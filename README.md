@@ -72,6 +72,7 @@ project/
   scripts/                     # smoke-проверки (8) + verify-stack.sh + make-sample-resume.py
   docs/                        # сопроводительная документация (00–06 + лэндинг)
   docker-compose.yml           # backend, frontend, PostgreSQL, Redis — 4 сервиса
+                               #   (Redis поднят как задел под кэш: код к нему не обращается)
   .env.example
   Makefile
 ```

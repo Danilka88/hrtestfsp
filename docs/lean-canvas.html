@@ -493,15 +493,15 @@
         <span class="mod">auth &amp; RBAC</span><span class="mod">candidates</span><span class="mod">employers</span>
         <span class="mod">testing</span><span class="mod">items</span><span class="mod">matching</span>
         <span class="mod">invitations</span><span class="mod">vacancies</span><span class="mod">tasks</span>
-        <span class="mod">fsp</span><span class="mod">notifications</span><span class="mod">admin</span>
+        <span class="mod">fsp</span><span class="mod">ai</span><span class="mod">health</span>
       </div>
       <div class="mods" style="margin-top:8px">
-        <span class="mod p">providers: LLM · FSP · Email · Storage · Code-similarity (моки)</span>
+        <span class="mod p">providers: LLM (Ollama/mock) · Embedding · Auth (local/Keycloak) · FSP · Email · Storage</span>
       </div>
     </div>
     <div class="down">▼</div>
     <div class="layer"><div class="t">Слой хранения</div>
-      <div class="mods"><span class="mod">PostgreSQL 16</span><span class="mod">Redis 7</span><span class="mod">Файлы: PDF-резюме / профили</span></div></div>
+      <div class="mods"><span class="mod">PostgreSQL 16</span><span class="mod">Redis 7 · задел под кэш, в MVP не используется</span><span class="mod">Файлы: PDF-резюме / профили</span></div></div>
   </div>
 
   <div class="grid g3" style="margin-top:16px">
@@ -1119,18 +1119,18 @@ docker compose exec -T backend python scripts/seed_demo.py</pre>
   </div>
 
   <h3>Проверки для технических судей</h3>
-  <p>Все проверки воспроизводимы и выполняются в терминале. Автотесты запускаются в локальном
-  окружении Python (папка <code>backend/.venv</code> в поставке уже создана):</p>
+  <p>Все проверки воспроизводимы и выполняются в терминале. Окружение Python в репозиторий
+  <b>не входит</b> (папка <code>.venv</code> исключена из git), поэтому создайте его один раз —
+  это занимает минуту:</p>
+  <pre>cd backend
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt -r requirements-dev.txt</pre>
+  <p style="color:var(--mut)">Дальше проверки запускаются так:</p>
   <pre>cd backend
 .venv/bin/python -m pytest -q                                  # 253 теста
 .venv/bin/python -m pytest -q --cov=app                        # покрытие 97%
 .venv/bin/python scripts/validate_solution.py --runs 120       # метрики валидации
 cd .. && bash scripts/verify-stack.sh                          # состояние всех сервисов</pre>
-  <p style="color:var(--mut)">Если папки <code>.venv</code> нет, создайте окружение заново:</p>
-  <pre>cd backend
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt -r requirements-dev.txt
-.venv/bin/python -m pytest -q</pre>
   <p style="color:var(--mut)">Проверки кода: <code>cd backend &amp;&amp; ruff check . &amp;&amp; ruff format --check .</code> —
   линтер проходит без замечаний. Всё то же доступно через <code>make help</code> в корне проекта.</p>
 
