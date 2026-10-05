@@ -31,7 +31,7 @@ async def ready() -> dict:
     db_ok = await ping_database()
 
     providers: dict[str, bool] = {}
-    for name, provider in get_providers().items():
+    for name, provider in get_providers().as_dict().items():
         try:
             providers[name] = await provider.health()
         except Exception:  # noqa: BLE001 — readiness не должен падать

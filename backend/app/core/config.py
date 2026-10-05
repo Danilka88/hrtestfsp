@@ -9,7 +9,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import List
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     redis_url: str = "redis://redis:6379/0"
 
     # --- Безопасность ---
-    jwt_secret: str = "change-me"
+    jwt_secret: str = "dev-insecure-secret-change-me-in-production"
     jwt_algorithm: str = "HS256"
     access_token_ttl_minutes: int = 30
     refresh_token_ttl_days: int = 30
@@ -40,6 +40,13 @@ class Settings(BaseSettings):
     fsp_provider: str = "mock"
     email_provider: str = "mock"
     storage_provider: str = "mock"
+
+    # --- Аутентификация ---
+    email_verification_ttl_minutes: int = 24 * 60
+    consent_version: str = "pdn-v1"
+    # В демо-режиме (mock-почта) токен подтверждения отдаётся в ответе API.
+    # В продакшене обязательно False.
+    expose_dev_tokens: bool = True
 
     # --- Правила продукта ---
     grade_change_cooldown_days: int = 90
@@ -52,6 +59,18 @@ class Settings(BaseSettings):
             "http://127.0.0.1:8080",
         ]
     )
+
+
+    @model_validator(mode="after")
+    def _validate_security_settings(self) -> "Settings":
+        """Защита от запуска с небезопасным секретом вне локального окружения."""
+        if self.environment != "local":
+            if len(self.jwt_secret) < 32 or "change-me" in self.jwt_secret or "insecure" in self.jwt_secret:
+                raise ValueError(
+                    "JWT_SECRET должен быть не короче 32 символов и не содержать "
+                    "заглушек ('change-me', 'insecure') вне локального окружения"
+                )
+        return self
 
 
 @lru_cache(maxsize=1)
