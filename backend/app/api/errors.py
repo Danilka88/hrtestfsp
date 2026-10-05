@@ -13,10 +13,18 @@ from fastapi.responses import JSONResponse
 from app.services.auth import AuthError
 from app.services.candidates import ProfileError
 from app.services.employers import EmployerError
+from app.services.invitations import InvitationError
 from app.services.resume import ResumeError
 from app.services.testing_flow import TestingError
 
-DOMAIN_ERRORS = (AuthError, ProfileError, ResumeError, EmployerError, TestingError)
+DOMAIN_ERRORS = (
+    AuthError,
+    ProfileError,
+    ResumeError,
+    EmployerError,
+    InvitationError,
+    TestingError,
+)
 
 
 async def _domain_error_handler(request: Request, exc: Exception) -> JSONResponse:

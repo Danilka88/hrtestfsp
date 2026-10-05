@@ -18,6 +18,7 @@ from app.schemas.candidate import (
     ResumeUploadResponse,
 )
 from app.services import candidates as candidate_service
+from app.services import fsp_link
 from app.services.candidates import ProfileError
 from app.services.profile_pdf import build_profile_pdf
 from app.services.resume import ResumeError
@@ -115,7 +116,13 @@ async def download_profile_pdf(
     if profile is None:
         raise HTTPException(status_code=404, detail="Профиль ещё не создан")
 
-    pdf_bytes = build_profile_pdf(candidate_service.pdf_payload(profile))
+    # Достижения ФСП добавляются в PDF, только если идентификатор привязан и реестр ответил
+    achievements = None
+    if user.fsp_id:
+        status = await fsp_link.status(session, user)
+        achievements = status.get("achievements") or None
+
+    pdf_bytes = build_profile_pdf(candidate_service.pdf_payload(profile), achievements)
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
