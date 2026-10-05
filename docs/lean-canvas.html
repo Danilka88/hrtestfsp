@@ -167,12 +167,15 @@
   <a href="#mech">Механики</a>
   <a href="#canvas">Lean Canvas</a>
   <a href="#research">Исследование</a>
+  <a href="#testing">Тестирование</a>
+  <a href="#matching">Подбор</a>
   <a href="#rules">Правила</a>
   <a href="#arch">Архитектура</a>
   <a href="#mvp">MVP</a>
   <a href="#road">План</a>
   <a href="#valid">Валидация</a>
   <a href="#score">Критерии</a>
+  <a href="#run">Запуск</a>
   <a href="#sources">Источники</a>
 </div></nav>
 
@@ -641,9 +644,242 @@
   </div>
 </div></section>
 
-<!-- 13. SOURCES -->
+<!-- 13. RUN & DEMO -->
+<section id="run"><div class="wrap">
+  <h2><span class="n">13</span>Запуск и демонстрация: пошаговая инструкция</h2>
+  <p class="sub">Инструкция рассчитана на человека <b>без технического опыта</b>: что установить, как запустить
+  одной командой, что нажимать в демонстрации и что должно появиться на экране.</p>
+
+  <div class="grid g3" style="margin-bottom:20px">
+    <div class="card"><h3><span class="num">1</span>Что нужно</h3>
+      <p>Компьютер (macOS, Windows или Linux), <b>8 ГБ оперативной памяти</b> (комфортно 16 ГБ),
+      <b>около 6 ГБ</b> свободного места и бесплатная программа <b>Docker Desktop</b>.
+      Больше ничего устанавливать не требуется: база данных, сервер приложения и веб-интерфейс
+      поднимаются сами внутри Docker.</p></div>
+    <div class="card"><h3><span class="num">2</span>Нужен ли интернет</h3>
+      <p>Только <b>при первом запуске</b> — скачать программу и образы. Дальше демонстрация работает
+      полностью <b>оффлайн</b>: все внешние сервисы (LLM, реестр ФСП, почта, файловое хранилище)
+      заменены встроенными mock-реализациями.</p></div>
+    <div class="card"><h3><span class="num">3</span>Сколько времени</h3>
+      <p>Установка Docker — 5–10 минут. Первый запуск платформы — 3–7 минут (идёт сборка образов).
+      Каждый следующий запуск — несколько секунд.</p></div>
+  </div>
+
+  <h3>Шаг 1. Установить и запустить Docker Desktop</h3>
+  <div class="tw" style="margin-bottom:14px">
+    <table>
+      <thead><tr><th>Действие</th><th>Как именно</th><th>Признак, что получилось</th></tr></thead>
+      <tbody>
+        <tr><td><b>Скачать</b></td>
+            <td>Открыть <a href="https://www.docker.com/products/docker-desktop/">docker.com/products/docker-desktop</a>
+            и нажать кнопку скачивания для своей системы</td>
+            <td>Файл установщика скачан в «Загрузки»</td></tr>
+        <tr><td><b>Установить</b></td>
+            <td>macOS: открыть скачанный файл и перетащить Docker в папку «Программы».
+            Windows: запустить установщик и следовать подсказкам (согласиться со значениями по умолчанию)</td>
+            <td>Docker появился в списке приложений системы</td></tr>
+        <tr><td><b>Запустить</b></td>
+            <td>Открыть Docker Desktop как обычную программу и <b>дождаться зелёного статуса</b>
+            «Docker Desktop is running» (30–60 секунд)</td>
+            <td>В строке меню (macOS) или в трее (Windows) виден значок кита</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note" style="margin-bottom:20px">
+    <b class="hl">Важно:</b> Docker Desktop должен быть запущен <b>всё время</b>, пока вы работаете с платформой.
+    Если он закрыт, команды ниже выдадут ошибку «Cannot connect to the Docker daemon» — в этом случае
+    просто запустите Docker Desktop и повторите команду.
+  </div>
+
+  <h3>Шаг 2. Открыть терминал</h3>
+  <div class="grid g2" style="margin-bottom:14px">
+    <div class="card"><h3>macOS</h3>
+      <p>Нажать <code>⌘ + Пробел</code> (поиск Spotlight), набрать <b>Терминал</b>, нажать Enter.
+      Откроется окно с командной строкой.</p></div>
+    <div class="card"><h3>Windows</h3>
+      <p>Нажать <b>Пуск</b>, набрать <b>PowerShell</b>, нажать Enter. Откроется окно с командной строкой.</p></div>
+  </div>
+  <p>Все следующие команды вводятся в это окно: строку копируют целиком, вставляют и нажимают <b>Enter</b>.
+  После выполнения команда снова «приглашает» ввод — значит, она завершилась и можно вводить следующую.</p>
+
+  <h3>Шаг 3. Запустить платформу</h3>
+  <p>Сначала перейти в папку с проектом (подставьте свой путь к папке <code>project</code>):</p>
+  <pre>cd путь/к/папке/moscow_it_pratform_test/project      # macOS и Linux
+cd путь\к\папке\moscow_it_pratform_test\project      # Windows</pre>
+  <div class="note" style="margin-bottom:14px">
+    <b class="hl">Подсказка:</b> путь удобно не набирать вручную. Наберите <code>cd </code> (с пробелом), затем
+    перетащите папку <code>project</code> из окна Finder (macOS) или Проводника (Windows) прямо в окно терминала —
+    путь подставится сам — и нажмите Enter.
+  </div>
+  <p>Затем — <b>одна команда</b>, которая собирает и запускает всё решение:</p>
+  <pre>docker compose up -d --build</pre>
+  <p style="color:var(--mut)">Первый запуск идёт 3–7 минут: скачиваются и собираются образы, в окне бегут
+  строки логов. Это нормально. Когда управление вернётся и появится приглашение ввода — платформа запущена.</p>
+  <p>Проверить, что поднялись все четыре сервиса:</p>
+  <pre>docker compose ps</pre>
+  <p>В таблице должно быть четыре строки со статусом <b>Up … (healthy)</b>:
+  <code>backend</code>, <code>db</code>, <code>frontend</code>, <code>redis</code>.
+  Если у <code>backend</code> ещё написано <code>(health: starting)</code> — подождите 20–30 секунд
+  и повторите команду; база данных стартует чуть дольше остальных.</p>
+
+  <h3>Шаг 4. Открыть платформу в браузере</h3>
+  <div class="tw" style="margin-bottom:14px">
+    <table>
+      <thead><tr><th>Что открыть</th><th>Адрес</th><th>Зачем это нужно</th></tr></thead>
+      <tbody>
+        <tr><td><b>Платформа</b> — то, что оценивают</td><td><code>http://localhost:8080</code></td>
+            <td>Кабинеты кандидата и работодателя: весь пользовательский путь</td></tr>
+        <tr><td>Документация API</td><td><code>http://localhost:8000/docs</code></td>
+            <td>Интерактивный Swagger: полный перечень методов, у каждого кнопка «Try it out» —
+            можно отправить запрос прямо из браузера</td></tr>
+        <tr><td>Проверка работоспособности</td><td><code>http://localhost:8000/api/v1/health/ready</code></td>
+            <td>Должен вернуть <code>{"status":"ok","database":"ok"}</code> — значит, сервер и база данных живы</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Шаг 5. Войти под демонстрационным аккаунтом</h3>
+  <p>На странице <code>http://localhost:8080</code> находится форма входа. Демонстрационные аккаунты уже созданы:</p>
+  <div class="grid g2" style="margin-bottom:16px">
+    <div class="card" style="border-color:var(--acc)"><h3>Работодатель — инициатор подбора</h3>
+      <pre>email:   hr@fintech-demo.ru
+пароль:  demo12345</pre>
+      <p style="color:var(--mut)">Второй работодатель: <code>hr@digital-demo.ru</code>, пароль тот же.</p></div>
+    <div class="card" style="border-color:var(--ok)"><h3>Кандидат</h3>
+      <pre>email:   anna.kovaleva@demo.ru
+пароль:  demo12345</pre>
+      <p style="color:var(--mut)">В seed-данных ещё 7 кандидатов с тем же паролем:
+      <code>dmitry.sokolov@demo.ru</code>, <code>elena.fedorova@demo.ru</code>, <code>ivan.lebdev@demo.ru</code>,
+      <code>marina.orlova@demo.ru</code>, <code>olga.nikolaeva@demo.ru</code>, <code>pavel.morozov@demo.ru</code>,
+      <code>sergey.volkov@demo.ru</code>.</p></div>
+  </div>
+  <div class="note" style="margin-bottom:20px">
+    <b class="hl">Если вход не проходит</b> («Неверный email или пароль») — значит, база данных пустая и
+    демонстрационные данные не загружены. Выполните в терминале:
+    <pre style="margin:10px 0 0">docker compose exec -T backend python scripts/seed_demo.py</pre>
+  </div>
+
+  <h3>Шаг 6. Сценарий демонстрации: что нажимать</h3>
+  <p class="sub">Полный смысл продукта виден в двух кабинетах: работодатель находит категорию и приглашает,
+  кандидат получает приглашение с зарплатой. Ниже — по шагам, что делать и что должно появиться на экране.</p>
+
+  <div class="grid g2" style="margin-bottom:16px">
+    <div class="card" style="border-color:var(--acc)">
+      <h3>Работодатель: <code>hr@fintech-demo.ru</code></h3>
+      <ol style="margin:0;padding-left:18px;font-size:14px;line-height:1.85">
+        <li>Войдите под аккаунтом работодателя. Откроется <b>«Кабинет работодателя»</b> с вкладками
+            «Подбор кандидатов», «Поиск по банку», «Приглашения», «Профиль компании».</li>
+        <li>На вкладке <b>«Подбор кандидатов»</b> заполните потребность: название роли, специализация,
+            грейд, стек. Нажмите <b>«Сформировать подборку»</b>.</li>
+        <li>Появится <b>список кандидатов</b> с позицией, баллом и раскрытыми причинами попадания
+            («Подтверждённый профиль», «Совпадение стека»), а также блоком
+            <b>«нет данных»</b> там, где информации действительно нет. Контактов в списке нет —
+            вместо них подпись «Контакты скрыты до принятия приглашения».</li>
+        <li>Нажмите <b>«Уточнить подборку»</b> — создастся <b>новая версия</b>, а прежняя останется
+            в блоке «История подборок» с пометкой «уточнение предыдущей версии». Ничего не теряется.</li>
+        <li>Откройте вкладку <b>«Поиск по банку»</b>, задайте фильтры (специализация, грейд, стек,
+            наличие достижений ФСП) и нажмите <b>«Найти»</b>.</li>
+        <li>У любого кандидата нажмите <b>«Пригласить»</b>, укажите <b>зарплату</b> (поле обязательное)
+            и текст предложения, затем <b>«Отправить приглашение»</b>.</li>
+        <li>На вкладке <b>«Приглашения»</b> виден статус отправленного приглашения.
+            Контакты кандидата появятся здесь <b>только после того, как он его примет</b>.</li>
+      </ol>
+    </div>
+
+    <div class="card" style="border-color:var(--ok)">
+      <h3>Кандидат: <code>anna.kovaleva@demo.ru</code></h3>
+      <ol style="margin:0;padding-left:18px;font-size:14px;line-height:1.85">
+        <li>Нажмите <b>«Выйти»</b> и войдите под аккаунтом кандидата. Откроется
+            <b>«Кабинет соискателя»</b>: «Категория и грейд», «Тестирование», «Приглашения»,
+            «Профиль и ФСП».</li>
+        <li>На вкладке <b>«Категория и грейд»</b> видно присвоенную категорию (специализация × грейд),
+            историю смены грейда и историю тестирования. Категория присвоена <b>автоматически по тесту</b>,
+            а не выбрана из резюме.</li>
+        <li>На вкладке <b>«Тестирование»</b> пройдите обязательный путь: опрос по отрасли →
+            выбор предполагаемого грейда → <b>адаптивный тест</b> (10–16 заданий, сложность подстраивается
+            под ответы) → категория присваивается системой по итогу.</li>
+        <li>На вкладке <b>«Приглашения»</b> — приглашение от компании: <b>название компании и зарплата
+            видны до начала общения</b>. При открытии вкладки статус приглашения меняется
+            на <b>«просмотрено»</b>. Нажмите <b>«Принять»</b> — только после этого работодатель
+            получает ваши контакты.</li>
+        <li>На вкладке <b>«Профиль и ФСП»</b> — профиль, загрузка PDF-резюме, настройки приватности
+            и привязка идентификатора ФСП с подтверждёнными достижениями.</li>
+      </ol>
+      <p style="margin-top:12px;color:var(--mut);font-size:13.5px">Отдельно стоит показать кандидата
+      <b>без истории ФСП</b>: платформа честно помечает этот блок как «нет данных», а не додумывает достижения.</p>
+    </div>
+  </div>
+
+  <h3>Шаг 7. Остановить платформу</h3>
+  <pre>docker compose down        # остановить; созданные данные сохранятся
+docker compose down -v     # остановить и удалить данные (полный сброс)</pre>
+
+  <h3>Шаг 8. Чистая база перед показом</h3>
+  <p>Если вы ранее запускали автоматические проверки, в базе остались служебные учётные записи.
+  Чтобы демонстрация шла на чистых seed-данных, выполните три команды по порядку:</p>
+  <pre>docker compose down -v
+docker compose up -d --build
+docker compose exec -T backend python scripts/seed_demo.py</pre>
+
+  <h3>Если что-то не работает</h3>
+  <div class="tw" style="margin-bottom:20px">
+    <table>
+      <thead><tr><th>Что видно на экране</th><th>В чём причина</th><th>Что сделать</th></tr></thead>
+      <tbody>
+        <tr><td><code>docker: command not found</code></td>
+            <td>Docker Desktop не установлен или не запущен</td>
+            <td>Запустить Docker Desktop, дождаться зелёного статуса, повторить команду</td></tr>
+        <tr><td><code>Cannot connect to the Docker daemon</code></td>
+            <td>Docker Desktop запущен не до конца либо был закрыт</td>
+            <td>Открыть Docker Desktop и подождать 30–60 секунд</td></tr>
+        <tr><td><code>port is already allocated</code> или «порт занят»</td>
+            <td>Порты 8080 или 8000 занимает другая программа</td>
+            <td>Закрыть программу, занимающую порт, либо выполнить <code>docker compose down</code>
+            и снова <code>docker compose up -d</code></td></tr>
+        <tr><td>Страница в браузере не открывается</td>
+            <td>Сервисы ещё стартуют</td>
+            <td>Подождать 20–30 секунд, проверить статус командой <code>docker compose ps</code></td></tr>
+        <tr><td>«Неверный email или пароль»</td>
+            <td>База пустая, демо-данные не загружены</td>
+            <td><code>docker compose exec -T backend python scripts/seed_demo.py</code></td></tr>
+        <tr><td>Всё зависло, нужно начать заново</td>
+            <td>Остался старый запуск</td>
+            <td><code>docker compose down</code>, затем <code>docker compose up -d --build</code>
+            (данные сохранятся)</td></tr>
+        <tr><td>Нужен полный сброс с данными</td>
+            <td>—</td>
+            <td><code>docker compose down -v</code>, затем запуск заново и загрузка demo-данных</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Проверки для технических судей</h3>
+  <p>Все проверки воспроизводимы и выполняются в терминале. Автотесты запускаются в локальном
+  окружении Python (папка <code>backend/.venv</code> в поставке уже создана):</p>
+  <pre>cd backend
+.venv/bin/python -m pytest -q                                  # 110 автотестов
+.venv/bin/python scripts/validate_solution.py --runs 120       # метрики валидации
+cd .. && bash scripts/verify-stack.sh                          # состояние всех сервисов</pre>
+  <p style="color:var(--mut)">Если папки <code>.venv</code> нет, создайте окружение заново:</p>
+  <pre>cd backend
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt -r requirements-dev.txt
+.venv/bin/python -m pytest -q</pre>
+  <p style="color:var(--mut)">Проверки кода: <code>cd backend &amp;&amp; ruff check . &amp;&amp; ruff format --check .</code> —
+  линтер проходит без замечаний. Всё то же доступно через <code>make help</code> в корне проекта.</p>
+
+  <div class="note">
+    <b class="hl">Резюме одной строкой.</b> Запустить Docker Desktop → в терминале
+    <code>docker compose up -d --build</code> из папки <code>project</code> → открыть
+    <code>http://localhost:8080</code> → войти как <code>hr@fintech-demo.ru</code> (работодатель)
+    или <code>anna.kovaleva@demo.ru</code> (кандидат), пароль <code>demo12345</code>.
+    Документация API — <code>http://localhost:8000/docs</code>.
+  </div>
+</div></section>
+
+<!-- 14. SOURCES -->
 <section id="sources"><div class="wrap">
-  <h2><span class="n">13</span>Источники (30)</h2>
+  <h2><span class="n">14</span>Источники (30)</h2>
   <p class="sub">Все утверждения выше подкреплены проверяемыми ссылками.</p>
   <div class="src">
     <div id="src-1"><b>[1]</b> LHH — Active Placement: <a href="https://en.prnasia.com/releases/apac/Lee_Hecht_Harrison_Reinvents_Outplacement-182431.shtml">prnasia</a></div>
