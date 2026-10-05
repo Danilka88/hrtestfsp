@@ -4,6 +4,7 @@
 """
 
 from app.models.candidate import CandidateProfile
+from app.models.employer import EmployerNeed, EmployerProfile, Selection, SelectionCandidate
 from app.models.testing import (
     Category,
     Grade,
@@ -29,4 +30,8 @@ __all__ = [
     "TestSession",
     "ItemResponseRecord",
     "GradeChange",
+    "EmployerProfile",
+    "EmployerNeed",
+    "Selection",
+    "SelectionCandidate",
 ]

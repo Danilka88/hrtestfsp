@@ -9,6 +9,7 @@ from typing import AsyncIterator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.errors import register_domain_error_handlers
 from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.core.logging import setup_logging
@@ -61,6 +62,7 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(api_router, prefix=settings.api_v1_prefix)
+    register_domain_error_handlers(app)
 
     @app.get("/", tags=["meta"], summary="Служебная информация о сервисе")
     async def root() -> dict:
