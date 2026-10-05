@@ -21,6 +21,8 @@ export function Field({
   type = "text",
   placeholder,
   required,
+  autoComplete,
+  hint,
 }: {
   label: string;
   value: string;
@@ -28,6 +30,8 @@ export function Field({
   type?: string;
   placeholder?: string;
   required?: boolean;
+  autoComplete?: string;
+  hint?: string;
 }) {
   return (
     <label className="block text-sm">
@@ -38,8 +42,10 @@ export function Field({
         value={value}
         required={required}
         placeholder={placeholder}
+        autoComplete={autoComplete}
         onChange={(event) => onChange(event.target.value)}
       />
+      {hint ? <span className="mt-1 block text-xs text-slate-500">{hint}</span> : null}
     </label>
   );
 }
@@ -139,21 +145,45 @@ export function Alert({ kind = "info", children }: { kind?: "info" | "error" | "
   return <div className={`rounded-lg border p-3 text-sm ${styles}`}>{children}</div>;
 }
 
-export function ReasonList({ reasons, missing }: { reasons: { code: string; text: string; contribution: number }[]; missing: string[] }) {
+/**
+ * Отсутствующие данные: у каждого критерия — короткое человеческое название, а не
+ * готовая фраза сервера. Иначе получалось «нет данных: нет данных о достижениях».
+ */
+const MISSING_LABELS: Record<string, string> = {
+  "нет результата теста": "результат теста",
+  "нет данных о достижениях (в том числе при отсутствии истории)": "достижения ФСП",
+  "нет отметок активности в регулярных заданиях": "активность в заданиях",
+  "нет оценки соответствия потребности": "соответствие описанной потребности",
+};
+
+export function ReasonList({
+  reasons,
+  missing,
+}: {
+  reasons: { code: string; text: string; contribution: number }[];
+  missing: string[];
+}) {
   return (
-    <ul className="mt-2 space-y-0.5 text-xs text-slate-400">
-      {reasons.map((reason) => (
-        <li key={reason.code}>
-          · {reason.text}
-          {reason.contribution > 0 ? ` (вклад ${reason.contribution})` : ""}
-        </li>
-      ))}
-      {missing.map((item) => (
-        <li key={item} className="text-amber-400/80">
-          ! нет данных: {item}
-        </li>
-      ))}
-    </ul>
+    <>
+      <ul className="mt-2 space-y-0.5 text-xs text-slate-400">
+        {reasons.map((reason) => (
+          <li key={reason.code}>
+            · {reason.text}
+            {reason.contribution > 0 ? ` (вклад ${score(reason.contribution)})` : ""}
+          </li>
+        ))}
+        {missing.map((item) => (
+          <li key={item} className="text-slate-500">
+            · не оценено: {MISSING_LABELS[item] ?? item} — вклад 0
+          </li>
+        ))}
+      </ul>
+      {missing.length ? (
+        <p className="mt-1 text-xs text-slate-500">
+          Данных для этих критериев нет — они не додумываются: вклад 0, позицию это не понижает.
+        </p>
+      ) : null}
+    </>
   );
 }
 
@@ -172,6 +202,17 @@ export function gradesLabel(grade: string | null | undefined): string {
 
 export function money(value: number): string {
   return `${value.toLocaleString("ru-RU")} ₽`;
+}
+
+/**
+ * Числовой показатель (балл рубрики, θ) в едином виде: фиксированное число знаков
+ * и запятая как разделитель. Иначе в интерфейсе соседствуют «0.25» и «0.4187».
+ */
+export function score(value: number, digits = 3): string {
+  return value.toLocaleString("ru-RU", {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
 }
 
 /**

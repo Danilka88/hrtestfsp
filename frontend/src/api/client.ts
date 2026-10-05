@@ -1,4 +1,5 @@
 import axios, { AxiosError } from "axios";
+import type { InternalAxiosRequestConfig } from "axios";
 
 export const API_BASE = import.meta.env.VITE_API_BASE ?? "/api/v1";
 const TOKEN_KEY = "it-talent-access";
@@ -19,7 +20,10 @@ export const tokenStore = {
 
 export const api = axios.create({
   baseURL: API_BASE,
-  timeout: 20000,
+  // Запас больше серверного таймаута модели (25 с): если локальная модель отвечает
+  // медленно, сервер успевает отдать демо-данные и пометить ответ degraded,
+  // а не обрывать запрос на стороне браузера.
+  timeout: 60000,
   headers: { "Content-Type": "application/json" },
 });
 
@@ -29,10 +33,51 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+/** Обновление access-токена по refresh-токену. Параллельные вызовы ждут один запрос. */
+let renewal: Promise<string | null> | null = null;
+
+async function renewAccessToken(): Promise<string | null> {
+  const refreshToken = tokenStore.refresh();
+  if (!refreshToken) return null;
+  if (!renewal) {
+    renewal = api
+      .post<TokenPair>("/auth/refresh", { refresh_token: refreshToken })
+      .then((response) => {
+        tokenStore.save(response.data.access_token, response.data.refresh_token);
+        return response.data.access_token;
+      })
+      .catch(() => null)
+      .finally(() => {
+        renewal = null;
+      });
+  }
+  return renewal;
+}
+
 api.interceptors.response.use(
   (response) => response,
-  (error: AxiosError) => {
-    if (error.response?.status === 401) tokenStore.clear();
+  async (error: AxiosError) => {
+    const config = error.config as (InternalAxiosRequestConfig & { _retried?: boolean }) | undefined;
+    const status = error.response?.status;
+    // Сами запросы авторизации не пытаемся «обновлять»: это привело бы к рекурсии.
+    const isAuthCall =
+      Boolean(config?.url?.includes("/auth/refresh")) || Boolean(config?.url?.includes("/auth/login"));
+
+    if (status === 401 && config && !config._retried && !isAuthCall) {
+      config._retried = true;
+      const renewed = await renewAccessToken();
+      if (renewed) return api(config);
+    }
+
+    if (status === 401) {
+      // Обновить не удалось: сообщаем приложению, что сессия закончилась, — иначе
+      // пользователь видит ошибки чужих действий («не удалось сформировать
+      // объяснение») и не понимает, что нужно войти заново. hadToken отличает
+      // истёкшую сессию от первого захода без токена.
+      const hadToken = Boolean(config?.headers?.Authorization);
+      tokenStore.clear();
+      window.dispatchEvent(new CustomEvent("it-talent:unauthorized", { detail: { hadToken } }));
+    }
     return Promise.reject(error);
   },
 );
@@ -40,13 +85,24 @@ api.interceptors.response.use(
 /** Человекочитаемое сообщение об ошибке API. */
 export function errorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
+    const status = error.response?.status;
     const detail = (error.response?.data as { detail?: unknown } | undefined)?.detail;
+
+    // Сначала — понятная причина, затем подробность от сервера.
+    if (status === 401) return "Сессия истекла — войдите заново";
+    if (status === 403) return "Недостаточно прав для этого действия";
+    if (status === 404) return typeof detail === "string" ? detail : "Запись не найдена";
+    if (status && status >= 500) return "Сервис вернул ошибку — попробуйте ещё раз";
+    if (!error.response) {
+      return error.code === "ECONNABORTED"
+        ? "Ответ идёт дольше обычного: локальная модель ещё загружается — попробуйте ещё раз"
+        : "Сервис недоступен — проверьте, запущен ли backend";
+    }
     if (typeof detail === "string") return detail;
     if (Array.isArray(detail) && detail.length) {
       const first = detail[0] as { msg?: string };
       if (first?.msg) return first.msg;
     }
-    if (!error.response) return "Сервис недоступен — проверьте, запущен ли backend";
   }
   return "Не удалось выполнить запрос";
 }

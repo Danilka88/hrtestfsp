@@ -13,7 +13,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { AIButton, AISourceNote, AIStatusBadge, aiToastPayload } from "../../components/ai";
 import { TasksPanel, VacanciesPanel } from "../../components/marketplace";
 import { useToast } from "../../components/toast";
-import { Alert, Button, Card, EmptyState, Field, InfoTip, Modal, SectionNote, StatusBadge, TextArea, gradesLabel, money } from "../../components/ui";
+import { Alert, Button, Card, EmptyState, Field, InfoTip, Modal, SectionNote, StatusBadge, TextArea, gradesLabel, money, score } from "../../components/ui";
 
 type Tab = "category" | "test" | "invitations" | "vacancies" | "tasks" | "profile";
 
@@ -205,7 +205,7 @@ function CategoryTab({
                     <td className="py-1 pr-3">{gradesLabel(session.target_grade)}</td>
                     <td className="py-1 pr-3">{gradesLabel(session.result_grade)}</td>
                     <td className="py-1 pr-3">{session.items_answered}</td>
-                    <td className="py-1 pr-3">{session.theta.toFixed(2)}</td>
+                    <td className="py-1 pr-3">{score(session.theta, 2)}</td>
                     <td className="py-1">
                       {session.status === "in_progress" ? (
                         <Button
@@ -434,7 +434,7 @@ function TestTab({
             </p>
             <p className="text-sm">Заданий: {result.items_answered}</p>
             <p className="text-sm">
-              Оценка θ = {result.theta.toFixed(3)} (ошибка ±{result.standard_error.toFixed(3)})
+              Оценка θ = {score(result.theta)} (ошибка ±{score(result.standard_error)})
             </p>
           </div>
           <p className="mt-2 text-xs text-slate-400">{result.grade_change_reason}</p>

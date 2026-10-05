@@ -73,6 +73,31 @@ export function LoginPage() {
     }
   }
 
+  /** Вход в демонстрационный профиль одним нажатием — чтобы показ не начинался с ручного ввода. */
+  async function demoLogin(kind: Role) {
+    const account =
+      kind === "employer"
+        ? { email: "hr@fintech-demo.ru", password: "demo12345" }
+        : { email: "anna.kovaleva@demo.ru", password: "demo12345" };
+    setMode("login");
+    setEmail(account.email);
+    setPassword(account.password);
+    setBusy(true);
+    setError(null);
+    try {
+      const profile = await login(account.email, account.password);
+      navigate(profile.role === "employer" ? "/employer" : "/candidate");
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Согласие на обработку персональных данных требует сервер: без него регистрация
+  // вернула бы ошибку. Понятнее не отправлять форму, чем получить отказ после отправки.
+  const consentMissing = mode === "register" && !consentPdn;
+
   return (
     <div className="mx-auto max-w-lg">
       <h1 className="text-2xl font-bold tracking-tight">
@@ -102,13 +127,23 @@ export function LoginPage() {
               void (mode === "login" ? submitLogin() : submitRegister());
             }}
           >
-            <Field label="Электронная почта" value={email} onChange={setEmail} type="email" required />
+            <Field
+              label="Электронная почта"
+              value={email}
+              onChange={setEmail}
+              type="email"
+              required
+              autoComplete="email"
+              placeholder="you@example.com"
+            />
             <Field
               label="Пароль (минимум 8 символов)"
               value={password}
               onChange={setPassword}
               type="password"
               required
+              autoComplete={mode === "login" ? "current-password" : "new-password"}
+              hint={mode === "register" ? "Пароль хешируется на сервере и не хранится в открытом виде." : undefined}
             />
 
             {mode === "register" ? (
@@ -148,11 +183,14 @@ export function LoginPage() {
               </>
             ) : null}
 
-            <div className="flex gap-2 pt-1">
-              <Button type="submit" disabled={busy}>
+            <div className="flex items-center gap-2 pt-1">
+              <Button type="submit" disabled={busy || consentMissing}>
                 {mode === "login" ? "Войти" : "Зарегистрироваться"}
               </Button>
-              {busy ? <span className="self-center text-xs text-slate-500">выполняется…</span> : null}
+              {busy ? <span className="text-xs text-slate-500">выполняется…</span> : null}
+              {consentMissing ? (
+                <span className="text-xs text-amber-400">Отметьте согласие на обработку данных</span>
+              ) : null}
             </div>
           </form>
         </Card>
@@ -176,10 +214,24 @@ export function LoginPage() {
           </Card>
         ) : null}
 
+        <Card title="Демонстрационный доступ">
+          <p className="mb-3 text-xs text-slate-400">
+            Логин и пароль подставятся автоматически. Работает после загрузки демо-данных
+            (<code>bash scripts/reset-demo.sh</code>).
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="ghost" disabled={busy} onClick={() => void demoLogin("candidate")}>
+              Войти как соискатель
+            </Button>
+            <Button variant="ghost" disabled={busy} onClick={() => void demoLogin("employer")}>
+              Войти как работодатель
+            </Button>
+          </div>
+        </Card>
+
         <p className="text-center text-xs text-slate-500">
-          Демо-доступ после загрузки демо-данных: <code>anna.kovaleva@demo.ru</code> /{" "}
-          <code>demo12345</code>, работодатель <code>hr@fintech-demo.ru</code> /{" "}
-          <code>demo12345</code>. <Link to="/health">Состояние сервиса</Link>
+          <code>anna.kovaleva@demo.ru</code> и <code>hr@fintech-demo.ru</code>, пароль{" "}
+          <code>demo12345</code> · <Link to="/health">Состояние сервиса</Link>
         </p>
       </div>
     </div>

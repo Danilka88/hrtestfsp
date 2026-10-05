@@ -1,9 +1,10 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
 import * as apiClient from "../api/client";
 import type { Role, UserPublic } from "../api/client";
 import { tokenStore } from "../api/client";
+import { useToast } from "../components/toast";
 
 interface AuthState {
   user: UserPublic | null;
@@ -24,8 +25,25 @@ interface AuthState {
 const AuthContext = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const toast = useToast();
   const [user, setUser] = useState<UserPublic | null>(null);
   const [loading, setLoading] = useState(true);
+  const currentUser = useRef<UserPublic | null>(null);
+  currentUser.current = user;
+
+  // Сессия закончилась во время работы: без явного сообщения пользователь видит
+  // ошибки конкретных действий и не понимает, что нужно войти заново.
+  useEffect(() => {
+    const onUnauthorized = (event: Event) => {
+      const hadToken = (event as CustomEvent<{ hadToken?: boolean }>).detail?.hadToken ?? false;
+      if (currentUser.current || hadToken) {
+        toast.error("Сессия истекла", "Войдите заново — данные сохранены на сервере");
+      }
+      setUser(null);
+    };
+    window.addEventListener("it-talent:unauthorized", onUnauthorized);
+    return () => window.removeEventListener("it-talent:unauthorized", onUnauthorized);
+  }, [toast]);
 
   const refresh = useCallback(async () => {
     if (!tokenStore.access()) {

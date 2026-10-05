@@ -122,7 +122,7 @@ class KeycloakAuthProvider:
         self.realm = settings.keycloak_realm
         self.client_id = settings.keycloak_client_id
         self.client_secret = settings.keycloak_client_secret
-        self.timeout = settings.llm_timeout_seconds
+        self.timeout = settings.http_timeout_seconds
 
     def _token_endpoint(self) -> str:
         return f"{self.base_url}/realms/{self.realm}/protocol/openid-connect/token"

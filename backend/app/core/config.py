@@ -49,7 +49,12 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://host.docker.internal:11434"
     ollama_model: str = ""
     ollama_embed_model: str = ""
-    llm_timeout_seconds: float = 30.0
+    # Больше, чем нужно тёплой модели, и меньше таймаута браузера (60 с):
+    # при холодной загрузке сервер успевает отдать демо-данные, а не оборвать запрос.
+    llm_timeout_seconds: float = 45.0
+    # Таймаут внешних интеграций (Keycloak, ФСП): здесь ждать десятки секунд нечего,
+    # и он не должен расти вместе с таймаутом модели.
+    http_timeout_seconds: float = 10.0
     # Reasoning-режим Gemma 4 замедляет короткие задачи в ~40 раз (9.8 с → 0.25 с);
     # для извлечения полей и черновиков он избыточен и отключён по умолчанию.
     llm_think: bool = False

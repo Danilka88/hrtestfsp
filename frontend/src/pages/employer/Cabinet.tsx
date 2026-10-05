@@ -28,6 +28,7 @@ import {
   TextArea,
   gradesLabel,
   money,
+  score,
 } from "../../components/ui";
 
 type Tab = "selection" | "search" | "invitations" | "vacancies" | "tasks" | "profile";
@@ -557,7 +558,8 @@ function CandidateRow({
             #{candidate.rank} · {candidate.full_name ?? candidate.reference}
           </p>
           <p className="text-xs text-slate-400">
-            {candidate.specialization ?? "—"} / {gradesLabel(candidate.grade)} · балл {candidate.score}
+            {candidate.specialization ?? "—"} / {gradesLabel(candidate.grade)} · балл{" "}
+            {score(candidate.score)}
             {candidate.fsp_achievements !== null
               ? ` · достижений ФСП: ${candidate.fsp_achievements}`
               : ""}
