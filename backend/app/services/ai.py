@@ -544,6 +544,135 @@ class AIEngine:
             else "модель эмбеддингов недоступна — применена лексическая близость",
         )
 
+    # --- 8. Дашборд администратора ---------------------------------------
+
+    async def platform_summary(self, metrics: dict[str, Any]) -> AIResult:
+        """Сводка состояния платформы человеческим языком по посчитанным метрикам.
+
+        Модель не считает метрики и не выдумывает числа: ей передаётся уже
+        посчитанный набор, её задача — связать показатели и объяснить, что они
+        означают для двустороннего рынка.
+        """
+        schema = {
+            "type": "object",
+            "properties": {
+                "headline": {"type": "string"},
+                "summary": {"type": "string"},
+                "points": {"type": "array", "items": {"type": "string"}},
+                "watch": {"type": "array", "items": {"type": "string"}},
+            },
+            "required": ["headline", "summary"],
+        }
+        system = (
+            "Ты аналитик двусторонней платформы подбора ИТ-специалистов. Тебе дают "
+            "готовые показатели. Опиши состояние рынка платформы: что происходит с "
+            "обеими сторонами, где узкое место воронки, на что смотреть. Используй "
+            "только переданные числа, ничего не выдумывай. По-русски, кратко, без "
+            "маркетинговых формулировок."
+        )
+        prompt = f"Показатели платформы (JSON):\n{_compact(metrics)}"
+        return await self._json(
+            prompt,
+            system=system,
+            schema=schema,
+            demo=lambda: self._demo_summary(metrics),
+            max_tokens=700,
+        )
+
+    def _demo_summary(self, metrics: dict[str, Any]) -> dict[str, Any]:
+        people = metrics.get("people", {})
+        liquidity = metrics.get("liquidity", {})
+        candidates = int(people.get("candidates") or 0)
+        employers = int(people.get("employers") or 0)
+        contact_rate = liquidity.get("contact_rate")
+        response_rate = liquidity.get("response_rate")
+        return {
+            "headline": f"{candidates} соискателей и {employers} компаний на платформе",
+            "summary": (
+                "Подготовленная сводка: показываются посчитанные показатели без обращения "
+                "к модели. Соотношение сторон, воронка пути кандидата и ликвидность рынка "
+                "рассчитаны напрямую по данным платформы."
+            ),
+            "points": [
+                f"Соискателей: {candidates}, компаний: {employers}",
+                "Доля потребностей, доведённых до приглашения: "
+                f"{contact_rate if contact_rate is not None else 'нет данных'}%",
+                "Доля приглашений с решением кандидата: "
+                f"{response_rate if response_rate is not None else 'нет данных'}%",
+            ],
+            "watch": [
+                "Категории без кандидатов при наличии спроса — там платформа не может помочь",
+                "Приглашения без ответа дольше недели — ожидание, которое стоит снимать",
+            ],
+        }
+
+    async def platform_recommendations(self, metrics: dict[str, Any]) -> AIResult:
+        """Что сделать администратору: конкретные шаги по показателям."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "actions": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "title": {"type": "string"},
+                            "why": {"type": "string"},
+                            "how": {"type": "string"},
+                        },
+                        "required": ["title", "why"],
+                    },
+                }
+            },
+            "required": ["actions"],
+        }
+        system = (
+            "Ты операционный аналитик двусторонней платформы подбора. По переданным "
+            "показателям предложи 3 конкретных действия администратора. Каждое действие "
+            "должно опираться на конкретный показатель и быть выполнимым: привлечение "
+            "кандидатов в дефицитные категории, работа с зависшими приглашениями, "
+            "активация молчащих компаний. Не выдумывай числа. По-русски."
+        )
+        prompt = f"Показатели платформы (JSON):\n{_compact(metrics)}"
+        return await self._json(
+            prompt,
+            system=system,
+            schema=schema,
+            demo=lambda: self._demo_recommendations(metrics),
+            max_tokens=800,
+        )
+
+    def _demo_recommendations(self, metrics: dict[str, Any]) -> dict[str, Any]:
+        liquidity = metrics.get("liquidity", {})
+        return {
+            "actions": [
+                {
+                    "title": "Закрыть дефицит в категориях без кандидатов",
+                    "why": "Есть спрос работодателей, но подборка пустая — платформа не может помочь",
+                    "how": "Смотрите раздел «Категории»: строки со статусом «дефицит»",
+                },
+                {
+                    "title": "Разобрать приглашения без ответа",
+                    "why": f"Без ответа дольше недели: {liquidity.get('invitations_stale', 0)}",
+                    "how": (
+                        "Напомнить кандидату или отозвать приглашение, чтобы работодатель мог направить новое"
+                    ),
+                },
+                {
+                    "title": "Подключить компании, которые ещё не выходили на контакт",
+                    "why": "Аккаунты есть, но основная механика — приглашение — не используется",
+                    "how": "Раздел «Компании»: строки с нулём приглашений",
+                },
+            ]
+        }
+
+
+def _compact(data: dict[str, Any], limit: int = 2400) -> str:
+    """Сжатое представление метрик для промпта: без форматирующих пробелов."""
+    import json
+
+    return json.dumps(data, ensure_ascii=False, default=str, separators=(",", ":"))[:limit]
+
 
 _engine: AIEngine | None = None
 

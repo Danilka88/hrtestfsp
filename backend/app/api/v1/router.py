@@ -9,6 +9,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
+    admin,
     ai,
     auth,
     candidates,
@@ -35,3 +36,4 @@ api_router.include_router(vacancies.router_employer)
 api_router.include_router(vacancies.router_candidate)
 api_router.include_router(tasks.router_employer)
 api_router.include_router(tasks.router_candidate)
+api_router.include_router(admin.router)
