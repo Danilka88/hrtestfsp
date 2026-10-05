@@ -3,15 +3,14 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class Contacts(BaseModel):
-    email: Optional[EmailStr] = None
-    phone: Optional[str] = Field(default=None, max_length=40)
-    telegram: Optional[str] = Field(default=None, max_length=64)
+    email: EmailStr | None = None
+    phone: str | None = Field(default=None, max_length=40)
+    telegram: str | None = Field(default=None, max_length=64)
 
 
 class PrivacySettings(BaseModel):
@@ -22,15 +21,15 @@ class PrivacySettings(BaseModel):
 
 
 class CandidateProfileIn(BaseModel):
-    full_name: Optional[str] = Field(default=None, max_length=200)
+    full_name: str | None = Field(default=None, max_length=200)
     contacts: Contacts = Field(default_factory=Contacts)
-    specialization: Optional[str] = Field(default=None, max_length=120)
-    grade: Optional[str] = Field(default=None, max_length=20)
-    experience_years: Optional[int] = Field(default=None, ge=0, le=60)
-    stack: List[str] = Field(default_factory=list)
-    roles: List[str] = Field(default_factory=list)
-    soft_skills: List[str] = Field(default_factory=list)
-    summary: Optional[str] = Field(default=None, max_length=4000)
+    specialization: str | None = Field(default=None, max_length=120)
+    grade: str | None = Field(default=None, max_length=20)
+    experience_years: int | None = Field(default=None, ge=0, le=60)
+    stack: list[str] = Field(default_factory=list)
+    roles: list[str] = Field(default_factory=list)
+    soft_skills: list[str] = Field(default_factory=list)
+    summary: str | None = Field(default=None, max_length=4000)
 
 
 class CandidateProfileOut(CandidateProfileIn):
@@ -39,7 +38,7 @@ class CandidateProfileOut(CandidateProfileIn):
     id: str
     user_id: str
     resume_source: str
-    resume_filename: Optional[str] = None
+    resume_filename: str | None = None
     privacy: PrivacySettings
     created_at: datetime
     updated_at: datetime
@@ -48,13 +47,13 @@ class CandidateProfileOut(CandidateProfileIn):
 class ParsedResume(BaseModel):
     """Результат автораспознавания резюме (данные провайдера, без додумывания)."""
 
-    full_name: Optional[str] = None
-    contacts: Dict[str, Optional[str]] = Field(default_factory=dict)
-    stack: List[str] = Field(default_factory=list)
-    grade: Optional[str] = None
-    roles: List[str] = Field(default_factory=list)
-    experience_years: Optional[int] = None
-    soft_skills: List[str] = Field(default_factory=list)
+    full_name: str | None = None
+    contacts: dict[str, str | None] = Field(default_factory=dict)
+    stack: list[str] = Field(default_factory=list)
+    grade: str | None = None
+    roles: list[str] = Field(default_factory=list)
+    experience_years: int | None = None
+    soft_skills: list[str] = Field(default_factory=list)
     source: str = "mock"
 
 
@@ -66,7 +65,7 @@ class ResumeUploadResponse(BaseModel):
 
 
 class PrivacyUpdateRequest(BaseModel):
-    show_contacts: Optional[bool] = None
-    show_stack: Optional[bool] = None
-    show_experience: Optional[bool] = None
-    show_fsp: Optional[bool] = None
+    show_contacts: bool | None = None
+    show_stack: bool | None = None
+    show_experience: bool | None = None
+    show_fsp: bool | None = None

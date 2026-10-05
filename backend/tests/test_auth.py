@@ -10,8 +10,12 @@ from tests.conftest import register_and_verify
 async def test_register_requires_pdn_consent(client: AsyncClient) -> None:
     response = await client.post(
         "/api/v1/auth/register",
-        json={"email": "no-consent@example.com", "password": "secret12345",
-              "role": "candidate", "consent_pdn": False},
+        json={
+            "email": "no-consent@example.com",
+            "password": "secret12345",
+            "role": "candidate",
+            "consent_pdn": False,
+        },
     )
     assert response.status_code == 400
     assert "согласие" in response.json()["detail"].lower()
@@ -20,8 +24,7 @@ async def test_register_requires_pdn_consent(client: AsyncClient) -> None:
 async def test_register_rejects_admin_role(client: AsyncClient) -> None:
     response = await client.post(
         "/api/v1/auth/register",
-        json={"email": "admin@example.com", "password": "secret12345",
-              "role": "admin", "consent_pdn": True},
+        json={"email": "admin@example.com", "password": "secret12345", "role": "admin", "consent_pdn": True},
     )
     assert response.status_code == 422  # роль не входит в допустимый литерал схемы
 
@@ -29,20 +32,28 @@ async def test_register_rejects_admin_role(client: AsyncClient) -> None:
 async def test_register_creates_unverified_user_and_token(client: AsyncClient) -> None:
     response = await client.post(
         "/api/v1/auth/register",
-        json={"email": "New.User@Example.com", "password": "secret12345",
-              "role": "candidate", "consent_pdn": True},
+        json={
+            "email": "New.User@Example.com",
+            "password": "secret12345",
+            "role": "candidate",
+            "consent_pdn": True,
+        },
     )
     assert response.status_code == 201
     body = response.json()
-    assert body["email"] == "new.user@example.com"       # email нормализуется
+    assert body["email"] == "new.user@example.com"  # email нормализуется
     assert body["email_verified"] is False
-    assert body["verification_token"]                    # демо-режим отдаёт токен
+    assert body["verification_token"]  # демо-режим отдаёт токен
     assert body["role"] == "candidate"
 
 
 async def test_duplicate_email_rejected(client: AsyncClient) -> None:
-    payload = {"email": "dup@example.com", "password": "secret12345",
-               "role": "candidate", "consent_pdn": True}
+    payload = {
+        "email": "dup@example.com",
+        "password": "secret12345",
+        "role": "candidate",
+        "consent_pdn": True,
+    }
     assert (await client.post("/api/v1/auth/register", json=payload)).status_code == 201
     second = await client.post("/api/v1/auth/register", json=payload)
     assert second.status_code == 409
@@ -51,8 +62,7 @@ async def test_duplicate_email_rejected(client: AsyncClient) -> None:
 async def test_short_password_rejected(client: AsyncClient) -> None:
     response = await client.post(
         "/api/v1/auth/register",
-        json={"email": "short@example.com", "password": "1234",
-              "role": "candidate", "consent_pdn": True},
+        json={"email": "short@example.com", "password": "1234", "role": "candidate", "consent_pdn": True},
     )
     assert response.status_code == 422
 
@@ -60,8 +70,12 @@ async def test_short_password_rejected(client: AsyncClient) -> None:
 async def test_login_requires_verified_email(client: AsyncClient) -> None:
     await client.post(
         "/api/v1/auth/register",
-        json={"email": "unverified@example.com", "password": "secret12345",
-              "role": "candidate", "consent_pdn": True},
+        json={
+            "email": "unverified@example.com",
+            "password": "secret12345",
+            "role": "candidate",
+            "consent_pdn": True,
+        },
     )
     response = await client.post(
         "/api/v1/auth/login", json={"email": "unverified@example.com", "password": "secret12345"}
@@ -88,9 +102,7 @@ async def test_full_flow_register_verify_login_me(client: AsyncClient) -> None:
     assert tokens["access_token"] and tokens["refresh_token"]
     assert tokens["expires_in"] > 0
 
-    me = await client.get(
-        "/api/v1/auth/me", headers={"Authorization": f"Bearer {tokens['access_token']}"}
-    )
+    me = await client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {tokens['access_token']}"})
     assert me.status_code == 200
     assert me.json()["email"] == "flow@example.com"
 
@@ -138,8 +150,12 @@ async def test_logout_revokes_refresh_token(client: AsyncClient) -> None:
     )
     refresh_token = login.json()["refresh_token"]
 
-    assert (await client.post("/api/v1/auth/logout", json={"refresh_token": refresh_token})).status_code == 200
-    assert (await client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})).status_code == 401
+    assert (
+        await client.post("/api/v1/auth/logout", json={"refresh_token": refresh_token})
+    ).status_code == 200
+    assert (
+        await client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
+    ).status_code == 401
 
 
 async def test_publish_consent_can_be_toggled(client: AsyncClient) -> None:

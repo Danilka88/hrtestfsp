@@ -59,15 +59,20 @@ async def submit_survey(
 ) -> SurveyResponseOut:
     try:
         record, options = await testing_flow.save_survey(
-            session, user.id, industry=payload.industry,
-            specialization_code=payload.specialization_code, answers=payload.answers,
+            session,
+            user.id,
+            industry=payload.industry,
+            specialization_code=payload.specialization_code,
+            answers=payload.answers,
         )
     except TestingError as exc:
         _raise(exc)
     return SurveyResponseOut(
-        id=record.id, industry=record.industry,
+        id=record.id,
+        industry=record.industry,
         specialization_code=payload.specialization_code,
-        grade_options=options, created_at=record.created_at,
+        grade_options=options,
+        created_at=record.created_at,
     )
 
 
@@ -79,8 +84,10 @@ async def start_session(
 ) -> StartSessionResponse:
     try:
         test_session, item = await testing_flow.start_session(
-            session, user.id,
-            specialization_code=payload.specialization_code, target_grade=payload.target_grade,
+            session,
+            user.id,
+            specialization_code=payload.specialization_code,
+            target_grade=payload.target_grade,
         )
     except TestingError as exc:
         _raise(exc)
@@ -105,8 +112,12 @@ async def answer(
 ) -> AnswerResponse:
     try:
         outcome = await testing_flow.submit_answer(
-            session, user.id, session_id=session_id, item_id=payload.item_id,
-            answer_index=payload.answer_index, response_time_ms=payload.response_time_ms,
+            session,
+            user.id,
+            session_id=session_id,
+            item_id=payload.item_id,
+            answer_index=payload.answer_index,
+            response_time_ms=payload.response_time_ms,
         )
     except TestingError as exc:
         _raise(exc)

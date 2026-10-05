@@ -9,7 +9,7 @@ from __future__ import annotations
 import io
 import logging
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any
 from xml.sax.saxutils import escape
 
 from reportlab.lib import colors
@@ -76,33 +76,49 @@ def resolve_font_name(regular: bool = True) -> str:
     return "Helvetica" if regular else "Helvetica-Bold"
 
 
-def _styles() -> Dict[str, ParagraphStyle]:
+def _styles() -> dict[str, ParagraphStyle]:
     return {
         "title": ParagraphStyle(
-            "title", fontName=resolve_font_name(False), fontSize=18, leading=22, spaceAfter=2 * mm,
+            "title",
+            fontName=resolve_font_name(False),
+            fontSize=18,
+            leading=22,
+            spaceAfter=2 * mm,
             textColor=colors.HexColor("#0f172a"),
         ),
         "subtitle": ParagraphStyle(
-            "subtitle", fontName=resolve_font_name(), fontSize=10.5, leading=14,
-            textColor=colors.HexColor("#475569"), spaceAfter=6 * mm,
+            "subtitle",
+            fontName=resolve_font_name(),
+            fontSize=10.5,
+            leading=14,
+            textColor=colors.HexColor("#475569"),
+            spaceAfter=6 * mm,
         ),
         "heading": ParagraphStyle(
-            "heading", fontName=resolve_font_name(False), fontSize=12, leading=15, spaceBefore=4 * mm,
-            spaceAfter=2 * mm, textColor=colors.HexColor("#0f172a"),
+            "heading",
+            fontName=resolve_font_name(False),
+            fontSize=12,
+            leading=15,
+            spaceBefore=4 * mm,
+            spaceAfter=2 * mm,
+            textColor=colors.HexColor("#0f172a"),
         ),
         "body": ParagraphStyle(
-            "body", fontName=resolve_font_name(), fontSize=10.5, leading=15,
+            "body",
+            fontName=resolve_font_name(),
+            fontSize=10.5,
+            leading=15,
             textColor=colors.HexColor("#1e293b"),
         ),
     }
 
 
-def _p(text: Optional[str], style: ParagraphStyle) -> Optional[Paragraph]:
+def _p(text: str | None, style: ParagraphStyle) -> Paragraph | None:
     value = (text or "").strip()
     return Paragraph(escape(value), style) if value else None
 
 
-def build_profile_pdf(profile: Dict[str, Any], fsp_achievements: Optional[List[Dict[str, Any]]] = None) -> bytes:
+def build_profile_pdf(profile: dict[str, Any], fsp_achievements: list[dict[str, Any]] | None = None) -> bytes:
     """Собирает PDF-профиль. Отсутствующие данные не выдумываются — блок пропускается."""
     ensure_fonts()
     styles = _styles()
@@ -119,7 +135,7 @@ def build_profile_pdf(profile: Dict[str, Any], fsp_achievements: Optional[List[D
         author="IT-Talent Match",
     )
 
-    story: List[Any] = []
+    story: list[Any] = []
     story.append(Paragraph("Профиль кандидата", styles["title"]))
     story.append(
         Paragraph(

@@ -7,8 +7,9 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Iterable, Sequence
 from datetime import datetime
-from typing import Any, Dict, Iterable, List, Optional, Sequence
+from typing import Any
 
 from app.core.security import utcnow
 
@@ -16,7 +17,7 @@ from app.core.security import utcnow
 ABILITY_SCALE = 2.5
 
 
-def normalize_theta(theta: Optional[float]) -> Optional[float]:
+def normalize_theta(theta: float | None) -> float | None:
     """θ → 0..1 логистическим преобразованием."""
     if theta is None:
         return None
@@ -36,12 +37,12 @@ def compute_fit(
     *,
     required_stack: Sequence[str],
     candidate_stack: Sequence[str],
-    required_specialization: Optional[str],
-    candidate_specialization: Optional[str],
-    required_grade: Optional[str],
-    candidate_grade: Optional[str],
+    required_specialization: str | None,
+    candidate_specialization: str | None,
+    required_grade: str | None,
+    candidate_grade: str | None,
     grade_order: Sequence[str],
-) -> Optional[float]:
+) -> float | None:
     """Соответствие потребности работодателя (0..1).
 
     Простая, полностью объяснимая мера: пересечение стека и совпадение
@@ -52,8 +53,8 @@ def compute_fit(
     if not has_any:
         return None
 
-    parts: List[float] = []
-    weights: List[float] = []
+    parts: list[float] = []
+    weights: list[float] = []
 
     if required_stack:
         parts.append(stack_overlap(required_stack, candidate_stack))
@@ -65,9 +66,7 @@ def compute_fit(
 
     if required_grade and candidate_grade:
         try:
-            distance = abs(
-                list(grade_order).index(candidate_grade) - list(grade_order).index(required_grade)
-            )
+            distance = abs(list(grade_order).index(candidate_grade) - list(grade_order).index(required_grade))
         except ValueError:
             distance = len(grade_order)
         parts.append(max(0.0, 1.0 - distance / 3.0))
@@ -76,10 +75,10 @@ def compute_fit(
     if not parts:
         return None
     total_weight = sum(weights)
-    return round(sum(p * w for p, w in zip(parts, weights)) / total_weight, 4)
+    return round(sum(p * w for p, w in zip(parts, weights, strict=True)) / total_weight, 4)
 
 
-def days_since(moment: Optional[datetime], now: Optional[datetime] = None) -> Optional[int]:
+def days_since(moment: datetime | None, now: datetime | None = None) -> int | None:
     if moment is None:
         return None
     reference = now or utcnow()
@@ -90,8 +89,7 @@ def fsp_achievement_count(achievements: Iterable[Any]) -> int:
     return len(list(achievements))
 
 
-def describe_fit(fit: Optional[float], required_stack: Sequence[str],
-                 matched_stack: Sequence[str]) -> str:
+def describe_fit(fit: float | None, required_stack: Sequence[str], matched_stack: Sequence[str]) -> str:
     """Человекочитаемое объяснение соответствия требованиям."""
     if fit is None:
         return "Потребность описана без стека и специализации"
@@ -99,12 +97,12 @@ def describe_fit(fit: Optional[float], required_stack: Sequence[str],
     return f"Совпадение стека по потребности: {matched}"
 
 
-def matched_stack(required: Sequence[str], actual: Sequence[str]) -> List[str]:
+def matched_stack(required: Sequence[str], actual: Sequence[str]) -> list[str]:
     required_set = {s.strip().lower(): s for s in required if s and s.strip()}
     actual_lower = {s.strip().lower() for s in actual if s and s.strip()}
     return [original for key, original in required_set.items() if key in actual_lower]
 
 
-def signals_debug(payload: Dict[str, Any]) -> Dict[str, Any]:
+def signals_debug(payload: dict[str, Any]) -> dict[str, Any]:
     """Служебное представление сигналов (используется в тестах и отладке)."""
     return dict(payload)

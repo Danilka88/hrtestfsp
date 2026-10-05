@@ -8,15 +8,16 @@
 from __future__ import annotations
 
 import random
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any
 
 
 @dataclass(frozen=True)
 class GeneratedItem:
     skill_tag: str
     difficulty: float
-    payload: Dict[str, Any] = field(default_factory=dict)
+    payload: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -25,10 +26,10 @@ class Template:
 
     code: str
     skill_tag: str
-    build: Callable[[random.Random], Tuple[str, List[str], int, float]]
+    build: Callable[[random.Random], tuple[str, list[str], int, float]]
 
 
-def _shuffle(rng: random.Random, correct: str, distractors: List[str]) -> Tuple[List[str], int]:
+def _shuffle(rng: random.Random, correct: str, distractors: list[str]) -> tuple[list[str], int]:
     """Собирает варианты ответа: правильный + уникальные дистракторы (максимум 4 варианта)."""
     options = [correct]
     seen = {correct}
@@ -44,7 +45,8 @@ def _shuffle(rng: random.Random, correct: str, distractors: List[str]) -> Tuple[
 
 # --- Шаблоны -----------------------------------------------------------------
 
-def _python_modulo(rng: random.Random) -> Tuple[str, List[str], int, float]:
+
+def _python_modulo(rng: random.Random) -> tuple[str, list[str], int, float]:
     a = rng.randint(20, 99)
     b = rng.randint(3, 9)
     correct = str(a % b)
@@ -54,14 +56,14 @@ def _python_modulo(rng: random.Random) -> Tuple[str, List[str], int, float]:
     return question, options, idx, -1.0
 
 
-def _python_slice(rng: random.Random) -> Tuple[str, List[str], int, float]:
+def _python_slice(rng: random.Random) -> tuple[str, list[str], int, float]:
     data = rng.choice([[1, 2, 3, 4, 5, 6], [10, 20, 30, 40, 50, 60], ["a", "b", "c", "d", "e", "f"]])
     start = rng.randint(1, 2)
     stop = rng.randint(4, 5)
     correct = str(data[start:stop])
     distractors = [
-        str(data[start:stop - 1]),
-        str(data[start + 1:stop + 1]),
+        str(data[start : stop - 1]),
+        str(data[start + 1 : stop + 1]),
         str(data[:stop]),
     ]
     options, idx = _shuffle(rng, correct, [d for d in distractors if d != correct][:3])
@@ -69,11 +71,26 @@ def _python_slice(rng: random.Random) -> Tuple[str, List[str], int, float]:
     return question, options, idx, -0.2
 
 
-def _sql_operator(rng: random.Random) -> Tuple[str, List[str], int, float]:
+def _sql_operator(rng: random.Random) -> tuple[str, list[str], int, float]:
     variants = [
-        ("выбрать только уникальные значения столбца city", "SELECT DISTINCT city FROM users", ["SELECT city FROM users", "SELECT UNIQUE users.city", "SELECT city, COUNT(*) FROM users"], "GROUP BY"),
-        ("отсортировать результат по полю salary по убыванию", "ORDER BY salary DESC", ["ORDER BY salary ASC", "SORT salary DESC", "GROUP BY salary DESC"], "ORDER BY"),
-        ("оставить только группы с более чем 5 записями", "GROUP BY dep HAVING COUNT(*) > 5", ["GROUP BY dep WHERE COUNT(*) > 5", "WHERE COUNT(*) > 5", "GROUP BY dep LIMIT 5"], "HAVING"),
+        (
+            "выбрать только уникальные значения столбца city",
+            "SELECT DISTINCT city FROM users",
+            ["SELECT city FROM users", "SELECT UNIQUE users.city", "SELECT city, COUNT(*) FROM users"],
+            "GROUP BY",
+        ),
+        (
+            "отсортировать результат по полю salary по убыванию",
+            "ORDER BY salary DESC",
+            ["ORDER BY salary ASC", "SORT salary DESC", "GROUP BY salary DESC"],
+            "ORDER BY",
+        ),
+        (
+            "оставить только группы с более чем 5 записями",
+            "GROUP BY dep HAVING COUNT(*) > 5",
+            ["GROUP BY dep WHERE COUNT(*) > 5", "WHERE COUNT(*) > 5", "GROUP BY dep LIMIT 5"],
+            "HAVING",
+        ),
     ]
     description, correct, distractors, _skill = rng.choice(variants)
     options, idx = _shuffle(rng, correct, [d for d in distractors if d != correct][:3])
@@ -81,7 +98,7 @@ def _sql_operator(rng: random.Random) -> Tuple[str, List[str], int, float]:
     return question, options, idx, 0.3
 
 
-def _complexity(rng: random.Random) -> Tuple[str, List[str], int, float]:
+def _complexity(rng: random.Random) -> tuple[str, list[str], int, float]:
     loops = rng.randint(2, 3)
     correct = f"O(N^{loops})"
     distractors = ["O(N)", f"O(N^{loops + 1})", "O(log N)", "O(N log N)"]
@@ -93,7 +110,7 @@ def _complexity(rng: random.Random) -> Tuple[str, List[str], int, float]:
     return question, options, idx, 0.6
 
 
-def _binary_search(rng: random.Random) -> Tuple[str, List[str], int, float]:
+def _binary_search(rng: random.Random) -> tuple[str, list[str], int, float]:
     import math
 
     n = rng.choice([1000, 1024, 2048, 4096, 999999])
@@ -112,7 +129,7 @@ def _binary_search(rng: random.Random) -> Tuple[str, List[str], int, float]:
     return question, options, idx, 1.2
 
 
-def _concurrency(rng: random.Random) -> Tuple[str, List[str], int, float]:
+def _concurrency(rng: random.Random) -> tuple[str, list[str], int, float]:
     correct = "Снимок состояния корутины, позволяющий приостановить и возобновить выполнение"
     distractors = [
         "Отдельный поток операционной системы",
@@ -124,7 +141,7 @@ def _concurrency(rng: random.Random) -> Tuple[str, List[str], int, float]:
     return question, options, idx, 1.5
 
 
-TEMPLATES: List[Template] = [
+TEMPLATES: list[Template] = [
     Template("python_modulo", "python_basics", _python_modulo),
     Template("python_slice", "python_basics", _python_slice),
     Template("sql_operator", "sql", _sql_operator),
@@ -134,7 +151,7 @@ TEMPLATES: List[Template] = [
 ]
 
 # Диапазоны сложности для равномерного покрытия шкалы.
-DIFFICULTY_BANDS: List[Tuple[float, float, int]] = [
+DIFFICULTY_BANDS: list[tuple[float, float, int]] = [
     (-2.2, -1.5, 4),
     (-1.5, -0.7, 4),
     (-0.7, 0.0, 4),
@@ -144,14 +161,14 @@ DIFFICULTY_BANDS: List[Tuple[float, float, int]] = [
 ]
 
 
-def generate_items(seed: Optional[int] = 20261005) -> List[GeneratedItem]:
+def generate_items(seed: int | None = 20261005) -> list[GeneratedItem]:
     """Генерирует банк заданий: каждый шаблон × каждая полоса сложности.
 
     Для каждой пары берётся несколько вариантов с разными параметрами —
     так банк содержит уникальные формулировки при известной сложности.
     """
     rng = random.Random(seed)
-    items: List[GeneratedItem] = []
+    items: list[GeneratedItem] = []
     for template in TEMPLATES:
         for low, high, variants in DIFFICULTY_BANDS:
             for _ in range(variants):

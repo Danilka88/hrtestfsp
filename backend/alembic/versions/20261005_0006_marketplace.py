@@ -5,27 +5,33 @@ Revises: 20261005_0005
 Create Date: 2026-10-05
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision: str = "20261005_0006"
-down_revision: Union[str, None] = "20261005_0005"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = "20261005_0005"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
     op.create_table(
         "vacancies",
         sa.Column("id", sa.String(length=36), primary_key=True),
-        sa.Column("employer_id", sa.String(length=36),
-                  sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "employer_id", sa.String(length=36), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+        ),
         sa.Column("title", sa.String(length=200), nullable=False),
         sa.Column("description", sa.Text(), nullable=True),
-        sa.Column("specialization_id", sa.Integer(),
-                  sa.ForeignKey("specializations.id", ondelete="SET NULL"), nullable=True),
+        sa.Column(
+            "specialization_id",
+            sa.Integer(),
+            sa.ForeignKey("specializations.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
         sa.Column("grade_code", sa.String(length=20), nullable=True),
         sa.Column("stack", sa.JSON(), nullable=False),
         sa.Column("salary_from", sa.Integer(), nullable=False),
@@ -40,10 +46,18 @@ def upgrade() -> None:
     op.create_table(
         "applications",
         sa.Column("id", sa.String(length=36), primary_key=True),
-        sa.Column("vacancy_id", sa.String(length=36),
-                  sa.ForeignKey("vacancies.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("candidate_user_id", sa.String(length=36),
-                  sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "vacancy_id",
+            sa.String(length=36),
+            sa.ForeignKey("vacancies.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
+        sa.Column(
+            "candidate_user_id",
+            sa.String(length=36),
+            sa.ForeignKey("users.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("message", sa.Text(), nullable=True),
         sa.Column("status", sa.String(length=16), nullable=False, server_default="sent"),
         sa.Column("created_at", sa.DateTime(), nullable=False),
@@ -57,12 +71,17 @@ def upgrade() -> None:
     op.create_table(
         "regular_tasks",
         sa.Column("id", sa.String(length=36), primary_key=True),
-        sa.Column("employer_id", sa.String(length=36),
-                  sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "employer_id", sa.String(length=36), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+        ),
         sa.Column("title", sa.String(length=200), nullable=False),
         sa.Column("description", sa.Text(), nullable=True),
-        sa.Column("specialization_id", sa.Integer(),
-                  sa.ForeignKey("specializations.id", ondelete="SET NULL"), nullable=True),
+        sa.Column(
+            "specialization_id",
+            sa.Integer(),
+            sa.ForeignKey("specializations.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
         sa.Column("grade_code", sa.String(length=20), nullable=True),
         sa.Column("status", sa.String(length=16), nullable=False, server_default="open"),
         sa.Column("created_at", sa.DateTime(), nullable=False),
@@ -72,18 +91,25 @@ def upgrade() -> None:
     op.create_table(
         "task_submissions",
         sa.Column("id", sa.String(length=36), primary_key=True),
-        sa.Column("task_id", sa.String(length=36),
-                  sa.ForeignKey("regular_tasks.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("candidate_user_id", sa.String(length=36),
-                  sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "task_id",
+            sa.String(length=36),
+            sa.ForeignKey("regular_tasks.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
+        sa.Column(
+            "candidate_user_id",
+            sa.String(length=36),
+            sa.ForeignKey("users.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("solution", sa.Text(), nullable=False),
         sa.Column("status", sa.String(length=16), nullable=False, server_default="submitted"),
         sa.Column("employer_feedback", sa.Text(), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=False),
     )
     op.create_index("ix_task_submissions_task_id", "task_submissions", ["task_id"])
-    op.create_index("ix_task_submissions_candidate_user_id", "task_submissions",
-                    ["candidate_user_id"])
+    op.create_index("ix_task_submissions_candidate_user_id", "task_submissions", ["candidate_user_id"])
 
 
 def downgrade() -> None:

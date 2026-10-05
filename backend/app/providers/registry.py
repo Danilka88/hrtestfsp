@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict
 
 from app.core.config import get_settings
 from app.providers import mock
@@ -21,7 +20,7 @@ class Providers:
     email: EmailProvider
     storage: StorageProvider
 
-    def as_dict(self) -> Dict[str, Provider]:
+    def as_dict(self) -> dict[str, Provider]:
         return {
             "llm": self.llm,
             "fsp": self.fsp,

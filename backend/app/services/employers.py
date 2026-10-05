@@ -11,7 +11,8 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from collections.abc import Sequence
+from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -50,16 +51,13 @@ class EmployerError(Exception):
 
 # --- Профиль компании ---------------------------------------------------------
 
-async def get_profile(session: AsyncSession, user_id: str) -> Optional[EmployerProfile]:
-    result = await session.execute(
-        select(EmployerProfile).where(EmployerProfile.user_id == user_id)
-    )
+
+async def get_profile(session: AsyncSession, user_id: str) -> EmployerProfile | None:
+    result = await session.execute(select(EmployerProfile).where(EmployerProfile.user_id == user_id))
     return result.scalar_one_or_none()
 
 
-async def upsert_profile(
-    session: AsyncSession, user_id: str, data: EmployerProfileIn
-) -> EmployerProfile:
+async def upsert_profile(session: AsyncSession, user_id: str, data: EmployerProfileIn) -> EmployerProfile:
     profile = await get_profile(session, user_id)
     if profile is None:
         profile = EmployerProfile(user_id=user_id)
@@ -73,6 +71,7 @@ async def upsert_profile(
 
 
 # --- Потребность --------------------------------------------------------------
+
 
 async def create_need(session: AsyncSession, user_id: str, payload: NeedIn) -> EmployerNeed:
     specialization_id = None
@@ -108,15 +107,16 @@ async def create_need(session: AsyncSession, user_id: str, payload: NeedIn) -> E
 
 # --- Банк кандидатов ----------------------------------------------------------
 
+
 async def _candidate_rows(
     session: AsyncSession,
     *,
-    specialization_code: Optional[str] = None,
-    grade: Optional[str] = None,
-    category_id: Optional[int] = None,
+    specialization_code: str | None = None,
+    grade: str | None = None,
+    category_id: int | None = None,
     stack: Sequence[str] = (),
-    has_fsp: Optional[bool] = None,
-) -> List[Tuple[CandidateProfile, User]]:
+    has_fsp: bool | None = None,
+) -> list[tuple[CandidateProfile, User]]:
     """Кандидаты банка: только прошедшие тест (у них определён грейд)."""
     query = (
         select(CandidateProfile, User)
@@ -149,10 +149,7 @@ async def _candidate_rows(
 
     if stack:
         wanted = {s.strip().lower() for s in stack if s and s.strip()}
-        rows = [
-            (p, u) for (p, u) in rows
-            if wanted & {s.strip().lower() for s in (p.stack or [])}
-        ]
+        rows = [(p, u) for (p, u) in rows if wanted & {s.strip().lower() for s in (p.stack or [])}]
     return rows
 
 
@@ -162,10 +159,10 @@ async def _signals_for(
     user: User,
     *,
     required_stack: Sequence[str],
-    required_specialization: Optional[str],
-    required_grade: Optional[str],
-    in_requested_category: Optional[bool] = None,
-) -> Tuple[CandidateSignals, Dict[str, Any]]:
+    required_specialization: str | None,
+    required_grade: str | None,
+    in_requested_category: bool | None = None,
+) -> tuple[CandidateSignals, dict[str, Any]]:
     """Сигналы кандидата: сила теста, достижения ФСП, свежесть, соответствие."""
     last_session = (
         await session.execute(
@@ -188,7 +185,7 @@ async def _signals_for(
     last_activity = await last_activity_at(session, user.id)
     fresh_days = days_since(last_activity)
 
-    fsp_count: Optional[int] = None
+    fsp_count: int | None = None
     if user.fsp_id:
         try:
             achievements = await get_fsp().fetch_achievements(user.fsp_id)
@@ -223,7 +220,7 @@ async def _signals_for(
     return signals, debug
 
 
-def _mask(profile: CandidateProfile, privacy: Dict[str, bool]) -> Dict[str, bool]:
+def _mask(profile: CandidateProfile, privacy: dict[str, bool]) -> dict[str, bool]:
     return {
         "stack": privacy.get("show_stack", True),
         "experience": privacy.get("show_experience", True),
@@ -231,9 +228,7 @@ def _mask(profile: CandidateProfile, privacy: Dict[str, bool]) -> Dict[str, bool
     }
 
 
-async def search_candidates(
-    session: AsyncSession, query: SearchQuery
-) -> Tuple[int, List[Dict[str, Any]]]:
+async def search_candidates(session: AsyncSession, query: SearchQuery) -> tuple[int, list[dict[str, Any]]]:
     """Поиск по банку кандидатов с фильтрами и объяснимым ранжированием."""
     rows = await _candidate_rows(
         session,
@@ -244,18 +239,19 @@ async def search_candidates(
         has_fsp=query.has_fsp,
     )
 
-    scored: List[Tuple[Any, CandidateProfile, User, Dict[str, Any], CandidateSignals]] = []
+    scored: list[tuple[Any, CandidateProfile, User, dict[str, Any], CandidateSignals]] = []
     for profile, user in rows:
         # Соответствие запрошенной категории: выдача строится по категориям,
         # поэтому такие кандидаты получают приоритет в порядке выдачи.
-        category_match: Optional[bool] = None
+        category_match: bool | None = None
         if query.specialization_code or query.grade:
             category_match = (
-                (not query.specialization_code or profile.specialization == query.specialization_code)
-                and (not query.grade or profile.grade == query.grade)
-            )
+                not query.specialization_code or profile.specialization == query.specialization_code
+            ) and (not query.grade or profile.grade == query.grade)
         signals, debug = await _signals_for(
-            session, profile, user,
+            session,
+            profile,
+            user,
             required_stack=query.stack,
             required_specialization=query.specialization_code,
             required_grade=query.grade,
@@ -271,7 +267,7 @@ async def search_candidates(
         )
     )
     total = len(scored)
-    page = scored[query.offset: query.offset + query.limit]
+    page = scored[query.offset : query.offset + query.limit]
 
     candidates = [
         _card(item[0], item[1], item[2], rank=query.offset + index)
@@ -280,7 +276,7 @@ async def search_candidates(
     return total, candidates
 
 
-def _fsp_from_reasons(reasons: Sequence[Any]) -> Optional[int]:
+def _fsp_from_reasons(reasons: Sequence[Any]) -> int | None:
     """Извлекает число подтверждённых достижений из объяснения ранжирования."""
     for reason in reasons:
         code = reason.get("code") if isinstance(reason, dict) else getattr(reason, "code", None)
@@ -292,7 +288,7 @@ def _fsp_from_reasons(reasons: Sequence[Any]) -> Optional[int]:
     return None
 
 
-def _card(scored: Any, profile: CandidateProfile, user: User, *, rank: int) -> Dict[str, Any]:
+def _card(scored: Any, profile: CandidateProfile, user: User, *, rank: int) -> dict[str, Any]:
     """Карточка кандидата без контактов; приватность ограничивает видимые блоки."""
     privacy = {**DEFAULT_PRIVACY, **(profile.privacy or {})}
     visible = _mask(profile, privacy)
@@ -319,14 +315,12 @@ def _card(scored: Any, profile: CandidateProfile, user: User, *, rank: int) -> D
 
 
 async def _category_id(
-    session: AsyncSession, specialization_code: Optional[str], grade: Optional[str]
-) -> Optional[int]:
+    session: AsyncSession, specialization_code: str | None, grade: str | None
+) -> int | None:
     if not specialization_code or not grade:
         return None
     specialization = (
-        await session.execute(
-            select(Specialization).where(Specialization.code == specialization_code)
-        )
+        await session.execute(select(Specialization).where(Specialization.code == specialization_code))
     ).scalar_one_or_none()
     if specialization is None:
         return None
@@ -342,8 +336,8 @@ async def _category_id(
 
 
 async def _recommended_categories(
-    session: AsyncSession, specialization_id: Optional[int], grade: Optional[str]
-) -> List[Category]:
+    session: AsyncSession, specialization_id: int | None, grade: str | None
+) -> list[Category]:
     """Рекомендуемые категории: целевая и соседние по грейду."""
     if specialization_id is None or not grade:
         return []
@@ -369,11 +363,11 @@ async def build_selection(
     employer_id: str,
     need: EmployerNeed,
     *,
-    parent_selection_id: Optional[str] = None,
-    stack_override: Optional[Sequence[str]] = None,
-    grade_override: Optional[str] = None,
-    title: Optional[str] = None,
-) -> Tuple[Selection, List[SelectionCandidate]]:
+    parent_selection_id: str | None = None,
+    stack_override: Sequence[str] | None = None,
+    grade_override: str | None = None,
+    title: str | None = None,
+) -> tuple[Selection, list[SelectionCandidate]]:
     """Формирует подборку по потребности и сохраняет её вместе с объяснениями."""
     specialization_code = None
     if need.specialization_id:
@@ -387,12 +381,10 @@ async def build_selection(
     category_ids = [c.id for c in categories]
     grade_by_category = {c.id: c.grade_code for c in categories}
 
-    rows = await _candidate_rows(
-        session, specialization_code=specialization_code, stack=required_stack
-    )
+    rows = await _candidate_rows(session, specialization_code=specialization_code, stack=required_stack)
     # Оставляем кандидатов рекомендуемых категорий; если их мало — добираем остальных
-    primary: List[Tuple[CandidateProfile, User]] = []
-    secondary: List[Tuple[CandidateProfile, User]] = []
+    primary: list[tuple[CandidateProfile, User]] = []
+    secondary: list[tuple[CandidateProfile, User]] = []
     for profile, user in rows:
         if grade and profile.grade in grade_by_category.values():
             primary.append((profile, user))
@@ -401,18 +393,18 @@ async def build_selection(
 
     ordered = primary if len(primary) >= 5 else primary + secondary[: max(0, 5 - len(primary))]
 
-    signals: List[CandidateSignals] = []
-    debug_map: Dict[str, Dict[str, Any]] = {}
-    profiles: Dict[str, Tuple[CandidateProfile, User]] = {}
+    signals: list[CandidateSignals] = []
+    debug_map: dict[str, dict[str, Any]] = {}
+    profiles: dict[str, tuple[CandidateProfile, User]] = {}
     for profile, user in ordered[:MAX_SELECTION_CANDIDATES]:
         prepared, debug = await _signals_for(
-            session, profile, user,
+            session,
+            profile,
+            user,
             required_stack=required_stack,
             required_specialization=specialization_code,
             required_grade=grade,
-            in_requested_category=(
-                None if not grade else profile.grade in grade_by_category.values()
-            ),
+            in_requested_category=(None if not grade else profile.grade in grade_by_category.values()),
         )
         signals.append(prepared)
         debug_map[user.id] = debug
@@ -436,7 +428,7 @@ async def build_selection(
     session.add(selection)
     await session.flush()
 
-    stored: List[SelectionCandidate] = []
+    stored: list[SelectionCandidate] = []
     for position, scored in enumerate(ranked, start=1):
         profile, user = profiles[scored.candidate_id]
         record = SelectionCandidate(
@@ -461,20 +453,24 @@ async def build_selection(
 
 async def get_selection(
     session: AsyncSession, employer_id: str, selection_id: str
-) -> Tuple[Selection, List[Tuple[SelectionCandidate, CandidateProfile, User]]]:
+) -> tuple[Selection, list[tuple[SelectionCandidate, CandidateProfile, User]]]:
     selection = await session.get(Selection, selection_id)
     if selection is None or selection.employer_id != employer_id:
         raise EmployerError(404, "Подборка не найдена")
 
     records = list(
-        (await session.execute(
-            select(SelectionCandidate)
-            .where(SelectionCandidate.selection_id == selection_id)
-            .order_by(SelectionCandidate.rank)
-        )).scalars().all()
+        (
+            await session.execute(
+                select(SelectionCandidate)
+                .where(SelectionCandidate.selection_id == selection_id)
+                .order_by(SelectionCandidate.rank)
+            )
+        )
+        .scalars()
+        .all()
     )
 
-    enriched: List[Tuple[SelectionCandidate, CandidateProfile, User]] = []
+    enriched: list[tuple[SelectionCandidate, CandidateProfile, User]] = []
     for record in records:
         profile = (
             await session.execute(
@@ -487,25 +483,33 @@ async def get_selection(
     return selection, enriched
 
 
-async def list_selections(session: AsyncSession, employer_id: str) -> List[Tuple[Selection, int]]:
+async def list_selections(session: AsyncSession, employer_id: str) -> list[tuple[Selection, int]]:
     selections = list(
-        (await session.execute(
-            select(Selection).where(Selection.employer_id == employer_id)
-            .order_by(Selection.created_at.desc())
-        )).scalars().all()
+        (
+            await session.execute(
+                select(Selection)
+                .where(Selection.employer_id == employer_id)
+                .order_by(Selection.created_at.desc())
+            )
+        )
+        .scalars()
+        .all()
     )
     counts = dict(
-        (await session.execute(
-            select(SelectionCandidate.selection_id, func.count())
-            .group_by(SelectionCandidate.selection_id)
-        )).all()
+        (
+            await session.execute(
+                select(SelectionCandidate.selection_id, func.count()).group_by(
+                    SelectionCandidate.selection_id
+                )
+            )
+        ).all()
     )
     return [(s, int(counts.get(s.id, 0))) for s in selections]
 
 
 def selection_candidate_card(
     record: SelectionCandidate, profile: CandidateProfile, user: User
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     privacy = {**DEFAULT_PRIVACY, **(profile.privacy or {})}
     visible = _mask(profile, privacy)
     return {

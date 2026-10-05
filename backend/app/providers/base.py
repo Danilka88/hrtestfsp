@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 
 class Provider(Protocol):
@@ -30,15 +30,15 @@ class FspAchievement:
     contest: str
     category: str
     year: int
-    place: Optional[int] = None
-    rating: Optional[float] = None
+    place: int | None = None
+    rating: float | None = None
 
 
 @runtime_checkable
 class FspProvider(Provider, Protocol):
     """Реестр достижений ФСП. Обязательна корректная обработка отсутствия истории."""
 
-    async def fetch_achievements(self, fsp_id: str) -> List[FspAchievement]: ...
+    async def fetch_achievements(self, fsp_id: str) -> list[FspAchievement]: ...
 
 
 @runtime_checkable

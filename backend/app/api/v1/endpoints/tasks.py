@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import List
-
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,25 +28,25 @@ async def create_task(
     return TaskOut.model_validate(await market.task_view(session, task))
 
 
-@router_employer.get("", response_model=List[TaskOut], summary="Задания работодателя")
+@router_employer.get("", response_model=list[TaskOut], summary="Задания работодателя")
 async def my_tasks(
     user: User = Depends(employer_only),
     session: AsyncSession = Depends(get_session),
-) -> List[TaskOut]:
+) -> list[TaskOut]:
     tasks = await market.list_employer_tasks(session, user.id)
     return [TaskOut.model_validate(await market.task_view(session, t)) for t in tasks]
 
 
 @router_employer.get(
     "/{task_id}/submissions",
-    response_model=List[SubmissionOut],
+    response_model=list[SubmissionOut],
     summary="Решения кандидатов по заданию",
 )
 async def task_submissions(
     task_id: str,
     user: User = Depends(employer_only),
     session: AsyncSession = Depends(get_session),
-) -> List[SubmissionOut]:
+) -> list[SubmissionOut]:
     rows = await market.list_submissions(session, user.id, task_id)
     return [
         SubmissionOut(
@@ -66,11 +64,11 @@ async def task_submissions(
     ]
 
 
-@router_candidate.get("", response_model=List[TaskOut], summary="Предложенные короткие задания")
+@router_candidate.get("", response_model=list[TaskOut], summary="Предложенные короткие задания")
 async def offered_tasks(
     user: User = Depends(candidate_only),
     session: AsyncSession = Depends(get_session),
-) -> List[TaskOut]:
+) -> list[TaskOut]:
     tasks = await market.list_open_tasks(session, user.id)
     return [TaskOut.model_validate(await market.task_view(session, t)) for t in tasks]
 
@@ -86,9 +84,7 @@ async def submit(
     user: User = Depends(candidate_only),
     session: AsyncSession = Depends(get_session),
 ) -> SubmissionOut:
-    submission = await market.submit_solution(
-        session, user.id, task_id=task_id, solution=payload.solution
-    )
+    submission = await market.submit_solution(session, user.id, task_id=task_id, solution=payload.solution)
     return SubmissionOut(
         id=submission.id,
         task_id=submission.task_id,

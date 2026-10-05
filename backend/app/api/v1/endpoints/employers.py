@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import List, NoReturn, Optional
+from typing import NoReturn
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -71,17 +71,19 @@ async def create_need(
     return await _selection_response(session, user.id, selection.id)
 
 
-@router.get("/selections", response_model=List[SelectionSummaryOut], summary="Список подборок")
+@router.get("/selections", response_model=list[SelectionSummaryOut], summary="Список подборок")
 async def list_selections(
     user: User = Depends(employer_only),
     session: AsyncSession = Depends(get_session),
-) -> List[SelectionSummaryOut]:
+) -> list[SelectionSummaryOut]:
     rows = await employer_service.list_selections(session, user.id)
     return [
         SelectionSummaryOut(
-            id=selection.id, title=selection.title,
+            id=selection.id,
+            title=selection.title,
             parent_selection_id=selection.parent_selection_id,
-            candidates_count=count, created_at=selection.created_at,
+            candidates_count=count,
+            created_at=selection.created_at,
         )
         for selection, count in rows
     ]
@@ -105,18 +107,20 @@ async def refine_selection(
     selection_id: str,
     user: User = Depends(employer_only),
     session: AsyncSession = Depends(get_session),
-    stack: Optional[List[str]] = Query(default=None, description="Уточнённый стек"),
-    grade: Optional[str] = Query(default=None, description="Уточнённый грейд"),
+    stack: list[str] | None = Query(default=None, description="Уточнённый стек"),
+    grade: str | None = Query(default=None, description="Уточнённый грейд"),
 ) -> SelectionOut:
     try:
         previous, _ = await employer_service.get_selection(session, user.id, selection_id)
-        need = await session.get(
-            employer_service.EmployerNeed, previous.need_id
-        ) if previous.need_id else None
+        need = (
+            await session.get(employer_service.EmployerNeed, previous.need_id) if previous.need_id else None
+        )
         if need is None:
             raise EmployerError(409, "У прежней подборки нет сохранённой потребности")
         selection, _ = await employer_service.build_selection(
-            session, user.id, need,
+            session,
+            user.id,
+            need,
             parent_selection_id=previous.id,
             stack_override=stack if stack is not None else None,
             grade_override=grade,
@@ -131,28 +135,33 @@ async def refine_selection(
 async def search(
     user: User = Depends(employer_only),
     session: AsyncSession = Depends(get_session),
-    specialization_code: Optional[str] = Query(default=None),
-    grade: Optional[str] = Query(default=None),
-    category_id: Optional[int] = Query(default=None),
-    stack: Optional[List[str]] = Query(default=None),
-    has_fsp: Optional[bool] = Query(default=None, description="Только с подтверждёнными достижениями"),
+    specialization_code: str | None = Query(default=None),
+    grade: str | None = Query(default=None),
+    category_id: int | None = Query(default=None),
+    stack: list[str] | None = Query(default=None),
+    has_fsp: bool | None = Query(default=None, description="Только с подтверждёнными достижениями"),
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
 ) -> SearchResultOut:
     query = SearchQuery(
-        specialization_code=specialization_code, grade=grade, category_id=category_id,
-        stack=stack or [], has_fsp=has_fsp, limit=limit, offset=offset,
+        specialization_code=specialization_code,
+        grade=grade,
+        category_id=category_id,
+        stack=stack or [],
+        has_fsp=has_fsp,
+        limit=limit,
+        offset=offset,
     )
     total, candidates = await employer_service.search_candidates(session, query)
     return SearchResultOut(
-        total=total, limit=limit, offset=offset,
+        total=total,
+        limit=limit,
+        offset=offset,
         candidates=[CandidateCardOut.model_validate(c) for c in candidates],
     )
 
 
-async def _selection_response(
-    session: AsyncSession, employer_id: str, selection_id: str
-) -> SelectionOut:
+async def _selection_response(session: AsyncSession, employer_id: str, selection_id: str) -> SelectionOut:
     selection, rows = await employer_service.get_selection(session, employer_id, selection_id)
     cards = [
         CandidateCardOut.model_validate(

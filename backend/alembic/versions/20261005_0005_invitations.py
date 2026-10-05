@@ -5,29 +5,43 @@ Revises: 20261005_0004
 Create Date: 2026-10-05
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision: str = "20261005_0005"
-down_revision: Union[str, None] = "20261005_0004"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = "20261005_0004"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
     op.create_table(
         "invitations",
         sa.Column("id", sa.String(length=36), primary_key=True),
-        sa.Column("employer_id", sa.String(length=36),
-                  sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("candidate_user_id", sa.String(length=36),
-                  sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("need_id", sa.String(length=36),
-                  sa.ForeignKey("employer_needs.id", ondelete="SET NULL"), nullable=True),
-        sa.Column("selection_id", sa.String(length=36),
-                  sa.ForeignKey("selections.id", ondelete="SET NULL"), nullable=True),
+        sa.Column(
+            "employer_id", sa.String(length=36), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+        ),
+        sa.Column(
+            "candidate_user_id",
+            sa.String(length=36),
+            sa.ForeignKey("users.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
+        sa.Column(
+            "need_id",
+            sa.String(length=36),
+            sa.ForeignKey("employer_needs.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
+        sa.Column(
+            "selection_id",
+            sa.String(length=36),
+            sa.ForeignKey("selections.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
         sa.Column("vacancy_id", sa.String(length=36), nullable=True),
         sa.Column("message", sa.Text(), nullable=True),
         sa.Column("salary_from", sa.Integer(), nullable=False),

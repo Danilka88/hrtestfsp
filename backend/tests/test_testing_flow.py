@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Dict, List
-
 from httpx import AsyncClient
 from sqlalchemy import select
 
@@ -12,8 +10,8 @@ from app.services.item_factory import generate_items
 from app.services.testing import GRADE_ORDER
 from tests.conftest import register_and_verify
 
-
 # --- Юнит-уровень: параметрическая генерация --------------------------------
+
 
 def test_generation_is_deterministic_for_same_seed() -> None:
     first = generate_items(seed=1)
@@ -44,11 +42,10 @@ def test_templates_produce_different_questions() -> None:
 
 # --- Интеграционный уровень: API --------------------------------------------
 
+
 async def _login(client: AsyncClient, email: str, role: str = "candidate") -> str:
     await register_and_verify(client, email, role=role)
-    response = await client.post(
-        "/api/v1/auth/login", json={"email": email, "password": "secret12345"}
-    )
+    response = await client.post("/api/v1/auth/login", json={"email": email, "password": "secret12345"})
     return response.json()["access_token"]
 
 
@@ -56,7 +53,7 @@ def _auth(token: str) -> dict:
     return {"Authorization": f"Bearer {token}"}
 
 
-async def _answer_key(db_factory) -> Dict[str, int]:
+async def _answer_key(db_factory) -> dict[str, int]:
     """Правильные ответы банка — известны только тесту."""
     async with db_factory() as session:
         items = (await session.execute(select(Item))).scalars().all()
@@ -77,7 +74,7 @@ async def _run_test(
     session_id = start.json()["session_id"]
     item = start.json()["item"]
 
-    seen: List[str] = []
+    seen: list[str] = []
     for _ in range(20):
         seen.append(item["id"])
         correct_index = answers[item["id"]]
@@ -126,17 +123,21 @@ async def test_survey_returns_grade_options(client: AsyncClient) -> None:
 
 async def test_unknown_specialization_and_grade_are_rejected(client: AsyncClient) -> None:
     token = await _login(client, "bad-spec@example.com")
-    assert (await client.post(
-        "/api/v1/testing/survey",
-        json={"industry": "it", "specialization_code": "no-such", "answers": {}},
-        headers=_auth(token),
-    )).status_code == 404
+    assert (
+        await client.post(
+            "/api/v1/testing/survey",
+            json={"industry": "it", "specialization_code": "no-such", "answers": {}},
+            headers=_auth(token),
+        )
+    ).status_code == 404
 
-    assert (await client.post(
-        "/api/v1/testing/sessions",
-        json={"specialization_code": "backend", "target_grade": "godlike"},
-        headers=_auth(token),
-    )).status_code == 400
+    assert (
+        await client.post(
+            "/api/v1/testing/sessions",
+            json={"specialization_code": "backend", "target_grade": "godlike"},
+            headers=_auth(token),
+        )
+    ).status_code == 400
 
 
 async def test_testing_requires_candidate_role(client: AsyncClient) -> None:
@@ -184,8 +185,8 @@ async def test_grade_is_not_lowered_automatically(client: AsyncClient, db_factor
     )
     result = await _run_test(client, token, db_factory, correct=False, target_grade="senior")
 
-    assert result["result_grade"] != "senior"          # тест провален
-    assert result["grade_change_applied"] is False     # но грейд не понижен
+    assert result["result_grade"] != "senior"  # тест провален
+    assert result["grade_change_applied"] is False  # но грейд не понижен
     assert result["current_grade"] == "senior"
     assert "понижение" in result["grade_change_reason"].lower()
 
@@ -194,7 +195,7 @@ async def test_grade_change_cooldown_blocks_second_change(client: AsyncClient, d
     """Смена грейда ограничена по времени."""
     token = await _login(client, "cooldown@example.com")
     first = await _run_test(client, token, db_factory, correct=False)
-    assert first["grade_change_applied"] is True       # первичное присвоение
+    assert first["grade_change_applied"] is True  # первичное присвоение
 
     second = await _run_test(client, token, db_factory, correct=True)
     assert second["grade_change_applied"] is False
@@ -202,9 +203,7 @@ async def test_grade_change_cooldown_blocks_second_change(client: AsyncClient, d
     assert second["current_grade"] == first["current_grade"]
 
 
-async def test_category_endpoint_reports_status_and_history(
-    client: AsyncClient, db_factory
-) -> None:
+async def test_category_endpoint_reports_status_and_history(client: AsyncClient, db_factory) -> None:
     token = await _login(client, "category@example.com")
     await _run_test(client, token, db_factory, correct=True)
 
@@ -217,7 +216,7 @@ async def test_category_endpoint_reports_status_and_history(
     assert len(body["sessions"]) == 1
     assert body["sessions"][0]["status"] == "completed"
     assert body["grade_change_cooldown_days"] > 0
-    assert body["grade_change_allowed"] is False       # сразу после смены — запрещено
+    assert body["grade_change_allowed"] is False  # сразу после смены — запрещено
 
 
 async def test_exposure_counter_grows(client: AsyncClient, db_factory) -> None:
@@ -226,7 +225,5 @@ async def test_exposure_counter_grows(client: AsyncClient, db_factory) -> None:
     result = await _run_test(client, token, db_factory, correct=True)
 
     async with db_factory() as session:
-        used = (await session.execute(
-            select(Item).where(Item.id.in_(result["seen_items"]))
-        )).scalars().all()
+        used = (await session.execute(select(Item).where(Item.id.in_(result["seen_items"])))).scalars().all()
         assert all(item.exposure_count >= 1 for item in used)

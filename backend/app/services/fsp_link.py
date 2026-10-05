@@ -7,7 +7,7 @@ API и структура данных реестра не предоставл�
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,7 +21,7 @@ async def link(session: AsyncSession, user: User, fsp_id: str | None) -> None:
     await session.refresh(user)
 
 
-async def status(session: AsyncSession, user: User) -> Dict[str, Any]:
+async def status(session: AsyncSession, user: User) -> dict[str, Any]:
     """Состояние связи: без идентификатора, без истории или с достижениями."""
     if not user.fsp_id:
         return {
@@ -34,7 +34,7 @@ async def status(session: AsyncSession, user: User) -> Dict[str, Any]:
             ),
         }
 
-    achievements: List[Dict[str, Any]] = []
+    achievements: list[dict[str, Any]] = []
     error: str | None = None
     try:
         for item in await get_fsp().fetch_achievements(user.fsp_id):

@@ -412,14 +412,37 @@ export async function createNeed(payload: {
   return (await api.post<Selection>("/employers/me/needs", payload)).data;
 }
 
-export async function listSelections(): Promise<
-  { id: string; title: string; candidates_count: number; parent_selection_id: string | null }[]
-> {
-  return (await api.get("/employers/me/selections")).data;
+export interface SelectionSummary {
+  id: string;
+  title: string;
+  candidates_count: number;
+  parent_selection_id: string | null;
+}
+
+export async function listSelections(): Promise<SelectionSummary[]> {
+  return (await api.get<SelectionSummary[]>("/employers/me/selections")).data;
 }
 
 export async function getSelection(id: string): Promise<Selection> {
   return (await api.get<Selection>(`/employers/me/selections/${id}`)).data;
+}
+
+/**
+ * Уточнение подборки: создаётся НОВАЯ подборка, прежняя сохраняется
+ * (в ответе заполнено parent_selection_id).
+ */
+export async function refineSelection(
+  id: string,
+  params: { stack?: string[]; grade?: string } = {},
+): Promise<Selection> {
+  return (
+    await api.post<Selection>(`/employers/me/selections/${id}/refine`, null, {
+      params,
+      // FastAPI ожидает повторяющийся параметр (?stack=a&stack=b), поэтому
+      // отключаем индексацию массивов в сериализаторе axios.
+      paramsSerializer: { indexes: null },
+    })
+  ).data;
 }
 
 export async function employerInvitations(): Promise<EmployerInvitation[]> {
@@ -437,7 +460,13 @@ export async function sendInvitation(payload: {
 }
 
 export async function searchCandidates(
-  params: Record<string, string | number | boolean>,
+  params: Record<string, string | number | boolean | string[]>,
 ): Promise<{ total: number; candidates: CandidateCard[] }> {
-  return (await api.get("/employers/me/search", { params })).data;
+  return (
+    await api.get("/employers/me/search", {
+      params,
+      // FastAPI ожидает повторяющийся параметр (?stack=a&stack=b).
+      paramsSerializer: { indexes: null },
+    })
+  ).data;
 }

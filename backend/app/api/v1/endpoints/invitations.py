@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import List
-
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,8 +23,9 @@ employer_only = require_roles(UserRole.EMPLOYER)
 candidate_only = require_roles(UserRole.CANDIDATE)
 
 
-@router_employer.post("", response_model=InvitationEmployerView,
-                      summary="Направить приглашение конкретному кандидату")
+@router_employer.post(
+    "", response_model=InvitationEmployerView, summary="Направить приглашение конкретному кандидату"
+)
 async def send_invitation(
     payload: InvitationCreate,
     user: User = Depends(employer_only),
@@ -37,28 +36,33 @@ async def send_invitation(
     return InvitationEmployerView.model_validate(view)
 
 
-@router_employer.get("", response_model=List[InvitationEmployerView],
-                     summary="Приглашения работодателя и их статусы")
+@router_employer.get(
+    "", response_model=list[InvitationEmployerView], summary="Приглашения работодателя и их статусы"
+)
 async def list_invitations(
     user: User = Depends(employer_only),
     session: AsyncSession = Depends(get_session),
-) -> List[InvitationEmployerView]:
+) -> list[InvitationEmployerView]:
     views = await invitation_service.list_for_employer(session, user.id)
     return [InvitationEmployerView.model_validate(v) for v in views]
 
 
-@router_candidate.get("", response_model=List[InvitationCandidateView],
-                      summary="Входящие приглашения кандидата")
+@router_candidate.get(
+    "", response_model=list[InvitationCandidateView], summary="Входящие приглашения кандидата"
+)
 async def my_invitations(
     user: User = Depends(candidate_only),
     session: AsyncSession = Depends(get_session),
-) -> List[InvitationCandidateView]:
+) -> list[InvitationCandidateView]:
     views = await invitation_service.list_for_candidate(session, user.id)
     return [InvitationCandidateView.model_validate(v) for v in views]
 
 
-@router_candidate.post("/{invitation_id}/view", response_model=InvitationCandidateView,
-                       summary="Отметить приглашение просмотренным")
+@router_candidate.post(
+    "/{invitation_id}/view",
+    response_model=InvitationCandidateView,
+    summary="Отметить приглашение просмотренным",
+)
 async def view_invitation(
     invitation_id: str,
     user: User = Depends(candidate_only),
@@ -70,8 +74,11 @@ async def view_invitation(
     )
 
 
-@router_candidate.post("/{invitation_id}/decision", response_model=InvitationCandidateView,
-                       summary="Принять или отклонить приглашение")
+@router_candidate.post(
+    "/{invitation_id}/decision",
+    response_model=InvitationCandidateView,
+    summary="Принять или отклонить приглашение",
+)
 async def decide_invitation(
     invitation_id: str,
     payload: InvitationDecision,

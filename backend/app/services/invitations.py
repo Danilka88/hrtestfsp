@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -45,16 +45,20 @@ def reference_for(user_id: str) -> str:
 async def resolve_candidate_reference(session: AsyncSession, reference: str) -> User:
     """Находит кандидата по ссылке из подборки/поиска (например cand-8049f321)."""
     raw = (reference or "").strip()
-    prefix = raw[len(REFERENCE_PREFIX):] if raw.startswith(REFERENCE_PREFIX) else raw
+    prefix = raw[len(REFERENCE_PREFIX) :] if raw.startswith(REFERENCE_PREFIX) else raw
     if len(prefix) < 6:
         raise InvitationError(400, "Некорректная ссылка кандидата")
 
     rows = list(
-        (await session.execute(
-            select(User).where(
-                User.role == UserRole.CANDIDATE, User.id.like(f"{prefix}%"), User.is_active.is_(True)
+        (
+            await session.execute(
+                select(User).where(
+                    User.role == UserRole.CANDIDATE, User.id.like(f"{prefix}%"), User.is_active.is_(True)
+                )
             )
-        )).scalars().all()
+        )
+        .scalars()
+        .all()
     )
     if not rows:
         raise InvitationError(404, "Кандидат не найден")
@@ -63,9 +67,7 @@ async def resolve_candidate_reference(session: AsyncSession, reference: str) -> 
     return rows[0]
 
 
-async def create_invitation(
-    session: AsyncSession, employer_id: str, payload: InvitationCreate
-) -> Invitation:
+async def create_invitation(session: AsyncSession, employer_id: str, payload: InvitationCreate) -> Invitation:
     candidate = await resolve_candidate_reference(session, payload.candidate_reference)
 
     duplicate = (
@@ -99,17 +101,15 @@ async def create_invitation(
 
 async def _candidate_context(
     session: AsyncSession, candidate_user_id: str
-) -> Tuple[Optional[CandidateProfile], Optional[User]]:
+) -> tuple[CandidateProfile | None, User | None]:
     profile = (
-        await session.execute(
-            select(CandidateProfile).where(CandidateProfile.user_id == candidate_user_id)
-        )
+        await session.execute(select(CandidateProfile).where(CandidateProfile.user_id == candidate_user_id))
     ).scalar_one_or_none()
     user = await session.get(User, candidate_user_id)
     return profile, user
 
 
-async def employer_view(session: AsyncSession, invitation: Invitation) -> Dict[str, Any]:
+async def employer_view(session: AsyncSession, invitation: Invitation) -> dict[str, Any]:
     profile, user = await _candidate_context(session, invitation.candidate_user_id)
     revealed = invitation.status == STATUS_ACCEPTED
 
@@ -141,7 +141,7 @@ async def employer_view(session: AsyncSession, invitation: Invitation) -> Dict[s
     }
 
 
-async def candidate_view(session: AsyncSession, invitation: Invitation) -> Dict[str, Any]:
+async def candidate_view(session: AsyncSession, invitation: Invitation) -> dict[str, Any]:
     company = (
         await session.execute(
             select(EmployerProfile).where(EmployerProfile.user_id == invitation.employer_id)
@@ -162,22 +162,32 @@ async def candidate_view(session: AsyncSession, invitation: Invitation) -> Dict[
     }
 
 
-async def list_for_employer(session: AsyncSession, employer_id: str) -> List[Dict[str, Any]]:
+async def list_for_employer(session: AsyncSession, employer_id: str) -> list[dict[str, Any]]:
     invitations = list(
-        (await session.execute(
-            select(Invitation).where(Invitation.employer_id == employer_id)
-            .order_by(Invitation.created_at.desc())
-        )).scalars().all()
+        (
+            await session.execute(
+                select(Invitation)
+                .where(Invitation.employer_id == employer_id)
+                .order_by(Invitation.created_at.desc())
+            )
+        )
+        .scalars()
+        .all()
     )
     return [await employer_view(session, item) for item in invitations]
 
 
-async def list_for_candidate(session: AsyncSession, candidate_user_id: str) -> List[Dict[str, Any]]:
+async def list_for_candidate(session: AsyncSession, candidate_user_id: str) -> list[dict[str, Any]]:
     invitations = list(
-        (await session.execute(
-            select(Invitation).where(Invitation.candidate_user_id == candidate_user_id)
-            .order_by(Invitation.created_at.desc())
-        )).scalars().all()
+        (
+            await session.execute(
+                select(Invitation)
+                .where(Invitation.candidate_user_id == candidate_user_id)
+                .order_by(Invitation.created_at.desc())
+            )
+        )
+        .scalars()
+        .all()
     )
     return [await candidate_view(session, item) for item in invitations]
 
@@ -192,9 +202,7 @@ async def _get_own_invitation(
     return invitation
 
 
-async def mark_viewed(
-    session: AsyncSession, candidate_user_id: str, invitation_id: str
-) -> Invitation:
+async def mark_viewed(session: AsyncSession, candidate_user_id: str, invitation_id: str) -> Invitation:
     invitation = await _get_own_invitation(session, candidate_user_id, invitation_id)
     if invitation.status == STATUS_SENT:
         invitation.status = STATUS_VIEWED

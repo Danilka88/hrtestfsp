@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Dict, List
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,7 +17,7 @@ from app.services.testing import GRADE_ORDER
 
 logger = logging.getLogger(__name__)
 
-SPECIALIZATIONS: List[tuple[str, str]] = [
+SPECIALIZATIONS: list[tuple[str, str]] = [
     ("backend", "Backend-разработчик"),
     ("frontend", "Frontend-разработчик"),
     ("fullstack", "Fullstack-разработчик"),
@@ -29,7 +28,7 @@ SPECIALIZATIONS: List[tuple[str, str]] = [
     ("mobile", "Мобильный разработчик"),
 ]
 
-GRADE_TITLES: Dict[str, str] = {
+GRADE_TITLES: dict[str, str] = {
     "intern": "Стажёр (Intern)",
     "junior": "Младший (Junior)",
     "junior_plus": "Младший+ (Junior+)",
@@ -39,13 +38,11 @@ GRADE_TITLES: Dict[str, str] = {
 }
 
 
-async def ensure_reference_data(session: AsyncSession) -> Dict[str, int]:
+async def ensure_reference_data(session: AsyncSession) -> dict[str, int]:
     """Гарантирует наличие справочников и непустого банка заданий."""
-    created: Dict[str, int] = {"specializations": 0, "grades": 0, "categories": 0, "items": 0}
+    created: dict[str, int] = {"specializations": 0, "grades": 0, "categories": 0, "items": 0}
 
-    existing_specs = {
-        code for (code,) in (await session.execute(select(Specialization.code))).all()
-    }
+    existing_specs = {code for (code,) in (await session.execute(select(Specialization.code))).all()}
     for code, title in SPECIALIZATIONS:
         if code not in existing_specs:
             session.add(Specialization(code=code, title=title))
@@ -64,9 +61,9 @@ async def ensure_reference_data(session: AsyncSession) -> Dict[str, int]:
 
     existing_categories = {
         (spec_id, grade_code)
-        for spec_id, grade_code in (await session.execute(
-            select(Category.specialization_id, Category.grade_code)
-        )).all()
+        for spec_id, grade_code in (
+            await session.execute(select(Category.specialization_id, Category.grade_code))
+        ).all()
     }
     for spec in specs:
         for grade in grades:

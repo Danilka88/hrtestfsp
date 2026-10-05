@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import uuid4
 
 from sqlalchemy import (
@@ -74,7 +74,7 @@ class Item(Base):
     __tablename__ = "items"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
-    specialization_id: Mapped[Optional[int]] = mapped_column(
+    specialization_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("specializations.id", ondelete="SET NULL"), nullable=True, index=True
     )
     skill_tag: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
@@ -83,7 +83,7 @@ class Item(Base):
     discrimination: Mapped[float] = mapped_column(Float, default=1.0, nullable=False)
 
     # {"question": ..., "options": [...], "correct_index": n, "template": ..., "params": {...}}
-    payload: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
 
     version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     max_exposure: Mapped[int] = mapped_column(Integer, default=200, nullable=False)
@@ -106,7 +106,7 @@ class SurveyResponse(Base):
     specialization_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("specializations.id", ondelete="CASCADE"), nullable=False
     )
-    answers: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    answers: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
 
 
@@ -128,16 +128,16 @@ class TestSession(Base):
     item_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     theta: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     standard_error: Mapped[float] = mapped_column(Float, default=99.0, nullable=False)
-    result_grade: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
-    warnings: Mapped[List[str]] = mapped_column(JSON, default=list, nullable=False)
+    result_grade: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    warnings: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
 
-    category_id: Mapped[Optional[int]] = mapped_column(
+    category_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("categories.id", ondelete="SET NULL"), nullable=True
     )
     grade_applied: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     started_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
-    finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class ItemResponseRecord(Base):
@@ -151,8 +151,8 @@ class ItemResponseRecord(Base):
         String(36), ForeignKey("items.id", ondelete="CASCADE"), nullable=False
     )
     correct: Mapped[bool] = mapped_column(Boolean, nullable=False)
-    response_time_ms: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    answer: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    response_time_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    answer: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
 
 
@@ -165,7 +165,7 @@ class GradeChange(Base):
     user_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    from_grade: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    from_grade: Mapped[str | None] = mapped_column(String(20), nullable=True)
     to_grade: Mapped[str] = mapped_column(String(20), nullable=False)
-    session_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
+    session_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)

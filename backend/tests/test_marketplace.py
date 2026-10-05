@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import Dict, Optional
 
 from httpx import AsyncClient
 from sqlalchemy import select
 
 from app.core.security import utcnow
 from app.models.candidate import CandidateProfile
-from app.models.testing import SESSION_COMPLETED, TestSession as SessionRow
+from app.models.testing import SESSION_COMPLETED
+from app.models.testing import TestSession as SessionRow
 from app.models.user import User
 from app.services import marketplace as market
 from tests.conftest import register_and_verify
@@ -23,9 +23,7 @@ CANDIDATE_CONTACTS = {
 
 
 async def _login_only(client: AsyncClient, email: str, password: str = "secret12345") -> str:
-    response = await client.post(
-        "/api/v1/auth/login", json={"email": email, "password": password}
-    )
+    response = await client.post("/api/v1/auth/login", json={"email": email, "password": password})
     assert response.status_code == 200, response.text
     return response.json()["access_token"]
 
@@ -35,30 +33,40 @@ async def _register_login(client: AsyncClient, email: str, role: str) -> str:
     return await _login_only(client, email)
 
 
-def _auth(token: str) -> Dict[str, str]:
+def _auth(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-async def _candidate(client: AsyncClient, db_factory, email: str,
-                     contacts: Optional[Dict[str, str]] = None) -> str:
+async def _candidate(
+    client: AsyncClient, db_factory, email: str, contacts: dict[str, str] | None = None
+) -> str:
     await register_and_verify(client, email)
     async with db_factory() as session:
         user = (await session.execute(select(User).where(User.email == email))).scalar_one()
-        session.add(CandidateProfile(
-            user_id=user.id,
-            full_name="Откликнувшийся Кандидат",
-            contacts=dict(contacts if contacts is not None else CANDIDATE_CONTACTS),
-            specialization="backend",
-            grade="middle",
-            experience_years=3,
-            stack=["Python", "Docker"],
-            roles=["backend"],
-        ))
-        session.add(SessionRow(
-            user_id=user.id, specialization_id=1, target_grade="middle",
-            status=SESSION_COMPLETED, item_count=8, theta=0.5, standard_error=0.4,
-            result_grade="middle",
-        ))
+        session.add(
+            CandidateProfile(
+                user_id=user.id,
+                full_name="Откликнувшийся Кандидат",
+                contacts=dict(contacts if contacts is not None else CANDIDATE_CONTACTS),
+                specialization="backend",
+                grade="middle",
+                experience_years=3,
+                stack=["Python", "Docker"],
+                roles=["backend"],
+            )
+        )
+        session.add(
+            SessionRow(
+                user_id=user.id,
+                specialization_id=1,
+                target_grade="middle",
+                status=SESSION_COMPLETED,
+                item_count=8,
+                theta=0.5,
+                standard_error=0.4,
+                result_grade="middle",
+            )
+        )
         await session.commit()
         return user.id
 
@@ -67,7 +75,8 @@ async def _employer(client: AsyncClient, email: str) -> str:
     token = await _register_login(client, email, "employer")
     await client.put(
         "/api/v1/employers/me/profile",
-        json={"company_name": "ООО «Доп. функционал»"}, headers=_auth(token),
+        json={"company_name": "ООО «Доп. функционал»"},
+        headers=_auth(token),
     )
     return token
 
@@ -83,19 +92,20 @@ async def _vacancy(client: AsyncClient, token: str, **overrides) -> dict:
         "salary_to": 320000,
         **overrides,
     }
-    response = await client.post("/api/v1/employers/me/vacancies", json=payload,
-                                 headers=_auth(token))
+    response = await client.post("/api/v1/employers/me/vacancies", json=payload, headers=_auth(token))
     assert response.status_code == 200, response.text
     return response.json()
 
 
 # --- Вакансии ------------------------------------------------------------------
 
+
 async def test_vacancy_requires_employer_role(client: AsyncClient) -> None:
     token = await _register_login(client, "cand-vac@example.com", "candidate")
     response = await client.post(
         "/api/v1/employers/me/vacancies",
-        json={"title": "Тест", "salary_from": 1, "salary_to": 2}, headers=_auth(token),
+        json={"title": "Тест", "salary_from": 1, "salary_to": 2},
+        headers=_auth(token),
     )
     assert response.status_code == 403
 
@@ -104,23 +114,28 @@ async def test_vacancy_salary_range_validated(client: AsyncClient) -> None:
     token = await _employer(client, "vac-validate@example.com")
     response = await client.post(
         "/api/v1/employers/me/vacancies",
-        json={"title": "Тест", "salary_from": 500000, "salary_to": 100000}, headers=_auth(token),
+        json={"title": "Тест", "salary_from": 500000, "salary_to": 100000},
+        headers=_auth(token),
     )
     assert response.status_code == 400
 
 
 async def test_vacancy_grade_and_specialization_validated(client: AsyncClient) -> None:
     token = await _employer(client, "vac-validate2@example.com")
-    assert (await client.post(
-        "/api/v1/employers/me/vacancies",
-        json={"title": "Тест", "grade": "godlike", "salary_from": 1, "salary_to": 2},
-        headers=_auth(token),
-    )).status_code == 400
-    assert (await client.post(
-        "/api/v1/employers/me/vacancies",
-        json={"title": "Тест", "specialization_code": "no-such", "salary_from": 1, "salary_to": 2},
-        headers=_auth(token),
-    )).status_code == 404
+    assert (
+        await client.post(
+            "/api/v1/employers/me/vacancies",
+            json={"title": "Тест", "grade": "godlike", "salary_from": 1, "salary_to": 2},
+            headers=_auth(token),
+        )
+    ).status_code == 400
+    assert (
+        await client.post(
+            "/api/v1/employers/me/vacancies",
+            json={"title": "Тест", "specialization_code": "no-such", "salary_from": 1, "salary_to": 2},
+            headers=_auth(token),
+        )
+    ).status_code == 404
 
 
 async def test_candidate_sees_open_vacancies_only(client: AsyncClient, db_factory) -> None:
@@ -134,13 +149,13 @@ async def test_candidate_sees_open_vacancies_only(client: AsyncClient, db_factor
     assert open_list.json()[0]["company_name"] == "ООО «Доп. функционал»"
     assert open_list.json()[0]["salary_from"] == 250000
 
-    await client.post(f"/api/v1/employers/me/vacancies/{vacancy['id']}/close",
-                      headers=_auth(employer))
+    await client.post(f"/api/v1/employers/me/vacancies/{vacancy['id']}/close", headers=_auth(employer))
     after_close = await client.get("/api/v1/candidates/me/vacancies", headers=_auth(candidate))
     assert all(v["id"] != vacancy["id"] for v in after_close.json())
 
 
 # --- Отклики -------------------------------------------------------------------
+
 
 async def test_application_reveals_contacts_to_employer(client: AsyncClient, db_factory) -> None:
     candidate_id = await _candidate(client, db_factory, "applier@example.com")
@@ -150,7 +165,8 @@ async def test_application_reveals_contacts_to_employer(client: AsyncClient, db_
 
     applied = await client.post(
         f"/api/v1/candidates/me/vacancies/{vacancy['id']}/applications",
-        json={"message": "Хочу в команду"}, headers=_auth(candidate_token),
+        json={"message": "Хочу в команду"},
+        headers=_auth(candidate_token),
     )
     assert applied.status_code == 200, applied.text
     assert applied.json()["status"] == "sent"
@@ -185,12 +201,12 @@ async def test_application_to_closed_vacancy_rejected(client: AsyncClient, db_fa
     token = await _login_only(client, "closed-app@example.com")
     employer_token = await _employer(client, "closed-app-emp@example.com")
     vacancy = await _vacancy(client, employer_token)
-    await client.post(f"/api/v1/employers/me/vacancies/{vacancy['id']}/close",
-                      headers=_auth(employer_token))
+    await client.post(f"/api/v1/employers/me/vacancies/{vacancy['id']}/close", headers=_auth(employer_token))
 
     response = await client.post(
         f"/api/v1/candidates/me/vacancies/{vacancy['id']}/applications",
-        json={}, headers=_auth(token),
+        json={},
+        headers=_auth(token),
     )
     assert response.status_code == 409
 
@@ -203,20 +219,23 @@ async def test_employer_decides_on_application(client: AsyncClient, db_factory) 
 
     applied = await client.post(
         f"/api/v1/candidates/me/vacancies/{vacancy['id']}/applications",
-        json={}, headers=_auth(token),
+        json={},
+        headers=_auth(token),
     )
     application_id = applied.json()["id"]
 
     decided = await client.post(
         f"/api/v1/employers/me/vacancies/applications/{application_id}/decision",
-        json={"status": "accepted"}, headers=_auth(employer_token),
+        json={"status": "accepted"},
+        headers=_auth(employer_token),
     )
     assert decided.status_code == 200
     assert decided.json()["status"] == "accepted"
 
     again = await client.post(
         f"/api/v1/employers/me/vacancies/applications/{application_id}/decision",
-        json={"status": "declined"}, headers=_auth(employer_token),
+        json={"status": "declined"},
+        headers=_auth(employer_token),
     )
     assert again.status_code == 409
 
@@ -225,9 +244,7 @@ async def test_employer_decides_on_application(client: AsyncClient, db_factory) 
     assert mine.json()[0]["vacancy_title"] == "Backend-разработчик"
 
 
-async def test_employer_cannot_read_foreign_vacancy_applications(
-    client: AsyncClient, db_factory
-) -> None:
+async def test_employer_cannot_read_foreign_vacancy_applications(client: AsyncClient, db_factory) -> None:
     await _candidate(client, db_factory, "foreign-app@example.com")
     owner = await _employer(client, "foreign-owner@example.com")
     stranger = await _employer(client, "foreign-stranger@example.com")
@@ -248,14 +265,15 @@ async def test_candidate_cannot_see_other_applications(client: AsyncClient, db_f
     employer_token = await _employer(client, "apps-iso@example.com")
     vacancy = await _vacancy(client, employer_token)
 
-    await client.post(f"/api/v1/candidates/me/vacancies/{vacancy['id']}/applications",
-                      json={}, headers=_auth(owner_token))
+    await client.post(
+        f"/api/v1/candidates/me/vacancies/{vacancy['id']}/applications", json={}, headers=_auth(owner_token)
+    )
 
-    assert (await client.get("/api/v1/candidates/me/applications",
-                             headers=_auth(other_token))).json() == []
+    assert (await client.get("/api/v1/candidates/me/applications", headers=_auth(other_token))).json() == []
 
 
 # --- Регулярные короткие задания ----------------------------------------------
+
 
 async def test_task_lifecycle(client: AsyncClient, db_factory) -> None:
     await _candidate(client, db_factory, "tasker@example.com")
@@ -264,9 +282,12 @@ async def test_task_lifecycle(client: AsyncClient, db_factory) -> None:
 
     created = await client.post(
         "/api/v1/employers/me/tasks",
-        json={"title": "Спроектируйте идемпотентный вебхук",
-              "description": "Опишите подход или приведите код",
-              "specialization_code": "backend", "grade": "middle"},
+        json={
+            "title": "Спроектируйте идемпотентный вебхук",
+            "description": "Опишите подход или приведите код",
+            "specialization_code": "backend",
+            "grade": "middle",
+        },
         headers=_auth(employer_token),
     )
     assert created.status_code == 200, created.text
@@ -286,7 +307,8 @@ async def test_task_lifecycle(client: AsyncClient, db_factory) -> None:
 
     empty = await client.post(
         f"/api/v1/candidates/me/tasks/{task_id}/submissions",
-        json={"solution": "   "}, headers=_auth(candidate_token),
+        json={"solution": "   "},
+        headers=_auth(candidate_token),
     )
     # Строка из пробелов проходит схему, но отклоняется сервисом с понятным сообщением
     assert empty.status_code == 400
@@ -300,9 +322,7 @@ async def test_task_lifecycle(client: AsyncClient, db_factory) -> None:
     assert submissions.json()[0]["candidate_grade"] == "middle"
 
 
-async def test_task_submission_refreshes_profile_activity(
-    client: AsyncClient, db_factory
-) -> None:
+async def test_task_submission_refreshes_profile_activity(client: AsyncClient, db_factory) -> None:
     """Участие в коротких заданиях даёт работодателю свежий сигнал о кандидате."""
     email = "freshness@example.com"
     await register_and_verify(client, email)
@@ -310,15 +330,30 @@ async def test_task_submission_refreshes_profile_activity(
 
     async with db_factory() as session:
         user = (await session.execute(select(User).where(User.email == email))).scalar_one()
-        session.add(CandidateProfile(
-            user_id=user.id, full_name="Давний Кандидат", contacts={},
-            specialization="backend", grade="middle", stack=["Python"],
-        ))
-        session.add(SessionRow(
-            user_id=user.id, specialization_id=1, target_grade="middle",
-            status=SESSION_COMPLETED, item_count=8, theta=0.5, standard_error=0.4,
-            result_grade="middle", started_at=long_ago, finished_at=long_ago,
-        ))
+        session.add(
+            CandidateProfile(
+                user_id=user.id,
+                full_name="Давний Кандидат",
+                contacts={},
+                specialization="backend",
+                grade="middle",
+                stack=["Python"],
+            )
+        )
+        session.add(
+            SessionRow(
+                user_id=user.id,
+                specialization_id=1,
+                target_grade="middle",
+                status=SESSION_COMPLETED,
+                item_count=8,
+                theta=0.5,
+                standard_error=0.4,
+                result_grade="middle",
+                started_at=long_ago,
+                finished_at=long_ago,
+            )
+        )
         await session.commit()
 
         before = await market.last_activity_at(session, user.id)
@@ -333,7 +368,8 @@ async def test_task_submission_refreshes_profile_activity(
     )
     await client.post(
         f"/api/v1/candidates/me/tasks/{task.json()['id']}/submissions",
-        json={"solution": "Подход описан"}, headers=_auth(token),
+        json={"solution": "Подход описан"},
+        headers=_auth(token),
     )
 
     async with db_factory() as session:

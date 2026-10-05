@@ -8,7 +8,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 from uuid import uuid4
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
@@ -35,23 +34,23 @@ class Invitation(Base):
     candidate_user_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    need_id: Mapped[Optional[str]] = mapped_column(
+    need_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("employer_needs.id", ondelete="SET NULL"), nullable=True
     )
-    selection_id: Mapped[Optional[str]] = mapped_column(
+    selection_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("selections.id", ondelete="SET NULL"), nullable=True
     )
     # Вакансия появится в дополнительном функционале (Этап 6) — привязка необязательна
-    vacancy_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
+    vacancy_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
 
-    message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    message: Mapped[str | None] = mapped_column(Text, nullable=True)
     # Зарплата обязательна: кандидат видит условия до начала общения
     salary_from: Mapped[int] = mapped_column(Integer, nullable=False)
     salary_to: Mapped[int] = mapped_column(Integer, nullable=False)
-    contact_method: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    contact_method: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     status: Mapped[str] = mapped_column(String(16), default=STATUS_SENT, nullable=False, index=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
-    viewed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-    decided_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    viewed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

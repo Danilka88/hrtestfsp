@@ -6,15 +6,16 @@ Revises: 20261005_0002
 Create Date: 2026-10-05
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision: str = "20261005_0003"
-down_revision: Union[str, None] = "20261005_0002"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = "20261005_0002"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -38,10 +39,18 @@ def upgrade() -> None:
     op.create_table(
         "categories",
         sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
-        sa.Column("specialization_id", sa.Integer(),
-                  sa.ForeignKey("specializations.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("grade_code", sa.String(length=20),
-                  sa.ForeignKey("grades.code", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "specialization_id",
+            sa.Integer(),
+            sa.ForeignKey("specializations.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
+        sa.Column(
+            "grade_code",
+            sa.String(length=20),
+            sa.ForeignKey("grades.code", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.UniqueConstraint("specialization_id", "grade_code", name="uq_category"),
     )
     op.create_index("ix_categories_specialization_id", "categories", ["specialization_id"])
@@ -50,8 +59,12 @@ def upgrade() -> None:
     op.create_table(
         "items",
         sa.Column("id", sa.String(length=36), primary_key=True),
-        sa.Column("specialization_id", sa.Integer(),
-                  sa.ForeignKey("specializations.id", ondelete="SET NULL"), nullable=True),
+        sa.Column(
+            "specialization_id",
+            sa.Integer(),
+            sa.ForeignKey("specializations.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
         sa.Column("skill_tag", sa.String(length=64), nullable=False),
         sa.Column("item_type", sa.String(length=24), nullable=False, server_default="single_choice"),
         sa.Column("difficulty", sa.Float(), nullable=False),
@@ -70,11 +83,16 @@ def upgrade() -> None:
     op.create_table(
         "survey_responses",
         sa.Column("id", sa.String(length=36), primary_key=True),
-        sa.Column("user_id", sa.String(length=36),
-                  sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "user_id", sa.String(length=36), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+        ),
         sa.Column("industry", sa.String(length=64), nullable=False),
-        sa.Column("specialization_id", sa.Integer(),
-                  sa.ForeignKey("specializations.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "specialization_id",
+            sa.Integer(),
+            sa.ForeignKey("specializations.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("answers", sa.JSON(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
     )
@@ -83,10 +101,15 @@ def upgrade() -> None:
     op.create_table(
         "test_sessions",
         sa.Column("id", sa.String(length=36), primary_key=True),
-        sa.Column("user_id", sa.String(length=36),
-                  sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("specialization_id", sa.Integer(),
-                  sa.ForeignKey("specializations.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "user_id", sa.String(length=36), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+        ),
+        sa.Column(
+            "specialization_id",
+            sa.Integer(),
+            sa.ForeignKey("specializations.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("target_grade", sa.String(length=20), nullable=False),
         sa.Column("status", sa.String(length=20), nullable=False, server_default="in_progress"),
         sa.Column("item_count", sa.Integer(), nullable=False, server_default="0"),
@@ -94,8 +117,9 @@ def upgrade() -> None:
         sa.Column("standard_error", sa.Float(), nullable=False, server_default="99"),
         sa.Column("result_grade", sa.String(length=20), nullable=True),
         sa.Column("warnings", sa.JSON(), nullable=False),
-        sa.Column("category_id", sa.Integer(),
-                  sa.ForeignKey("categories.id", ondelete="SET NULL"), nullable=True),
+        sa.Column(
+            "category_id", sa.Integer(), sa.ForeignKey("categories.id", ondelete="SET NULL"), nullable=True
+        ),
         sa.Column("grade_applied", sa.Boolean(), nullable=False, server_default=sa.false()),
         sa.Column("started_at", sa.DateTime(), nullable=False),
         sa.Column("finished_at", sa.DateTime(), nullable=True),
@@ -105,10 +129,15 @@ def upgrade() -> None:
     op.create_table(
         "item_responses",
         sa.Column("id", sa.String(length=36), primary_key=True),
-        sa.Column("session_id", sa.String(length=36),
-                  sa.ForeignKey("test_sessions.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("item_id", sa.String(length=36),
-                  sa.ForeignKey("items.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "session_id",
+            sa.String(length=36),
+            sa.ForeignKey("test_sessions.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
+        sa.Column(
+            "item_id", sa.String(length=36), sa.ForeignKey("items.id", ondelete="CASCADE"), nullable=False
+        ),
         sa.Column("correct", sa.Boolean(), nullable=False),
         sa.Column("response_time_ms", sa.Integer(), nullable=True),
         sa.Column("answer", sa.JSON(), nullable=False),
@@ -119,8 +148,9 @@ def upgrade() -> None:
     op.create_table(
         "grade_changes",
         sa.Column("id", sa.String(length=36), primary_key=True),
-        sa.Column("user_id", sa.String(length=36),
-                  sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "user_id", sa.String(length=36), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+        ),
         sa.Column("from_grade", sa.String(length=20), nullable=True),
         sa.Column("to_grade", sa.String(length=20), nullable=False),
         sa.Column("session_id", sa.String(length=36), nullable=True),

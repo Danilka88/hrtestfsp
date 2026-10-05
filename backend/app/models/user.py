@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 from uuid import uuid4
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, String
@@ -36,14 +35,14 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     # Связь с участником соревновательного движения (обрабатывается на Этапе 5)
-    fsp_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    fsp_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
 
     # Согласия по 152-ФЗ: фиксируется факт и версия текста согласия
-    consent_pdn_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-    consent_pdn_version: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
-    consent_publish_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    consent_pdn_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    consent_pdn_version: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    consent_publish_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class EmailVerificationToken(Base):
@@ -55,7 +54,7 @@ class EmailVerificationToken(Base):
     )
     token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    used_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
 
 
@@ -69,5 +68,5 @@ class RefreshToken(Base):
         String(36), ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
     )
     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    revoked_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)

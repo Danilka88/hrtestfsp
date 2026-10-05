@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 
 import * as apiClient from "../../api/client";
-import type { CandidateCard, EmployerInvitation, Selection, Specialization } from "../../api/client";
+import type {
+  CandidateCard,
+  EmployerInvitation,
+  Grade,
+  Selection,
+  SelectionSummary,
+  Specialization,
+} from "../../api/client";
 import { errorMessage } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import {
@@ -16,7 +23,7 @@ import {
   money,
 } from "../../components/ui";
 
-type Tab = "profile" | "selection" | "invitations";
+type Tab = "selection" | "search" | "invitations" | "profile";
 
 export function EmployerCabinet() {
   const { user, logout } = useAuth();
@@ -38,6 +45,7 @@ export function EmployerCabinet() {
         {(
           [
             ["selection", "Подбор кандидатов"],
+            ["search", "Поиск по банку"],
             ["invitations", "Приглашения"],
             ["profile", "Профиль компании"],
           ] as [Tab, string][]
@@ -49,6 +57,7 @@ export function EmployerCabinet() {
       </nav>
 
       {tab === "selection" ? <SelectionTab /> : null}
+      {tab === "search" ? <SearchTab /> : null}
       {tab === "invitations" ? <InvitationsTab /> : null}
       {tab === "profile" ? <CompanyTab /> : null}
     </div>
@@ -57,6 +66,8 @@ export function EmployerCabinet() {
 
 function SelectionTab() {
   const [specializations, setSpecializations] = useState<Specialization[]>([]);
+  const [grades, setGrades] = useState<Grade[]>([]);
+  const [history, setHistory] = useState<SelectionSummary[]>([]);
   const [title, setTitle] = useState("Backend-разработчик (Python)");
   const [description, setDescription] = useState("Команда платежей");
   const [specialization, setSpecialization] = useState("backend");
@@ -64,19 +75,29 @@ function SelectionTab() {
   const [stack, setStack] = useState("Python, PostgreSQL, Docker");
   const [selection, setSelection] = useState<Selection | null>(null);
   const [inviteFor, setInviteFor] = useState<CandidateCard | null>(null);
-  const [salaryFrom, setSalaryFrom] = useState("250000");
-  const [salaryTo, setSalaryTo] = useState("320000");
-  const [inviteMessage, setInviteMessage] = useState("Приглашаем в команду платежей");
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const loadHistory = useCallback(async () => {
+    try {
+      setHistory(await apiClient.listSelections());
+    } catch {
+      // История — вспомогательный блок: её недоступность не должна ломать экран.
+    }
+  }, []);
 
   useEffect(() => {
     apiClient
       .listSpecializations()
       .then(setSpecializations)
       .catch(() => undefined);
-  }, []);
+    apiClient
+      .listGrades()
+      .then(setGrades)
+      .catch(() => undefined);
+    void loadHistory();
+  }, [loadHistory]);
 
   const build = useCallback(async () => {
     setBusy(true);
@@ -94,48 +115,42 @@ function SelectionTab() {
       setNotice(
         `Подборка сформирована: ${result.candidates.length} кандидатов, рубрика ${result.rubric_version}`,
       );
+      void loadHistory();
     } catch (err) {
       setError(errorMessage(err));
     } finally {
       setBusy(false);
     }
-  }, [title, description, specialization, grade, stack]);
+  }, [title, description, specialization, grade, stack, loadHistory]);
 
   const refine = useCallback(async () => {
     if (!selection) return;
     setBusy(true);
     setError(null);
+    setNotice(null);
     try {
-      const refined = await apiClient.getSelection(selection.id);
-      setSelection(refined);
-      setNotice("Прежняя подборка сохранена: уточнение создаёт новую версию");
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setBusy(false);
-    }
-  }, [selection]);
-
-  async function invite() {
-    if (!inviteFor) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await apiClient.sendInvitation({
-        candidate_reference: inviteFor.reference,
-        message: inviteMessage,
-        salary_from: Number(salaryFrom),
-        salary_to: Number(salaryTo),
-        contact_method: "hr@company.ru",
+      const stackList = stack
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+      // Уточнение создаёт новую подборку на сервере: прежняя сохраняется
+      // и остаётся доступной в истории (parent_selection_id).
+      const refined = await apiClient.refineSelection(selection.id, {
+        ...(stackList.length ? { stack: stackList } : {}),
+        ...(grade ? { grade } : {}),
       });
-      setNotice(`Приглашение отправлено кандидату ${inviteFor.reference}`);
-      setInviteFor(null);
+      setSelection(refined);
+      setNotice(
+        `Уточнённая подборка: ${refined.candidates.length} кандидатов` +
+          (refined.parent_selection_id ? ` · прежняя версия сохранена` : ""),
+      );
+      void loadHistory();
     } catch (err) {
       setError(errorMessage(err));
     } finally {
       setBusy(false);
     }
-  }
+  }, [selection, stack, grade, loadHistory]);
 
   return (
     <div className="space-y-4">
@@ -163,9 +178,15 @@ function SelectionTab() {
               value={grade}
               onChange={(event) => setGrade(event.target.value)}
             >
-              {["intern", "junior", "junior_plus", "middle", "senior", "lead"].map((code) => (
-                <option key={code} value={code}>
-                  {gradesLabel(code)}
+              {(grades.length
+                ? grades.map((item) => ({ code: item.code, title: item.title }))
+                : ["intern", "junior", "junior_plus", "middle", "senior", "lead"].map((code) => ({
+                    code,
+                    title: gradesLabel(code),
+                  }))
+              ).map((item) => (
+                <option key={item.code} value={item.code}>
+                  {item.title}
                 </option>
               ))}
             </select>
@@ -180,7 +201,7 @@ function SelectionTab() {
             Сформировать подборку
           </Button>
           <Button variant="ghost" onClick={() => void refine()} disabled={busy || !selection}>
-            Показать уточнённую (прежняя сохраняется)
+            Уточнить подборку (прежняя сохраняется)
           </Button>
         </div>
       </Card>
@@ -197,30 +218,12 @@ function SelectionTab() {
           </p>
           <div className="space-y-3">
             {selection.candidates.map((candidate) => (
-              <div key={candidate.reference} className="rounded-lg border border-slate-800 p-3">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    <p className="font-medium">
-                      #{candidate.rank} · {candidate.full_name ?? candidate.reference}
-                    </p>
-                    <p className="text-xs text-slate-400">
-                      {candidate.specialization ?? "—"} / {gradesLabel(candidate.grade)} · балл{" "}
-                      {candidate.score}
-                      {candidate.fsp_achievements !== null
-                        ? ` · достижений ФСП: ${candidate.fsp_achievements}`
-                        : ""}
-                    </p>
-                    {candidate.stack.length ? (
-                      <p className="mt-1 text-xs text-slate-500">{candidate.stack.join(", ")}</p>
-                    ) : null}
-                  </div>
-                  <Button onClick={() => setInviteFor(candidate)} disabled={busy}>
-                    Пригласить
-                  </Button>
-                </div>
-                <ReasonList reasons={candidate.reasons} missing={candidate.missing} />
-                <p className="mt-1 text-xs text-slate-600">Контакты скрыты до принятия приглашения</p>
-              </div>
+              <CandidateRow
+                key={candidate.reference}
+                candidate={candidate}
+                busy={busy}
+                onInvite={setInviteFor}
+              />
             ))}
             {selection.candidates.length === 0 ? (
               <p className="text-sm text-slate-500">Кандидатов по этой потребности пока нет.</p>
@@ -229,24 +232,34 @@ function SelectionTab() {
         </Card>
       ) : null}
 
-      {inviteFor ? (
-        <Card title={`Приглашение для ${inviteFor.reference}`} accent>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Зарплата от, ₽ (обязательно)" value={salaryFrom} onChange={setSalaryFrom} />
-            <Field label="Зарплата до, ₽ (обязательно)" value={salaryTo} onChange={setSalaryTo} />
-          </div>
-          <div className="mt-3">
-            <TextArea label="Текст предложения" value={inviteMessage} onChange={setInviteMessage} rows={3} />
-          </div>
-          <div className="mt-3 flex gap-2">
-            <Button onClick={() => void invite()} disabled={busy}>
-              Отправить приглашение
-            </Button>
-            <Button variant="ghost" onClick={() => setInviteFor(null)}>
-              Отмена
-            </Button>
-          </div>
+      {history.length ? (
+        <Card title="История подборок">
+          <p className="mb-2 text-xs text-slate-500">
+            Уточнение не перезаписывает результат: каждая версия хранится отдельно.
+          </p>
+          <ul className="space-y-1 text-sm">
+            {history.map((item) => (
+              <li key={item.id} className="flex flex-wrap items-center gap-2 text-slate-300">
+                <span className="font-medium">{item.title}</span>
+                <span className="text-xs text-slate-500">
+                  {item.candidates_count} кандидатов
+                  {item.parent_selection_id ? " · уточнение предыдущей версии" : " · первичная"}
+                </span>
+              </li>
+            ))}
+          </ul>
         </Card>
+      ) : null}
+
+      {inviteFor ? (
+        <InvitePanel
+          candidate={inviteFor}
+          onClose={() => setInviteFor(null)}
+          onSent={(text) => {
+            setInviteFor(null);
+            setNotice(text);
+          }}
+        />
       ) : null}
     </div>
   );
@@ -375,5 +388,246 @@ function CompanyTab() {
       {message ? <p className="mt-2 text-sm text-emerald-300">{message}</p> : null}
       {error ? <p className="mt-2 text-sm text-rose-300">{error}</p> : null}
     </Card>
+  );
+}
+
+/** Карточка кандидата с объяснением — одна и та же в подборке и в поиске. */
+function CandidateRow({
+  candidate,
+  busy,
+  onInvite,
+}: {
+  candidate: CandidateCard;
+  busy: boolean;
+  onInvite: (candidate: CandidateCard) => void;
+}) {
+  return (
+    <div className="rounded-lg border border-slate-800 p-3">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="font-medium">
+            #{candidate.rank} · {candidate.full_name ?? candidate.reference}
+          </p>
+          <p className="text-xs text-slate-400">
+            {candidate.specialization ?? "—"} / {gradesLabel(candidate.grade)} · балл {candidate.score}
+            {candidate.fsp_achievements !== null
+              ? ` · достижений ФСП: ${candidate.fsp_achievements}`
+              : ""}
+          </p>
+          {candidate.stack.length ? (
+            <p className="mt-1 text-xs text-slate-500">{candidate.stack.join(", ")}</p>
+          ) : null}
+        </div>
+        <Button onClick={() => onInvite(candidate)} disabled={busy}>
+          Пригласить
+        </Button>
+      </div>
+      <ReasonList reasons={candidate.reasons} missing={candidate.missing} />
+      <p className="mt-1 text-xs text-slate-600">Контакты скрыты до принятия приглашения</p>
+    </div>
+  );
+}
+
+/**
+ * Форма приглашения. Общая для подборки и поиска: обязательность зарплаты и
+ * правила раскрытия контактов должны совпадать во всех сценариях.
+ */
+function InvitePanel({
+  candidate,
+  onClose,
+  onSent,
+}: {
+  candidate: CandidateCard;
+  onClose: () => void;
+  onSent: (message: string) => void;
+}) {
+  const [salaryFrom, setSalaryFrom] = useState("250000");
+  const [salaryTo, setSalaryTo] = useState("320000");
+  const [message, setMessage] = useState("Приглашаем в команду");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function send() {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.sendInvitation({
+        candidate_reference: candidate.reference,
+        message,
+        salary_from: Number(salaryFrom),
+        salary_to: Number(salaryTo),
+        contact_method: "hr@company.ru",
+      });
+      onSent(`Приглашение отправлено кандидату ${candidate.reference}`);
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card title={`Приглашение для ${candidate.reference}`} accent>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="Зарплата от, ₽ (обязательно)" value={salaryFrom} onChange={setSalaryFrom} />
+        <Field label="Зарплата до, ₽ (обязательно)" value={salaryTo} onChange={setSalaryTo} />
+      </div>
+      <div className="mt-3">
+        <TextArea label="Текст предложения" value={message} onChange={setMessage} rows={3} />
+      </div>
+      <div className="mt-3 flex gap-2">
+        <Button onClick={() => void send()} disabled={busy}>
+          Отправить приглашение
+        </Button>
+        <Button variant="ghost" onClick={onClose}>
+          Отмена
+        </Button>
+      </div>
+      {error ? (
+        <div className="mt-3">
+          <Alert kind="error">{error}</Alert>
+        </div>
+      ) : null}
+    </Card>
+  );
+}
+
+/** Поиск по банку кандидатов: фильтры по специализации, грейду, стеку и ФСП. */
+function SearchTab() {
+  const [specializations, setSpecializations] = useState<Specialization[]>([]);
+  const [grades, setGrades] = useState<Grade[]>([]);
+  const [specialization, setSpecialization] = useState("");
+  const [grade, setGrade] = useState("");
+  const [stack, setStack] = useState("");
+  const [hasFsp, setHasFsp] = useState(false);
+  const [result, setResult] = useState<{ total: number; candidates: CandidateCard[] } | null>(null);
+  const [inviteFor, setInviteFor] = useState<CandidateCard | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    apiClient
+      .listSpecializations()
+      .then(setSpecializations)
+      .catch(() => undefined);
+    apiClient
+      .listGrades()
+      .then(setGrades)
+      .catch(() => undefined);
+  }, []);
+
+  const search = useCallback(async () => {
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const stackList = stack
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+      const params: Record<string, string | number | boolean | string[]> = { limit: 20 };
+      if (specialization) params.specialization_code = specialization;
+      if (grade) params.grade = grade;
+      if (stackList.length) params.stack = stackList;
+      if (hasFsp) params.has_fsp = true;
+      const found = await apiClient.searchCandidates(params);
+      setResult(found);
+      setNotice(`Найдено кандидатов: ${found.total}`);
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  }, [specialization, grade, stack, hasFsp]);
+
+  return (
+    <div className="space-y-4">
+      <Card title="Поиск по банку кандидатов">
+        <p className="mb-3 text-xs text-slate-500">
+          Основная механика платформы — обратный подбор: работодатель видит кандидатов по их
+          подтверждённой категории. Поиск нужен, когда требуется точечно проверить банк.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="text-sm">
+            <span className="mb-1 block text-slate-400">Специализация</span>
+            <select
+              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100"
+              value={specialization}
+              onChange={(event) => setSpecialization(event.target.value)}
+            >
+              <option value="">Любая</option>
+              {specializations.map((item) => (
+                <option key={item.code} value={item.code}>
+                  {item.title}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-sm">
+            <span className="mb-1 block text-slate-400">Грейд</span>
+            <select
+              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100"
+              value={grade}
+              onChange={(event) => setGrade(event.target.value)}
+            >
+              <option value="">Любой</option>
+              {grades.map((item) => (
+                <option key={item.code} value={item.code}>
+                  {item.title}
+                </option>
+              ))}
+            </select>
+          </label>
+          <Field label="Стек (через запятую)" value={stack} onChange={setStack} />
+          <label className="flex items-center gap-2 self-end text-sm text-slate-300">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-slate-700 bg-slate-950"
+              checked={hasFsp}
+              onChange={(event) => setHasFsp(event.target.checked)}
+            />
+            Только с подтверждёнными достижениями ФСП
+          </label>
+        </div>
+        <div className="mt-3">
+          <Button onClick={() => void search()} disabled={busy}>
+            Найти
+          </Button>
+        </div>
+      </Card>
+
+      {notice ? <Alert kind="ok">{notice}</Alert> : null}
+      {error ? <Alert kind="error">{error}</Alert> : null}
+
+      {result ? (
+        <Card title={`Результаты · ${result.candidates.length} из ${result.total}`} accent>
+          <div className="space-y-3">
+            {result.candidates.map((candidate) => (
+              <CandidateRow
+                key={candidate.reference}
+                candidate={candidate}
+                busy={busy}
+                onInvite={setInviteFor}
+              />
+            ))}
+            {result.candidates.length === 0 ? (
+              <p className="text-sm text-slate-500">По заданным условиям кандидатов нет.</p>
+            ) : null}
+          </div>
+        </Card>
+      ) : null}
+
+      {inviteFor ? (
+        <InvitePanel
+          candidate={inviteFor}
+          onClose={() => setInviteFor(null)}
+          onSent={(text) => {
+            setInviteFor(null);
+            setNotice(text);
+          }}
+        />
+      ) : null}
+    </div>
   );
 }

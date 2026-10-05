@@ -7,16 +7,13 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import List
 
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     # --- Приложение ---
     app_name: str = "IT-Talent Match API"
@@ -51,7 +48,7 @@ class Settings(BaseSettings):
     # --- Правила продукта ---
     grade_change_cooldown_days: int = 90
 
-    cors_origins: List[str] = Field(
+    cors_origins: list[str] = Field(
         default_factory=lambda: [
             "http://localhost:5173",
             "http://localhost:8080",
@@ -60,9 +57,8 @@ class Settings(BaseSettings):
         ]
     )
 
-
     @model_validator(mode="after")
-    def _validate_security_settings(self) -> "Settings":
+    def _validate_security_settings(self) -> Settings:
         """Защита от запуска с небезопасным секретом вне локального окружения."""
         if self.environment != "local":
             if len(self.jwt_secret) < 32 or "change-me" in self.jwt_secret or "insecure" in self.jwt_secret:

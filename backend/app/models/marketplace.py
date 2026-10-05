@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 from uuid import uuid4
 
 from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text
@@ -39,19 +38,18 @@ class Vacancy(Base):
         String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
     title: Mapped[str] = mapped_column(String(200), nullable=False)
-    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    specialization_id: Mapped[Optional[int]] = mapped_column(
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    specialization_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("specializations.id", ondelete="SET NULL"), nullable=True
     )
-    grade_code: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    grade_code: Mapped[str | None] = mapped_column(String(20), nullable=True)
     stack: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
     # Зарплата в вакансии обязательна
     salary_from: Mapped[int] = mapped_column(Integer, nullable=False)
     salary_to: Mapped[int] = mapped_column(Integer, nullable=False)
-    status: Mapped[str] = mapped_column(String(16), default=VACANCY_PUBLISHED, nullable=False,
-                                        index=True)
+    status: Mapped[str] = mapped_column(String(16), default=VACANCY_PUBLISHED, nullable=False, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
-    closed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class Application(Base):
@@ -69,12 +67,11 @@ class Application(Base):
     candidate_user_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    status: Mapped[str] = mapped_column(String(16), default=APPLICATION_SENT, nullable=False,
-                                        index=True)
+    message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(16), default=APPLICATION_SENT, nullable=False, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
-    viewed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-    decided_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    viewed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class RegularTask(Base):
@@ -87,11 +84,11 @@ class RegularTask(Base):
         String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
     title: Mapped[str] = mapped_column(String(200), nullable=False)
-    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    specialization_id: Mapped[Optional[int]] = mapped_column(
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    specialization_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("specializations.id", ondelete="SET NULL"), nullable=True
     )
-    grade_code: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    grade_code: Mapped[str | None] = mapped_column(String(20), nullable=True)
     status: Mapped[str] = mapped_column(String(16), default=TASK_OPEN, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
 
@@ -113,5 +110,5 @@ class TaskSubmission(Base):
     )
     solution: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[str] = mapped_column(String(16), default=SUBMISSION_NEW, nullable=False)
-    employer_feedback: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    employer_feedback: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)

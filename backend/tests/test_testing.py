@@ -96,7 +96,7 @@ def test_next_grade_options_include_lower_and_higher() -> None:
 
 
 def test_grade_change_cooldown() -> None:
-    assert can_change_grade(None, 90) == (True, None)          # первичное присвоение
-    assert can_change_grade(120, 90) == (True, None)           # срок прошёл
+    assert can_change_grade(None, 90) == (True, None)  # первичное присвоение
+    assert can_change_grade(120, 90) == (True, None)  # срок прошёл
     allowed, remaining = can_change_grade(30, 90)
-    assert allowed is False and remaining == 60                # смена ограничена по времени
+    assert allowed is False and remaining == 60  # смена ограничена по времени

@@ -322,7 +322,16 @@ function InvitationsTab() {
 
   const load = useCallback(async () => {
     try {
-      setInvitations(await apiClient.myInvitations());
+      const list = await apiClient.myInvitations();
+      // Открытие вкладки означает фактический просмотр: приглашения в статусе
+      // «отправлено» переводятся в «просмотрено», чтобы работодатель видел,
+      // что приглашение доставлено и открыто, а не проигнорировано.
+      const marked = await Promise.all(
+        list.map(async (invitation) =>
+          invitation.status === "sent" ? await apiClient.viewInvitation(invitation.id) : invitation,
+        ),
+      );
+      setInvitations(marked);
     } catch (err) {
       setError(errorMessage(err));
     }

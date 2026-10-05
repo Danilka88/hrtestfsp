@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -61,12 +61,12 @@ class TestingError(Exception):
 @dataclass
 class AnswerOutcome:
     correct: bool
-    next_item: Optional[Dict[str, Any]]
+    next_item: dict[str, Any] | None
     finished: bool
-    result: Optional[Dict[str, Any]] = None
+    result: dict[str, Any] | None = None
 
 
-def public_item(item: Item) -> Dict[str, Any]:
+def public_item(item: Item) -> dict[str, Any]:
     """Представление задания для кандидата: без правильного ответа и сложности."""
     payload = item.payload or {}
     return {
@@ -97,10 +97,8 @@ async def get_specialization(session: AsyncSession, code: str) -> Specialization
     return spec
 
 
-async def _load_items(session: AsyncSession, specialization_id: int) -> List[Item]:
-    result = await session.execute(
-        select(Item).where(Item.is_active.is_(True)).order_by(Item.difficulty)
-    )
+async def _load_items(session: AsyncSession, specialization_id: int) -> list[Item]:
+    result = await session.execute(select(Item).where(Item.is_active.is_(True)).order_by(Item.difficulty))
     items = list(result.scalars().all())
     # Сначала задания целевой специализации, затем — общие
     items.sort(key=lambda i: (i.specialization_id != specialization_id, i.difficulty))
@@ -108,13 +106,15 @@ async def _load_items(session: AsyncSession, specialization_id: int) -> List[Ite
 
 
 async def _ensure_profile(session: AsyncSession, user_id: str) -> CandidateProfile:
-    result = await session.execute(
-        select(CandidateProfile).where(CandidateProfile.user_id == user_id)
-    )
+    result = await session.execute(select(CandidateProfile).where(CandidateProfile.user_id == user_id))
     profile = result.scalar_one_or_none()
     if profile is None:
         profile = CandidateProfile(
-            user_id=user_id, contacts={}, stack=[], roles=[], soft_skills=[],
+            user_id=user_id,
+            contacts={},
+            stack=[],
+            roles=[],
+            soft_skills=[],
             privacy=dict(DEFAULT_PRIVACY),
         )
         session.add(profile)
@@ -123,9 +123,13 @@ async def _ensure_profile(session: AsyncSession, user_id: str) -> CandidateProfi
 
 
 async def save_survey(
-    session: AsyncSession, user_id: str, *, industry: str, specialization_code: str,
-    answers: Dict[str, Any],
-) -> tuple[SurveyResponse, List[str]]:
+    session: AsyncSession,
+    user_id: str,
+    *,
+    industry: str,
+    specialization_code: str,
+    answers: dict[str, Any],
+) -> tuple[SurveyResponse, list[str]]:
     """Опрос по отрасли и специализации + подсказка допустимых уровней теста."""
     spec = await get_specialization(session, specialization_code)
     record = SurveyResponse(
@@ -144,7 +148,7 @@ async def save_survey(
 
 async def start_session(
     session: AsyncSession, user_id: str, *, specialization_code: str, target_grade: str
-) -> tuple[TestSession, Dict[str, Any]]:
+) -> tuple[TestSession, dict[str, Any]]:
     if target_grade not in GRADE_ORDER:
         raise TestingError(400, "Неизвестный грейд")
     spec = await get_specialization(session, specialization_code)
@@ -154,8 +158,11 @@ async def start_session(
         raise TestingError(503, "Банк заданий пуст")
 
     test_session = TestSession(
-        user_id=user_id, specialization_id=spec.id, target_grade=target_grade,
-        status=SESSION_IN_PROGRESS, warnings=[],
+        user_id=user_id,
+        specialization_id=spec.id,
+        target_grade=target_grade,
+        status=SESSION_IN_PROGRESS,
+        warnings=[],
     )
     session.add(test_session)
     await session.flush()
@@ -172,8 +179,13 @@ async def start_session(
 
 
 async def submit_answer(
-    session: AsyncSession, user_id: str, *, session_id: str, item_id: str,
-    answer_index: int, response_time_ms: Optional[int] = None,
+    session: AsyncSession,
+    user_id: str,
+    *,
+    session_id: str,
+    item_id: str,
+    answer_index: int,
+    response_time_ms: int | None = None,
 ) -> AnswerOutcome:
     test_session = await session.get(TestSession, session_id)
     if test_session is None or test_session.user_id != user_id:
@@ -198,8 +210,11 @@ async def submit_answer(
 
     session.add(
         ItemResponseRecord(
-            session_id=test_session.id, item_id=item.id, correct=correct,
-            response_time_ms=response_time_ms, answer={"index": answer_index},
+            session_id=test_session.id,
+            item_id=item.id,
+            correct=correct,
+            response_time_ms=response_time_ms,
+            answer={"index": answer_index},
         )
     )
     test_session.item_count += 1
@@ -210,8 +225,10 @@ async def submit_answer(
     items_map = {i.id: _item_to_core(i) for i in items}
 
     estimate = estimate_ability(
-        [Response(item_id=r.item_id, correct=r.correct, response_time_ms=r.response_time_ms)
-         for r in responses],
+        [
+            Response(item_id=r.item_id, correct=r.correct, response_time_ms=r.response_time_ms)
+            for r in responses
+        ],
         items_map,
     )
     test_session.theta = estimate.theta
@@ -237,7 +254,7 @@ async def submit_answer(
     return AnswerOutcome(correct=correct, next_item=public_item(next_item), finished=False)
 
 
-async def _load_responses(session: AsyncSession, session_id: str) -> List[ItemResponseRecord]:
+async def _load_responses(session: AsyncSession, session_id: str) -> list[ItemResponseRecord]:
     result = await session.execute(
         select(ItemResponseRecord)
         .where(ItemResponseRecord.session_id == session_id)
@@ -248,7 +265,7 @@ async def _load_responses(session: AsyncSession, session_id: str) -> List[ItemRe
 
 async def _finalize(
     session: AsyncSession, test_session: TestSession, estimate: AbilityEstimate
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Завершает тест: определяет грейд, присваивает категорию, применяет правила смены."""
     result_grade = grade_for_theta(estimate.theta)
     test_session.result_grade = result_grade
@@ -261,9 +278,7 @@ async def _finalize(
             warnings.append(warning)
     test_session.warnings = warnings
 
-    category = await _get_or_create_category(
-        session, test_session.specialization_id, result_grade
-    )
+    category = await _get_or_create_category(session, test_session.specialization_id, result_grade)
     test_session.category_id = category.id
 
     profile = await _ensure_profile(session, test_session.user_id)
@@ -293,9 +308,7 @@ async def _finalize(
     }
 
 
-async def _get_or_create_category(
-    session: AsyncSession, specialization_id: int, grade_code: str
-) -> Category:
+async def _get_or_create_category(session: AsyncSession, specialization_id: int, grade_code: str) -> Category:
     result = await session.execute(
         select(Category).where(
             Category.specialization_id == specialization_id, Category.grade_code == grade_code
@@ -311,15 +324,16 @@ async def _get_or_create_category(
 
 async def _apply_grade_rule(
     session: AsyncSession, profile: CandidateProfile, test_session: TestSession, result_grade: str
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Применяет правила смены грейда. Возвращает {applied, reason}."""
     current = profile.grade
 
     if current is None:
         profile.grade = result_grade
         session.add(
-            GradeChange(user_id=profile.user_id, from_grade=None, to_grade=result_grade,
-                        session_id=test_session.id)
+            GradeChange(
+                user_id=profile.user_id, from_grade=None, to_grade=result_grade, session_id=test_session.id
+            )
         )
         return {"applied": True, "reason": "первичное присвоение грейда"}
 
@@ -355,31 +369,40 @@ async def _apply_grade_rule(
 
     profile.grade = result_grade
     session.add(
-        GradeChange(user_id=profile.user_id, from_grade=current, to_grade=result_grade,
-                    session_id=test_session.id)
+        GradeChange(
+            user_id=profile.user_id, from_grade=current, to_grade=result_grade, session_id=test_session.id
+        )
     )
     return {"applied": True, "reason": f"повышение грейда: {current} → {result_grade}"}
 
 
-async def current_category(session: AsyncSession, user_id: str) -> Dict[str, Any]:
+async def current_category(session: AsyncSession, user_id: str) -> dict[str, Any]:
     """Текущий статус кандидата: специализация, грейд, история и ограничение смены."""
     profile = await _ensure_profile(session, user_id)
 
     history = (
-        await session.execute(
-            select(GradeChange)
-            .where(GradeChange.user_id == user_id)
-            .order_by(GradeChange.created_at.desc())
+        (
+            await session.execute(
+                select(GradeChange)
+                .where(GradeChange.user_id == user_id)
+                .order_by(GradeChange.created_at.desc())
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     sessions = (
-        await session.execute(
-            select(TestSession)
-            .where(TestSession.user_id == user_id)
-            .order_by(TestSession.started_at.desc())
+        (
+            await session.execute(
+                select(TestSession)
+                .where(TestSession.user_id == user_id)
+                .order_by(TestSession.started_at.desc())
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     last_change_days = None
     if history:
@@ -395,8 +418,7 @@ async def current_category(session: AsyncSession, user_id: str) -> Dict[str, Any
         "grade_change_cooldown_days": cooldown,
         "grade_options": next_grade_options(profile.grade or "junior"),
         "grade_history": [
-            {"from_grade": h.from_grade, "to_grade": h.to_grade, "at": h.created_at}
-            for h in history
+            {"from_grade": h.from_grade, "to_grade": h.to_grade, "at": h.created_at} for h in history
         ],
         "sessions": [
             {

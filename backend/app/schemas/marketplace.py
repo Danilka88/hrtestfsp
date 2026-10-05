@@ -3,17 +3,16 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
 
 class VacancyIn(BaseModel):
     title: str = Field(min_length=3, max_length=200)
-    description: Optional[str] = Field(default=None, max_length=6000)
-    specialization_code: Optional[str] = Field(default=None, max_length=64)
-    grade: Optional[str] = Field(default=None, max_length=20)
-    stack: List[str] = Field(default_factory=list)
+    description: str | None = Field(default=None, max_length=6000)
+    specialization_code: str | None = Field(default=None, max_length=64)
+    grade: str | None = Field(default=None, max_length=20)
+    stack: list[str] = Field(default_factory=list)
     salary_from: int = Field(ge=0, le=100_000_000)
     salary_to: int = Field(ge=0, le=100_000_000)
 
@@ -21,19 +20,19 @@ class VacancyIn(BaseModel):
 class VacancyOut(BaseModel):
     id: str
     title: str
-    description: Optional[str] = None
-    specialization_code: Optional[str] = None
-    grade: Optional[str] = None
-    stack: List[str] = Field(default_factory=list)
+    description: str | None = None
+    specialization_code: str | None = None
+    grade: str | None = None
+    stack: list[str] = Field(default_factory=list)
     salary_from: int
     salary_to: int
     status: str
-    company_name: Optional[str] = None
+    company_name: str | None = None
     created_at: datetime
 
 
 class ApplicationIn(BaseModel):
-    message: Optional[str] = Field(default=None, max_length=4000)
+    message: str | None = Field(default=None, max_length=4000)
 
 
 class ApplicationDecision(BaseModel):
@@ -41,21 +40,21 @@ class ApplicationDecision(BaseModel):
 
 
 class ContactsOut(BaseModel):
-    email: Optional[str] = None
-    phone: Optional[str] = None
-    telegram: Optional[str] = None
+    email: str | None = None
+    phone: str | None = None
+    telegram: str | None = None
 
 
 class ApplicationCandidateOut(BaseModel):
     id: str
     vacancy_id: str
-    vacancy_title: Optional[str] = None
-    company_name: Optional[str] = None
-    message: Optional[str] = None
+    vacancy_title: str | None = None
+    company_name: str | None = None
+    message: str | None = None
     status: str
     created_at: datetime
-    viewed_at: Optional[datetime] = None
-    decided_at: Optional[datetime] = None
+    viewed_at: datetime | None = None
+    decided_at: datetime | None = None
 
 
 class ApplicationEmployerOut(BaseModel):
@@ -64,34 +63,34 @@ class ApplicationEmployerOut(BaseModel):
     id: str
     vacancy_id: str
     candidate_reference: str
-    candidate_name: Optional[str] = None
-    candidate_specialization: Optional[str] = None
-    candidate_grade: Optional[str] = None
-    candidate_stack: List[str] = Field(default_factory=list)
-    message: Optional[str] = None
+    candidate_name: str | None = None
+    candidate_specialization: str | None = None
+    candidate_grade: str | None = None
+    candidate_stack: list[str] = Field(default_factory=list)
+    message: str | None = None
     status: str
     created_at: datetime
-    viewed_at: Optional[datetime] = None
-    decided_at: Optional[datetime] = None
-    candidate_contacts: Optional[ContactsOut] = None
+    viewed_at: datetime | None = None
+    decided_at: datetime | None = None
+    candidate_contacts: ContactsOut | None = None
     contacts_revealed: bool = True
 
 
 class TaskIn(BaseModel):
     title: str = Field(min_length=3, max_length=200)
-    description: Optional[str] = Field(default=None, max_length=6000)
-    specialization_code: Optional[str] = Field(default=None, max_length=64)
-    grade: Optional[str] = Field(default=None, max_length=20)
+    description: str | None = Field(default=None, max_length=6000)
+    specialization_code: str | None = Field(default=None, max_length=64)
+    grade: str | None = Field(default=None, max_length=20)
 
 
 class TaskOut(BaseModel):
     id: str
     title: str
-    description: Optional[str] = None
-    specialization_code: Optional[str] = None
-    grade: Optional[str] = None
+    description: str | None = None
+    specialization_code: str | None = None
+    grade: str | None = None
     status: str
-    company_name: Optional[str] = None
+    company_name: str | None = None
     created_at: datetime
 
 
@@ -102,10 +101,10 @@ class SubmissionIn(BaseModel):
 class SubmissionOut(BaseModel):
     id: str
     task_id: str
-    candidate_reference: Optional[str] = None
-    candidate_name: Optional[str] = None
-    candidate_specialization: Optional[str] = None
-    candidate_grade: Optional[str] = None
+    candidate_reference: str | None = None
+    candidate_name: str | None = None
+    candidate_specialization: str | None = None
+    candidate_grade: str | None = None
     solution: str
     status: str
     created_at: datetime

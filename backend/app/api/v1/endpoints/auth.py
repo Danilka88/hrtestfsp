@@ -37,7 +37,9 @@ def _raise(exc: AuthError) -> NoReturn:
     status_code=status.HTTP_201_CREATED,
     summary="Регистрация по email с подтверждением адреса",
 )
-async def register(payload: RegisterRequest, session: AsyncSession = Depends(get_session)) -> RegisterResponse:
+async def register(
+    payload: RegisterRequest, session: AsyncSession = Depends(get_session)
+) -> RegisterResponse:
     try:
         user, token = await auth_service.register_user(
             session,

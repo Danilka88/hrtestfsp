@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
@@ -63,8 +63,9 @@ async def db_factory(client: AsyncClient):
     return _current_factory
 
 
-async def register_and_verify(client: AsyncClient, email: str, password: str = "secret12345",
-                              role: str = "candidate") -> dict:
+async def register_and_verify(
+    client: AsyncClient, email: str, password: str = "secret12345", role: str = "candidate"
+) -> dict:
     """Хелпер: полный путь регистрации с подтверждением email."""
     response = await client.post(
         "/api/v1/auth/register",

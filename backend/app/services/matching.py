@@ -11,13 +11,13 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Sequence
 
 RUBRIC_VERSION = "rubric-1"
 
 # Единственный источник весов. Сумма должна равняться 1.0.
-WEIGHTS: Dict[str, float] = {
+WEIGHTS: dict[str, float] = {
     "test_strength": 0.45,
     "fsp_achievements": 0.20,
     "freshness": 0.10,
@@ -37,14 +37,14 @@ class CandidateSignals:
     """Сигналы кандидата, доступные на момент ранжирования."""
 
     candidate_id: str
-    test_strength: Optional[float] = None       # 0..1, нормализованная оценка теста
-    fsp_achievements: Optional[int] = None      # число подтверждённых достижений
-    days_since_last_task: Optional[int] = None  # свежесть (регулярные задания)
-    semantic_fit: Optional[float] = None        # 0..1, соответствие потребности
+    test_strength: float | None = None  # 0..1, нормализованная оценка теста
+    fsp_achievements: int | None = None  # число подтверждённых достижений
+    days_since_last_task: int | None = None  # свежесть (регулярные задания)
+    semantic_fit: float | None = None  # 0..1, соответствие потребности
     # Соответствие запрошенной категории (специализация × грейд). Выдача
     # формируется на основании категорий, поэтому кандидаты запрошенной
     # категории идут выше — это первый ключ сортировки, а не слагаемое балла.
-    in_requested_category: Optional[bool] = None
+    in_requested_category: bool | None = None
 
 
 @dataclass
@@ -61,8 +61,8 @@ class Reason:
 class ScoredCandidate:
     candidate_id: str
     score: float
-    reasons: List[Reason] = field(default_factory=list)
-    missing: List[str] = field(default_factory=list)
+    reasons: list[Reason] = field(default_factory=list)
+    missing: list[str] = field(default_factory=list)
 
 
 def _clamp01(x: float) -> float:
@@ -76,7 +76,7 @@ def _fsp_component(count: int) -> float:
     return 1.0 - math.exp(-count / FSP_SATURATION)
 
 
-def _freshness_component(days: Optional[int]) -> Optional[float]:
+def _freshness_component(days: int | None) -> float | None:
     if days is None:
         return None
     if days <= FRESHNESS_FULL_DAYS:
@@ -97,8 +97,8 @@ def _grade_words(value: float) -> str:
 
 def score_candidate(signals: CandidateSignals) -> ScoredCandidate:
     """Оценка кандидата с полным evidence-trail."""
-    reasons: List[Reason] = []
-    missing: List[str] = []
+    reasons: list[Reason] = []
+    missing: list[str] = []
     total = 0.0
 
     # 1. Сила подтверждённого профиля (результат теста)
@@ -112,7 +112,7 @@ def score_candidate(signals: CandidateSignals) -> ScoredCandidate:
             Reason(
                 code="test_strength",
                 text=f"Подтверждённый профиль: {_grade_words(value)} сила "
-                     f"({value:.2f} по нормализованной шкале теста)",
+                f"({value:.2f} по нормализованной шкале теста)",
                 value=value,
                 contribution=round(contribution, 4),
             )
@@ -186,7 +186,7 @@ def score_candidate(signals: CandidateSignals) -> ScoredCandidate:
     )
 
 
-def rank_candidates(signals: Sequence[CandidateSignals]) -> List[ScoredCandidate]:
+def rank_candidates(signals: Sequence[CandidateSignals]) -> list[ScoredCandidate]:
     """Ранжирование подборки.
 
     Порядок: сначала кандидаты запрошенной категории (специализация × грейд),
@@ -197,9 +197,7 @@ def rank_candidates(signals: Sequence[CandidateSignals]) -> List[ScoredCandidate
     Сортировка детерминирована: при равенстве баллов порядок задаёт candidate_id.
     """
     scored = [score_candidate(s) for s in signals]
-    category_flag = {
-        s.candidate_id: bool(s.in_requested_category) for s in signals
-    }
+    category_flag = {s.candidate_id: bool(s.in_requested_category) for s in signals}
 
     scored.sort(key=lambda c: (not category_flag[c.candidate_id], -c.score, c.candidate_id))
 

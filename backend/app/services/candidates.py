@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.candidate import DEFAULT_PRIVACY, CandidateProfile
 from app.providers.registry import get_llm
 from app.schemas.candidate import CandidateProfileIn, PrivacyUpdateRequest
-from app.services.resume import ResumeError, extract_text_from_pdf
+from app.services.resume import extract_text_from_pdf
 
 
 class ProfileError(Exception):
@@ -20,10 +20,8 @@ class ProfileError(Exception):
         self.detail = detail
 
 
-async def get_profile(session: AsyncSession, user_id: str) -> Optional[CandidateProfile]:
-    result = await session.execute(
-        select(CandidateProfile).where(CandidateProfile.user_id == user_id)
-    )
+async def get_profile(session: AsyncSession, user_id: str) -> CandidateProfile | None:
+    result = await session.execute(select(CandidateProfile).where(CandidateProfile.user_id == user_id))
     return result.scalar_one_or_none()
 
 
@@ -43,9 +41,7 @@ async def _get_or_create(session: AsyncSession, user_id: str) -> CandidateProfil
     return profile
 
 
-async def upsert_profile(
-    session: AsyncSession, user_id: str, data: CandidateProfileIn
-) -> CandidateProfile:
+async def upsert_profile(session: AsyncSession, user_id: str, data: CandidateProfileIn) -> CandidateProfile:
     """Сохранение профиля, заполненного вручную по форме."""
     profile = await _get_or_create(session, user_id)
 
@@ -67,7 +63,7 @@ async def upsert_profile(
 
 async def apply_resume_upload(
     session: AsyncSession, user_id: str, *, filename: str, data: bytes
-) -> tuple[CandidateProfile, Dict[str, Any], int]:
+) -> tuple[CandidateProfile, dict[str, Any], int]:
     """Загрузка PDF-резюме: извлечение текста → автораспознавание → слияние в профиль."""
     text = extract_text_from_pdf(data)  # поднимает ResumeError с понятным сообщением
     llm = get_llm()
@@ -117,7 +113,7 @@ async def update_privacy(
     return profile
 
 
-def pdf_payload(profile: CandidateProfile) -> Dict[str, Any]:
+def pdf_payload(profile: CandidateProfile) -> dict[str, Any]:
     return {
         "full_name": profile.full_name,
         "contacts": profile.contacts or {},

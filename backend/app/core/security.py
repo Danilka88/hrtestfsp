@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import hashlib
 import secrets
-from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Optional
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import jwt
 from argon2 import PasswordHasher
@@ -25,12 +25,14 @@ _hasher = PasswordHasher()
 
 # --- Время ---------------------------------------------------------------
 
+
 def utcnow() -> datetime:
     """Текущее время UTC (naive)."""
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 # --- Пароли --------------------------------------------------------------
+
 
 def hash_password(password: str) -> str:
     return _hasher.hash(password)
@@ -53,6 +55,7 @@ def needs_rehash(password_hash: str) -> bool:
 
 # --- Одноразовые токены (подтверждение email) ----------------------------
 
+
 def new_opaque_token(length: int = 32) -> str:
     return secrets.token_urlsafe(length)
 
@@ -64,7 +67,8 @@ def hash_opaque_token(token: str) -> str:
 
 # --- JWT -----------------------------------------------------------------
 
-def _encode(payload: Dict[str, Any], expires_delta: timedelta, secret: str, algorithm: str) -> str:
+
+def _encode(payload: dict[str, Any], expires_delta: timedelta, secret: str, algorithm: str) -> str:
     now = utcnow()
     to_encode = dict(payload)
     to_encode.update({"iat": now, "exp": now + expires_delta})
@@ -91,7 +95,7 @@ def create_refresh_token(user_id: str, jti: str) -> str:
     )
 
 
-def decode_token(token: str) -> Optional[Dict[str, Any]]:
+def decode_token(token: str) -> dict[str, Any] | None:
     """Декодирует и валидирует токен. Возвращает None при любой ошибке."""
     settings = get_settings()
     try:

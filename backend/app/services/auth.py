@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Optional
 from uuid import uuid4
 
 from sqlalchemy import select
@@ -48,7 +47,7 @@ def normalize_email(email: str) -> str:
     return email.strip().lower()
 
 
-async def _get_user_by_email(session: AsyncSession, email: str) -> Optional[User]:
+async def _get_user_by_email(session: AsyncSession, email: str) -> User | None:
     result = await session.execute(select(User).where(User.email == normalize_email(email)))
     return result.scalar_one_or_none()
 
@@ -61,7 +60,7 @@ async def register_user(
     role: str,
     consent_pdn: bool,
     consent_publish: bool,
-) -> tuple[User, Optional[str]]:
+) -> tuple[User, str | None]:
     """Регистрация. Возвращает пользователя и (в демо-режиме) токен подтверждения."""
     settings = get_settings()
 
@@ -112,9 +111,7 @@ async def register_user(
 async def verify_email(session: AsyncSession, token: str) -> User:
     now = utcnow()
     result = await session.execute(
-        select(EmailVerificationToken).where(
-            EmailVerificationToken.token_hash == hash_opaque_token(token)
-        )
+        select(EmailVerificationToken).where(EmailVerificationToken.token_hash == hash_opaque_token(token))
     )
     record = result.scalar_one_or_none()
     if record is None:
@@ -175,7 +172,7 @@ async def login(session: AsyncSession, *, email: str, password: str) -> tuple[Us
 
 async def refresh(session: AsyncSession, *, refresh_token: str) -> IssuedTokens:
     """Ротация refresh-токена: старый отзывается, выдаётся новая пара."""
-    from app.core.security import decode_token, REFRESH_TOKEN_TYPE
+    from app.core.security import REFRESH_TOKEN_TYPE, decode_token
 
     payload = decode_token(refresh_token)
     if not payload or payload.get("type") != REFRESH_TOKEN_TYPE:
@@ -216,5 +213,5 @@ async def update_publish_consent(session: AsyncSession, user: User, publish: boo
     return user
 
 
-async def get_user(session: AsyncSession, user_id: str) -> Optional[User]:
+async def get_user(session: AsyncSession, user_id: str) -> User | None:
     return await session.get(User, user_id)

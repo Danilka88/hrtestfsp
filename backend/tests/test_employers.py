@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, List, Optional
 
 from httpx import AsyncClient
 from sqlalchemy import select
@@ -11,12 +10,12 @@ from sqlalchemy import select
 from app.models.candidate import CandidateProfile
 from app.models.user import User
 from app.services.fit import compute_fit, normalize_theta, stack_overlap
-from app.services.matching import WEIGHTS, score_candidate, CandidateSignals
+from app.services.matching import WEIGHTS, CandidateSignals, score_candidate
 from app.services.testing import GRADE_ORDER
 from tests.conftest import register_and_verify
 
-
 # --- Юнит-уровень: сигналы и мера соответствия -------------------------------
+
 
 def test_normalize_theta_is_monotonic_and_bounded() -> None:
     low = normalize_theta(-4.0)
@@ -35,51 +34,75 @@ def test_stack_overlap() -> None:
 
 
 def test_fit_is_none_without_requirements() -> None:
-    assert compute_fit(
-        required_stack=[], candidate_stack=["Python"],
-        required_specialization=None, candidate_specialization="backend",
-        required_grade=None, candidate_grade="middle", grade_order=GRADE_ORDER,
-    ) is None
+    assert (
+        compute_fit(
+            required_stack=[],
+            candidate_stack=["Python"],
+            required_specialization=None,
+            candidate_specialization="backend",
+            required_grade=None,
+            candidate_grade="middle",
+            grade_order=GRADE_ORDER,
+        )
+        is None
+    )
 
 
 def test_fit_penalises_grade_distance() -> None:
     close = compute_fit(
-        required_stack=[], candidate_stack=[], required_specialization=None,
-        candidate_specialization=None, required_grade="middle", candidate_grade="middle",
+        required_stack=[],
+        candidate_stack=[],
+        required_specialization=None,
+        candidate_specialization=None,
+        required_grade="middle",
+        candidate_grade="middle",
         grade_order=GRADE_ORDER,
     )
     far = compute_fit(
-        required_stack=[], candidate_stack=[], required_specialization=None,
-        candidate_specialization=None, required_grade="middle", candidate_grade="intern",
+        required_stack=[],
+        candidate_stack=[],
+        required_specialization=None,
+        candidate_specialization=None,
+        required_grade="middle",
+        candidate_grade="intern",
         grade_order=GRADE_ORDER,
     )
     assert close is not None and far is not None and close > far
 
 
 def test_ranking_prefers_stronger_confirmed_profile() -> None:
-    strong = score_candidate(CandidateSignals(
-        candidate_id="strong", test_strength=0.9, fsp_achievements=2,
-        days_since_last_task=5, semantic_fit=0.8,
-    ))
-    weak = score_candidate(CandidateSignals(
-        candidate_id="weak", test_strength=0.3, fsp_achievements=0,
-        days_since_last_task=150, semantic_fit=0.2,
-    ))
+    strong = score_candidate(
+        CandidateSignals(
+            candidate_id="strong",
+            test_strength=0.9,
+            fsp_achievements=2,
+            days_since_last_task=5,
+            semantic_fit=0.8,
+        )
+    )
+    weak = score_candidate(
+        CandidateSignals(
+            candidate_id="weak",
+            test_strength=0.3,
+            fsp_achievements=0,
+            days_since_last_task=150,
+            semantic_fit=0.2,
+        )
+    )
     assert strong.score > weak.score
     assert abs(sum(WEIGHTS.values()) - 1.0) < 1e-9
 
 
 # --- Хелперы ------------------------------------------------------------------
 
+
 async def _employer_token(client: AsyncClient, email: str) -> str:
     await register_and_verify(client, email, role="employer")
-    response = await client.post(
-        "/api/v1/auth/login", json={"email": email, "password": "secret12345"}
-    )
+    response = await client.post("/api/v1/auth/login", json={"email": email, "password": "secret12345"})
     return response.json()["access_token"]
 
 
-def _auth(token: str) -> Dict[str, str]:
+def _auth(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
@@ -90,17 +113,15 @@ async def _seed_candidate(
     email: str,
     specialization: str,
     grade: str,
-    stack: List[str],
+    stack: list[str],
     theta: float = 0.5,
-    fsp_id: Optional[str] = None,
-    privacy: Optional[Dict[str, bool]] = None,
+    fsp_id: str | None = None,
+    privacy: dict[str, bool] | None = None,
 ) -> str:
     """Создаёт кандидата банка напрямую в БД (быстрее полного UI-пути)."""
     await register_and_verify(client, email)
     async with db_factory() as session:
-        user = (
-            await session.execute(select(User).where(User.email == email))
-        ).scalar_one()
+        user = (await session.execute(select(User).where(User.email == email))).scalar_one()
         user.fsp_id = fsp_id
         profile = CandidateProfile(
             user_id=user.id,
@@ -120,42 +141,80 @@ async def _seed_candidate(
         # Завершённая сессия даёт «силу подтверждённого профиля»
         from app.models.testing import SESSION_COMPLETED, TestSession
 
-        session.add(TestSession(
-            user_id=user_id, specialization_id=1, target_grade=grade,
-            status=SESSION_COMPLETED, item_count=8, theta=theta, standard_error=0.4,
-            result_grade=grade,
-        ))
+        session.add(
+            TestSession(
+                user_id=user_id,
+                specialization_id=1,
+                target_grade=grade,
+                status=SESSION_COMPLETED,
+                item_count=8,
+                theta=theta,
+                standard_error=0.4,
+                result_grade=grade,
+            )
+        )
         await session.commit()
     return user_id
 
 
-async def _bank(client: AsyncClient, db_factory) -> Dict[str, str]:
+async def _bank(client: AsyncClient, db_factory) -> dict[str, str]:
     ids = {}
     ids["strong"] = await _seed_candidate(
-        client, db_factory, email="strong@bank.ru", specialization="backend", grade="middle",
-        stack=["Python", "PostgreSQL", "Docker"], theta=1.2, fsp_id="fsp-1001",
+        client,
+        db_factory,
+        email="strong@bank.ru",
+        specialization="backend",
+        grade="middle",
+        stack=["Python", "PostgreSQL", "Docker"],
+        theta=1.2,
+        fsp_id="fsp-1001",
     )
     ids["medium"] = await _seed_candidate(
-        client, db_factory, email="medium@bank.ru", specialization="backend", grade="middle",
-        stack=["Python", "Docker"], theta=0.2, fsp_id=None,
+        client,
+        db_factory,
+        email="medium@bank.ru",
+        specialization="backend",
+        grade="middle",
+        stack=["Python", "Docker"],
+        theta=0.2,
+        fsp_id=None,
     )
     ids["junior"] = await _seed_candidate(
-        client, db_factory, email="junior@bank.ru", specialization="backend", grade="junior",
-        stack=["JavaScript", "React"], theta=-0.8, fsp_id="fsp-2000",
+        client,
+        db_factory,
+        email="junior@bank.ru",
+        specialization="backend",
+        grade="junior",
+        stack=["JavaScript", "React"],
+        theta=-0.8,
+        fsp_id="fsp-2000",
     )
     ids["frontend"] = await _seed_candidate(
-        client, db_factory, email="frontend@bank.ru", specialization="frontend", grade="middle",
-        stack=["JavaScript", "React", "TypeScript"], theta=1.0, fsp_id=None,
+        client,
+        db_factory,
+        email="frontend@bank.ru",
+        specialization="frontend",
+        grade="middle",
+        stack=["JavaScript", "React", "TypeScript"],
+        theta=1.0,
+        fsp_id=None,
     )
     ids["hidden"] = await _seed_candidate(
-        client, db_factory, email="hidden@bank.ru", specialization="backend", grade="middle",
-        stack=["Python", "Kafka"], theta=0.9, fsp_id=None,
+        client,
+        db_factory,
+        email="hidden@bank.ru",
+        specialization="backend",
+        grade="middle",
+        stack=["Python", "Kafka"],
+        theta=0.9,
+        fsp_id=None,
         privacy={"show_stack": False, "show_experience": False, "show_fsp": False},
     )
     return ids
 
 
 # --- Профиль компании ---------------------------------------------------------
+
 
 async def test_employer_profile_requires_employer_role(client: AsyncClient) -> None:
     await register_and_verify(client, "cand-not-emp@example.com")
@@ -172,8 +231,12 @@ async def test_employer_profile_roundtrip(client: AsyncClient) -> None:
 
     created = await client.put(
         "/api/v1/employers/me/profile",
-        json={"company_name": "ООО Ромашка", "description": "Разрабатываем финтех",
-              "industry": "it", "contact_email": "hr@romashka.ru"},
+        json={
+            "company_name": "ООО Ромашка",
+            "description": "Разрабатываем финтех",
+            "industry": "it",
+            "contact_email": "hr@romashka.ru",
+        },
         headers=_auth(token),
     )
     assert created.status_code == 200
@@ -185,17 +248,21 @@ async def test_employer_profile_roundtrip(client: AsyncClient) -> None:
 
 # --- Подборка -----------------------------------------------------------------
 
-async def test_need_creates_selection_ranked_by_confirmed_profile(
-    client: AsyncClient, db_factory
-) -> None:
+
+async def test_need_creates_selection_ranked_by_confirmed_profile(client: AsyncClient, db_factory) -> None:
     ids = await _bank(client, db_factory)
     token = await _employer_token(client, "employer1@example.com")
 
     response = await client.post(
         "/api/v1/employers/me/needs",
-        json={"title": "Backend-разработчик", "specialization_code": "backend",
-              "grade": "middle", "stack": ["Python", "Docker"], "salary_from": 200000,
-              "salary_to": 300000},
+        json={
+            "title": "Backend-разработчик",
+            "specialization_code": "backend",
+            "grade": "middle",
+            "stack": ["Python", "Docker"],
+            "salary_from": 200000,
+            "salary_to": 300000,
+        },
         headers=_auth(token),
     )
     assert response.status_code == 200, response.text
@@ -219,8 +286,7 @@ async def test_selection_explains_each_candidate(client: AsyncClient, db_factory
     token = await _employer_token(client, "employer2@example.com")
     response = await client.post(
         "/api/v1/employers/me/needs",
-        json={"title": "Backend", "specialization_code": "backend", "grade": "middle",
-              "stack": ["Python"]},
+        json={"title": "Backend", "specialization_code": "backend", "grade": "middle", "stack": ["Python"]},
         headers=_auth(token),
     )
     card = response.json()["candidates"][0]
@@ -256,9 +322,9 @@ async def test_other_employer_cannot_read_foreign_selection(client: AsyncClient,
         headers=_auth(owner),
     )
     selection_id = created.json()["id"]
-    assert (await client.get(
-        f"/api/v1/employers/me/selections/{selection_id}", headers=_auth(stranger)
-    )).status_code == 404
+    assert (
+        await client.get(f"/api/v1/employers/me/selections/{selection_id}", headers=_auth(stranger))
+    ).status_code == 404
 
 
 async def test_refine_keeps_previous_selection(client: AsyncClient, db_factory) -> None:
@@ -266,8 +332,7 @@ async def test_refine_keeps_previous_selection(client: AsyncClient, db_factory) 
     token = await _employer_token(client, "refiner@example.com")
     created = await client.post(
         "/api/v1/employers/me/needs",
-        json={"title": "Backend", "specialization_code": "backend", "grade": "middle",
-              "stack": ["Python"]},
+        json={"title": "Backend", "specialization_code": "backend", "grade": "middle", "stack": ["Python"]},
         headers=_auth(token),
     )
     first_id = created.json()["id"]
@@ -293,6 +358,7 @@ async def test_refine_keeps_previous_selection(client: AsyncClient, db_factory) 
 
 # --- Поиск по банку -----------------------------------------------------------
 
+
 async def test_search_filters(client: AsyncClient, db_factory) -> None:
     await _bank(client, db_factory)
     token = await _employer_token(client, "searcher@example.com")
@@ -311,9 +377,7 @@ async def test_search_filters(client: AsyncClient, db_factory) -> None:
     )
     assert all(c["grade"] == "junior" for c in juniors.json()["candidates"])
 
-    with_fsp = await client.get(
-        "/api/v1/employers/me/search", params={"has_fsp": True}, headers=_auth(token)
-    )
+    with_fsp = await client.get("/api/v1/employers/me/search", params={"has_fsp": True}, headers=_auth(token))
     assert all(c["fsp_achievements"] is not None for c in with_fsp.json()["candidates"])
 
     by_stack = await client.get(

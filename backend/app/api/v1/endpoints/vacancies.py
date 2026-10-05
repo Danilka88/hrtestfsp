@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,7 +17,6 @@ from app.schemas.marketplace import (
     VacancyOut,
 )
 from app.services import marketplace as market
-from app.services.marketplace import MarketplaceError
 
 router_employer = APIRouter(prefix="/employers/me/vacancies", tags=["vacancies:employer"])
 router_candidate = APIRouter(prefix="/candidates/me", tags=["vacancies:candidate"])
@@ -38,11 +35,11 @@ async def publish_vacancy(
     return VacancyOut.model_validate(await market.vacancy_view(session, vacancy))
 
 
-@router_employer.get("", response_model=List[VacancyOut], summary="Вакансии работодателя")
+@router_employer.get("", response_model=list[VacancyOut], summary="Вакансии работодателя")
 async def my_vacancies(
     user: User = Depends(employer_only),
     session: AsyncSession = Depends(get_session),
-) -> List[VacancyOut]:
+) -> list[VacancyOut]:
     vacancies = await market.list_vacancies(session, user.id)
     return [VacancyOut.model_validate(await market.vacancy_view(session, v)) for v in vacancies]
 
@@ -59,14 +56,14 @@ async def close_vacancy(
 
 @router_employer.get(
     "/{vacancy_id}/applications",
-    response_model=List[ApplicationEmployerOut],
+    response_model=list[ApplicationEmployerOut],
     summary="Отклики на вакансию (контакты раскрыты — кандидат откликнулся сам)",
 )
 async def vacancy_applications(
     vacancy_id: str,
     user: User = Depends(employer_only),
     session: AsyncSession = Depends(get_session),
-) -> List[ApplicationEmployerOut]:
+) -> list[ApplicationEmployerOut]:
     views = await market.list_vacancy_applications(session, user.id, vacancy_id)
     return [ApplicationEmployerOut.model_validate(v) for v in views]
 
@@ -87,20 +84,16 @@ async def decide_application(
     application = await market.decide_application(
         session, user.id, application_id, accept=payload.status == "accepted"
     )
-    return ApplicationEmployerOut.model_validate(
-        await market.application_employer_view(session, application)
-    )
+    return ApplicationEmployerOut.model_validate(await market.application_employer_view(session, application))
 
 
-@router_candidate.get("/vacancies", response_model=List[VacancyOut], summary="Открытые вакансии")
+@router_candidate.get("/vacancies", response_model=list[VacancyOut], summary="Открытые вакансии")
 async def open_vacancies(
-    specialization_code: Optional[str] = Query(default=None),
+    specialization_code: str | None = Query(default=None),
     user: User = Depends(candidate_only),
     session: AsyncSession = Depends(get_session),
-) -> List[VacancyOut]:
-    vacancies = await market.list_open_vacancies(
-        session, specialization_code=specialization_code
-    )
+) -> list[VacancyOut]:
+    vacancies = await market.list_open_vacancies(session, specialization_code=specialization_code)
     return [VacancyOut.model_validate(await market.vacancy_view(session, v)) for v in vacancies]
 
 
@@ -124,11 +117,11 @@ async def apply(
 
 
 @router_candidate.get(
-    "/applications", response_model=List[ApplicationCandidateOut], summary="Мои отклики и их статусы"
+    "/applications", response_model=list[ApplicationCandidateOut], summary="Мои отклики и их статусы"
 )
 async def my_applications(
     user: User = Depends(candidate_only),
     session: AsyncSession = Depends(get_session),
-) -> List[ApplicationCandidateOut]:
+) -> list[ApplicationCandidateOut]:
     views = await market.list_candidate_applications(session, user.id)
     return [ApplicationCandidateOut.model_validate(v) for v in views]

@@ -9,14 +9,13 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Dict, List
 
 from app.providers.base import FspAchievement
 
 logger = logging.getLogger(__name__)
 
 # Словарь технологий. Поиск идёт по подстроке в тексте, приведённом к нижнему регистру.
-_STACK_ALIASES: Dict[str, List[str]] = {
+_STACK_ALIASES: dict[str, list[str]] = {
     "Python": ["python", "питон"],
     "Java": ["java"],
     "Go": ["golang"],
@@ -54,7 +53,7 @@ _STACK_ALIASES: Dict[str, List[str]] = {
     "Spark": ["spark"],
 }
 
-_ROLE_HINTS: Dict[str, List[str]] = {
+_ROLE_HINTS: dict[str, list[str]] = {
     "backend": ["backend", "бэкенд", "back-end"],
     "frontend": ["frontend", "фронтенд", "front-end"],
     "fullstack": ["fullstack", "full-stack", "фулстек"],
@@ -73,8 +72,16 @@ _GRADE_HINTS = [
     ("junior", ["junior", "джун", "младший", "стажёр", "стажер", "intern"]),
 ]
 
-_SOFT_HINTS = ["команд", "коммуника", "ответствен", "ментор", "наставни",
-               "лидер", "самостоятельн", "инициатив"]
+_SOFT_HINTS = [
+    "команд",
+    "коммуника",
+    "ответствен",
+    "ментор",
+    "наставни",
+    "лидер",
+    "самостоятельн",
+    "инициатив",
+]
 
 
 class MockLLMProvider:
@@ -94,15 +101,13 @@ class MockLLMProvider:
 
         email_match = re.search(r"[\w.+-]+@[\w-]+\.[\w.]+", source)
         phone_match = re.search(r"\+?\d[\d\s\-()]{9,}\d", source)
-        name_match = re.search(
-            r"^\s*([А-ЯЁ][а-яё]+(?:\s+[А-ЯЁ][а-яё]+){1,2})\s*$", source, re.MULTILINE
-        )
+        name_match = re.search(r"^\s*([А-ЯЁ][а-яё]+(?:\s+[А-ЯЁ][а-яё]+){1,2})\s*$", source, re.MULTILINE)
 
-        stack = [name for name, aliases in _STACK_ALIASES.items()
-                 if any(alias in lowered for alias in aliases)]
+        stack = [
+            name for name, aliases in _STACK_ALIASES.items() if any(alias in lowered for alias in aliases)
+        ]
 
-        roles = [role for role, hints in _ROLE_HINTS.items()
-                 if any(hint in lowered for hint in hints)]
+        roles = [role for role, hints in _ROLE_HINTS.items() if any(hint in lowered for hint in hints)]
 
         grade = next(
             (code for code, hints in _GRADE_HINTS if any(hint in lowered for hint in hints)),
@@ -137,7 +142,7 @@ class MockFspProvider:
     async def health(self) -> bool:
         return True
 
-    async def fetch_achievements(self, fsp_id: str) -> List[FspAchievement]:
+    async def fetch_achievements(self, fsp_id: str) -> list[FspAchievement]:
         """Синтетические достижения.
 
         Пустой/неизвестный идентификатор возвращает пустой список — ветка

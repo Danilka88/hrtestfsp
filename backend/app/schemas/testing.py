@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -25,14 +25,14 @@ class GradeOut(BaseModel):
 class SurveyRequest(BaseModel):
     industry: str = Field(default="it", max_length=64)
     specialization_code: str = Field(max_length=64)
-    answers: Dict[str, Any] = Field(default_factory=dict)
+    answers: dict[str, Any] = Field(default_factory=dict)
 
 
 class SurveyResponseOut(BaseModel):
     id: str
     industry: str
     specialization_code: str
-    grade_options: List[str]
+    grade_options: list[str]
     created_at: datetime
 
 
@@ -44,8 +44,8 @@ class StartSessionRequest(BaseModel):
 class ItemOut(BaseModel):
     id: str
     skill_tag: str
-    question: Optional[str] = None
-    options: List[str] = Field(default_factory=list)
+    question: str | None = None
+    options: list[str] = Field(default_factory=list)
 
 
 class StartSessionResponse(BaseModel):
@@ -58,7 +58,7 @@ class StartSessionResponse(BaseModel):
 class AnswerRequest(BaseModel):
     item_id: str
     answer_index: int = Field(ge=0)
-    response_time_ms: Optional[int] = Field(default=None, ge=0)
+    response_time_ms: int | None = Field(default=None, ge=0)
 
 
 class GradeChangeOut(BaseModel):
@@ -75,22 +75,22 @@ class SessionResultOut(BaseModel):
     converged: bool
     result_grade: str
     category_id: int
-    specialization: Optional[str] = None
-    current_grade: Optional[str] = None
+    specialization: str | None = None
+    current_grade: str | None = None
     grade_change_applied: bool
     grade_change_reason: str
-    warnings: List[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
 
 
 class AnswerResponse(BaseModel):
     correct: bool
     finished: bool
-    next_item: Optional[ItemOut] = None
-    result: Optional[SessionResultOut] = None
+    next_item: ItemOut | None = None
+    result: SessionResultOut | None = None
 
 
 class GradeHistoryEntry(BaseModel):
-    from_grade: Optional[str] = None
+    from_grade: str | None = None
     to_grade: str
     at: datetime
 
@@ -99,17 +99,17 @@ class SessionSummary(BaseModel):
     id: str
     status: str
     target_grade: str
-    result_grade: Optional[str] = None
+    result_grade: str | None = None
     items_answered: int
     theta: float
 
 
 class CategoryStatusOut(BaseModel):
-    specialization: Optional[str] = None
-    grade: Optional[str] = None
+    specialization: str | None = None
+    grade: str | None = None
     grade_change_allowed: bool
-    grade_change_available_in_days: Optional[int] = None
+    grade_change_available_in_days: int | None = None
     grade_change_cooldown_days: int
-    grade_options: List[str]
-    grade_history: List[GradeHistoryEntry]
-    sessions: List[SessionSummary]
+    grade_options: list[str]
+    grade_history: list[GradeHistoryEntry]
+    sessions: list[SessionSummary]

@@ -8,12 +8,12 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Sequence, Tuple
 
 # Порог оценки способности (θ) для нижней границы грейда.
 # Грейд определяется тестом, а не самооценкой кандидата.
-GRADE_THRESHOLDS: Dict[str, float] = {
+GRADE_THRESHOLDS: dict[str, float] = {
     "intern": -3.0,
     "junior": -1.0,
     "junior_plus": -0.5,
@@ -23,7 +23,7 @@ GRADE_THRESHOLDS: Dict[str, float] = {
 }
 
 # Порядок грейдов по возрастанию — используется для правил смены грейда.
-GRADE_ORDER: List[str] = ["intern", "junior", "junior_plus", "middle", "senior", "lead"]
+GRADE_ORDER: list[str] = ["intern", "junior", "junior_plus", "middle", "senior", "lead"]
 
 
 @dataclass(frozen=True)
@@ -49,7 +49,7 @@ class Item:
 class Response:
     item_id: str
     correct: bool
-    response_time_ms: Optional[int] = None
+    response_time_ms: int | None = None
 
 
 @dataclass
@@ -58,7 +58,7 @@ class AbilityEstimate:
     standard_error: float
     iterations: int
     converged: bool
-    warnings: List[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
 
 
 def probability_correct(theta: float, difficulty: float, discrimination: float = 1.0) -> float:
@@ -73,7 +73,7 @@ def probability_correct(theta: float, difficulty: float, discrimination: float =
 
 def estimate_ability(
     responses: Sequence[Response],
-    items: Dict[str, Item],
+    items: dict[str, Item],
     max_iterations: int = 60,
     tolerance: float = 1e-6,
 ) -> AbilityEstimate:
@@ -84,7 +84,7 @@ def estimate_ability(
     как «диапазон не определён точно», без додумывания результата.
     """
     known = [(r, items[r.item_id]) for r in responses if r.item_id in items]
-    warnings: List[str] = []
+    warnings: list[str] = []
 
     if not known:
         return AbilityEstimate(0.0, 99.0, 0, False, ["нет данных для оценки"])
@@ -93,14 +93,15 @@ def estimate_ability(
     converged = False
     iterations = 0
 
-    for iterations in range(1, max_iterations + 1):
+    for _ in range(max_iterations):
+        iterations += 1
         grad = 0.0
         info = 0.0
         for resp, item in known:
             p = probability_correct(theta, item.difficulty, item.discrimination)
             x = 1.0 if resp.correct else 0.0
             grad += item.discrimination * (x - p)
-            info += (item.discrimination ** 2) * p * (1.0 - p)
+            info += (item.discrimination**2) * p * (1.0 - p)
 
         if info <= 1e-9:
             break
@@ -132,7 +133,7 @@ def estimate_ability(
     total_info = 0.0
     for _, item in known:
         p = probability_correct(theta, item.difficulty, item.discrimination)
-        total_info += (item.discrimination ** 2) * p * (1.0 - p)
+        total_info += (item.discrimination**2) * p * (1.0 - p)
 
     se = 99.0 if total_info <= 1e-9 else 1.0 / math.sqrt(total_info)
 
@@ -149,7 +150,7 @@ def select_next_item(
     items: Sequence[Item],
     theta: float,
     used_item_ids: Sequence[str] = (),
-) -> Optional[Item]:
+) -> Item | None:
     """Выбор следующего задания.
 
     Критерий: минимум |b − θ| (максимум информации при текущей оценке).
@@ -162,7 +163,7 @@ def select_next_item(
     return min(candidates, key=lambda i: (abs(i.difficulty - theta), i.exposure_count, i.id))
 
 
-def grade_for_theta(theta: float, thresholds: Optional[Dict[str, float]] = None) -> str:
+def grade_for_theta(theta: float, thresholds: dict[str, float] | None = None) -> str:
     """Отображение оценки способности на шкалу грейдов."""
     limits = thresholds or GRADE_THRESHOLDS
     result = GRADE_ORDER[0]
@@ -172,7 +173,7 @@ def grade_for_theta(theta: float, thresholds: Optional[Dict[str, float]] = None)
     return result
 
 
-def next_grade_options(current_grade: str) -> List[str]:
+def next_grade_options(current_grade: str) -> list[str]:
     """Допустимые уровни тестирования относительно текущего грейда.
 
     Грейд не понижается принудительно: после неуспеха доступен уровень ниже,
@@ -190,9 +191,9 @@ def next_grade_options(current_grade: str) -> List[str]:
 
 
 def can_change_grade(
-    last_change_days_ago: Optional[int],
+    last_change_days_ago: int | None,
     cooldown_days: int,
-) -> Tuple[bool, Optional[int]]:
+) -> tuple[bool, int | None]:
     """Проверка ограничения частоты смены грейда.
 
     Первичное присвоение грейда (`None`) сменой не считается.

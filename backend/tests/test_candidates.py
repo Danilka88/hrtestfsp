@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import io
-from typing import Sequence
+from collections.abc import Sequence
 
 import pytest
 from httpx import AsyncClient
@@ -43,9 +43,7 @@ def _make_pdf(lines: Sequence[str]) -> bytes:
 
 async def _token(client: AsyncClient, email: str, role: str = "candidate") -> str:
     await register_and_verify(client, email, role=role)
-    login = await client.post(
-        "/api/v1/auth/login", json={"email": email, "password": "secret12345"}
-    )
+    login = await client.post("/api/v1/auth/login", json={"email": email, "password": "secret12345"})
     return login.json()["access_token"]
 
 
@@ -77,7 +75,7 @@ async def test_put_profile_and_read_back(client: AsyncClient) -> None:
     body = created.json()
     assert body["full_name"] == "Мария Сидорова"
     assert body["resume_source"] == "form"
-    assert body["privacy"]["show_contacts"] is False   # контакты скрыты по умолчанию
+    assert body["privacy"]["show_contacts"] is False  # контакты скрыты по умолчанию
 
     fetched = await client.get("/api/v1/candidates/me/profile", headers=_auth(token))
     assert fetched.status_code == 200
@@ -181,7 +179,5 @@ async def test_pdf_requires_existing_profile(client: AsyncClient) -> None:
 @pytest.mark.parametrize("field", ["experience_years"])
 async def test_validation_rejects_absurd_values(client: AsyncClient, field: str) -> None:
     token = await _token(client, "validation@example.com")
-    response = await client.put(
-        "/api/v1/candidates/me/profile", json={field: 99}, headers=_auth(token)
-    )
+    response = await client.put("/api/v1/candidates/me/profile", json={field: 99}, headers=_auth(token))
     assert response.status_code == 422
