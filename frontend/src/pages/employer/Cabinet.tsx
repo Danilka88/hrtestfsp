@@ -11,6 +11,9 @@ import type {
 } from "../../api/client";
 import { errorMessage } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
+import { AIButton, AIStatusBadge, aiToastPayload } from "../../components/ai";
+import { TasksPanel, VacanciesPanel } from "../../components/marketplace";
+import { useToast } from "../../components/toast";
 import {
   Alert,
   Button,
@@ -23,7 +26,7 @@ import {
   money,
 } from "../../components/ui";
 
-type Tab = "selection" | "search" | "invitations" | "profile";
+type Tab = "selection" | "search" | "invitations" | "vacancies" | "tasks" | "profile";
 
 export function EmployerCabinet() {
   const { user, logout } = useAuth();
@@ -36,9 +39,12 @@ export function EmployerCabinet() {
           <h1 className="text-2xl font-bold tracking-tight">Кабинет работодателя</h1>
           <p className="text-sm text-slate-400">{user?.email}</p>
         </div>
-        <Button variant="ghost" onClick={() => void logout()}>
-          Выйти
-        </Button>
+        <div className="flex items-center gap-3">
+          <AIStatusBadge />
+          <Button variant="ghost" onClick={() => void logout()}>
+            Выйти
+          </Button>
+        </div>
       </header>
 
       <nav className="flex flex-wrap gap-2">
@@ -47,6 +53,8 @@ export function EmployerCabinet() {
             ["selection", "Подбор кандидатов"],
             ["search", "Поиск по банку"],
             ["invitations", "Приглашения"],
+            ["vacancies", "Вакансии"],
+            ["tasks", "Задания"],
             ["profile", "Профиль компании"],
           ] as [Tab, string][]
         ).map(([key, label]) => (
@@ -59,15 +67,20 @@ export function EmployerCabinet() {
       {tab === "selection" ? <SelectionTab /> : null}
       {tab === "search" ? <SearchTab /> : null}
       {tab === "invitations" ? <InvitationsTab /> : null}
+      {tab === "vacancies" ? <VacanciesPanel role="employer" /> : null}
+      {tab === "tasks" ? <TasksPanel role="employer" /> : null}
       {tab === "profile" ? <CompanyTab /> : null}
     </div>
   );
 }
 
 function SelectionTab() {
+  const toast = useToast();
   const [specializations, setSpecializations] = useState<Specialization[]>([]);
   const [grades, setGrades] = useState<Grade[]>([]);
   const [history, setHistory] = useState<SelectionSummary[]>([]);
+  const [explanations, setExplanations] = useState<Record<string, string>>({});
+  const [aiBusyFor, setAiBusyFor] = useState<string | null>(null);
   const [title, setTitle] = useState("Backend-разработчик (Python)");
   const [description, setDescription] = useState("Команда платежей");
   const [specialization, setSpecialization] = useState("backend");
@@ -115,6 +128,10 @@ function SelectionTab() {
       setNotice(
         `Подборка сформирована: ${result.candidates.length} кандидатов, рубрика ${result.rubric_version}`,
       );
+      toast.success(
+        "Подборка сформирована",
+        `${result.candidates.length} кандидатов · рубрика ${result.rubric_version}`,
+      );
       void loadHistory();
     } catch (err) {
       setError(errorMessage(err));
@@ -144,6 +161,7 @@ function SelectionTab() {
         `Уточнённая подборка: ${refined.candidates.length} кандидатов` +
           (refined.parent_selection_id ? ` · прежняя версия сохранена` : ""),
       );
+      toast.success("Подборка уточнена", "Прежняя версия сохранена в истории подборок");
       void loadHistory();
     } catch (err) {
       setError(errorMessage(err));
@@ -151,6 +169,32 @@ function SelectionTab() {
       setBusy(false);
     }
   }, [selection, stack, grade, loadHistory]);
+
+  /** Объяснение попадания кандидата человеческим языком (на основе сохранённых критериев). */
+  const explain = useCallback(
+    async (candidate: CandidateCard) => {
+      if (!selection) return;
+      setAiBusyFor(candidate.reference);
+      try {
+        const result = await apiClient.aiMatchExplain({
+          selection_id: selection.id,
+          candidate_reference: candidate.reference,
+        });
+        const data = result.data as { summary?: string; points?: string[] };
+        const text = [data.summary, ...(data.points ?? []).map((point) => `· ${point}`)]
+          .filter(Boolean)
+          .join(" ");
+        setExplanations((prev) => ({ ...prev, [candidate.reference]: text }));
+        const payload = aiToastPayload(result, "Объяснение готово");
+        toast.push(payload.kind, payload.text, payload.detail);
+      } catch (err) {
+        toast.error("Не удалось сформулировать объяснение", errorMessage(err));
+      } finally {
+        setAiBusyFor(null);
+      }
+    },
+    [selection, toast],
+  );
 
   return (
     <div className="space-y-4">
@@ -223,6 +267,9 @@ function SelectionTab() {
                 candidate={candidate}
                 busy={busy}
                 onInvite={setInviteFor}
+                onExplain={(item) => void explain(item)}
+                explanation={explanations[candidate.reference]}
+                aiBusy={aiBusyFor === candidate.reference}
               />
             ))}
             {selection.candidates.length === 0 ? (
@@ -396,10 +443,16 @@ function CandidateRow({
   candidate,
   busy,
   onInvite,
+  onExplain,
+  explanation,
+  aiBusy,
 }: {
   candidate: CandidateCard;
   busy: boolean;
   onInvite: (candidate: CandidateCard) => void;
+  onExplain?: (candidate: CandidateCard) => void;
+  explanation?: string;
+  aiBusy?: boolean;
 }) {
   return (
     <div className="rounded-lg border border-slate-800 p-3">
@@ -418,11 +471,27 @@ function CandidateRow({
             <p className="mt-1 text-xs text-slate-500">{candidate.stack.join(", ")}</p>
           ) : null}
         </div>
-        <Button onClick={() => onInvite(candidate)} disabled={busy}>
-          Пригласить
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {onExplain ? (
+            <AIButton
+              onClick={() => onExplain(candidate)}
+              busy={aiBusy}
+              title="Сформулировать причину попадания в подборку"
+            >
+              Объяснить словами
+            </AIButton>
+          ) : null}
+          <Button onClick={() => onInvite(candidate)} disabled={busy}>
+            Пригласить
+          </Button>
+        </div>
       </div>
       <ReasonList reasons={candidate.reasons} missing={candidate.missing} />
+      {explanation ? (
+        <p className="mt-2 rounded-lg border border-violet-500/30 bg-violet-500/5 p-2 text-xs text-violet-100">
+          {explanation}
+        </p>
+      ) : null}
       <p className="mt-1 text-xs text-slate-600">Контакты скрыты до принятия приглашения</p>
     </div>
   );
@@ -441,6 +510,7 @@ function InvitePanel({
   onClose: () => void;
   onSent: (message: string) => void;
 }) {
+  const toast = useToast();
   const [salaryFrom, setSalaryFrom] = useState("250000");
   const [salaryTo, setSalaryTo] = useState("320000");
   const [message, setMessage] = useState("Приглашаем в команду");
@@ -458,7 +528,12 @@ function InvitePanel({
         salary_to: Number(salaryTo),
         contact_method: "hr@company.ru",
       });
-      onSent(`Приглашение отправлено кандидату ${candidate.reference}`);
+      const sentTo = candidate.reference;
+      onSent(`Приглашение отправлено кандидату ${sentTo}`);
+      toast.success(
+        "Приглашение отправлено",
+        "Кандидат увидит компанию и зарплату до начала общения; контакты раскроются после принятия",
+      );
     } catch (err) {
       setError(errorMessage(err));
     } finally {

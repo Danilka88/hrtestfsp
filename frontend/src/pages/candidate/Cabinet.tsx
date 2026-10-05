@@ -10,9 +10,12 @@ import type {
 } from "../../api/client";
 import { errorMessage } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
+import { AIButton, AISourceNote, AIStatusBadge, aiToastPayload } from "../../components/ai";
+import { TasksPanel, VacanciesPanel } from "../../components/marketplace";
+import { useToast } from "../../components/toast";
 import { Alert, Button, Card, Field, StatusBadge, TextArea, gradesLabel, money } from "../../components/ui";
 
-type Tab = "category" | "test" | "invitations" | "profile";
+type Tab = "category" | "test" | "invitations" | "vacancies" | "tasks" | "profile";
 
 export function CandidateCabinet() {
   const { user, logout } = useAuth();
@@ -25,9 +28,12 @@ export function CandidateCabinet() {
           <h1 className="text-2xl font-bold tracking-tight">Кабинет соискателя</h1>
           <p className="text-sm text-slate-400">{user?.email}</p>
         </div>
-        <Button variant="ghost" onClick={() => void logout()}>
-          Выйти
-        </Button>
+        <div className="flex items-center gap-3">
+          <AIStatusBadge />
+          <Button variant="ghost" onClick={() => void logout()}>
+            Выйти
+          </Button>
+        </div>
       </header>
 
       <nav className="flex flex-wrap gap-2">
@@ -36,6 +42,8 @@ export function CandidateCabinet() {
             ["category", "Категория и грейд"],
             ["test", "Тестирование"],
             ["invitations", "Приглашения"],
+            ["vacancies", "Вакансии"],
+            ["tasks", "Задания"],
             ["profile", "Профиль и ФСП"],
           ] as [Tab, string][]
         ).map(([key, label]) => (
@@ -48,6 +56,8 @@ export function CandidateCabinet() {
       {tab === "category" ? <CategoryTab /> : null}
       {tab === "test" ? <TestTab /> : null}
       {tab === "invitations" ? <InvitationsTab /> : null}
+      {tab === "vacancies" ? <VacanciesPanel role="candidate" /> : null}
+      {tab === "tasks" ? <TasksPanel role="candidate" /> : null}
       {tab === "profile" ? <ProfileTab /> : null}
     </div>
   );
@@ -316,6 +326,7 @@ function TestTab() {
 }
 
 function InvitationsTab() {
+  const toast = useToast();
   const [invitations, setInvitations] = useState<CandidateInvitation[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -345,8 +356,17 @@ function InvitationsTab() {
     setBusy(true);
     try {
       await apiClient.decideInvitation(id, status);
+      if (status === "accepted") {
+        toast.success(
+          "Приглашение принято",
+          "Работодатель получил ваши контакты — свяжется по указанному способу",
+        );
+      } else {
+        toast.info("Приглашение отклонено", "Работодатель увидит ваш отказ");
+      }
       await load();
     } catch (err) {
+      toast.error("Не удалось изменить решение", errorMessage(err));
       setError(errorMessage(err));
     } finally {
       setBusy(false);
@@ -418,6 +438,11 @@ function ProfileTab() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const toast = useToast();
+  const [resumeText, setResumeText] = useState("");
+  const [aiResult, setAiResult] = useState<apiClient.AIResult | null>(null);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
 
   const load = useCallback(async () => {
     try {
@@ -483,6 +508,33 @@ function ProfileTab() {
     }
   }
 
+  /** ИИ-разбор текста: заполняет поля профиля и подсказывает, что дополнить. */
+  async function analyze() {
+    setAiBusy(true);
+    setAiResult(null);
+    setSuggestions([]);
+    try {
+      const result = await apiClient.aiProfileAnalyze(resumeText);
+      setAiResult(result);
+      const data = result.data as {
+        stack?: string[];
+        summary?: string;
+        full_name?: string | null;
+        suggestions?: string[];
+      };
+      if (data.stack?.length) setStack(data.stack.join(", "));
+      if (data.summary && !summary) setSummary(data.summary);
+      if (data.full_name && !fullName) setFullName(data.full_name);
+      setSuggestions(data.suggestions ?? []);
+      const payload = aiToastPayload(result, "Разбор готов");
+      toast.push(payload.kind, payload.text, payload.detail);
+    } catch (err) {
+      toast.error("Не удалось разобрать текст", errorMessage(err));
+    } finally {
+      setAiBusy(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <Card title="Профиль">
@@ -504,6 +556,38 @@ function ProfileTab() {
         <p className="mt-2 text-xs text-slate-500">
           Грейд присваивается тестом. Значение из формы используется только как исходное для профиля.
         </p>
+      </Card>
+
+      <Card title="ИИ-разбор резюме">
+        <p className="mb-3 text-xs text-slate-500">
+          Вставьте текст резюме — модель извлечёт стек и роли и подскажет, что дополнить.
+          Разбор ускоряет заполнение профиля, но не заменяет обязательное тестирование:
+          грейд присваивается только по результату теста.
+        </p>
+        <TextArea
+          label="Текст резюме или описания профиля"
+          value={resumeText}
+          onChange={setResumeText}
+          rows={5}
+        />
+        <div className="mt-3">
+          <AIButton
+            onClick={() => void analyze()}
+            busy={aiBusy}
+            disabled={resumeText.trim().length < 20}
+            title="Извлечь поля профиля из текста"
+          >
+            Разобрать текст
+          </AIButton>
+        </div>
+        <AISourceNote result={aiResult} />
+        {suggestions.length ? (
+          <ul className="mt-2 space-y-1 text-xs text-amber-300/90">
+            {suggestions.map((item) => (
+              <li key={item}>· {item}</li>
+            ))}
+          </ul>
+        ) : null}
       </Card>
 
       <Card title="Связь с идентификатором ФСП">

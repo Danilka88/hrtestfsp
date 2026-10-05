@@ -470,3 +470,219 @@ export async function searchCandidates(
     })
   ).data;
 }
+
+// --- Вакансии (дополнительный функционал) -----------------------------------
+
+export interface Vacancy {
+  id: string;
+  title: string;
+  description: string | null;
+  specialization_code: string | null;
+  grade: string | null;
+  stack: string[];
+  salary_from: number;
+  salary_to: number;
+  status: string;
+  company_name: string | null;
+  created_at: string;
+}
+
+export interface ApplicationCandidate {
+  id: string;
+  vacancy_id: string;
+  vacancy_title: string | null;
+  company_name: string | null;
+  message: string | null;
+  status: string;
+  created_at: string;
+  viewed_at: string | null;
+  decided_at: string | null;
+}
+
+export interface ApplicationEmployer {
+  id: string;
+  vacancy_id: string;
+  candidate_reference: string;
+  candidate_name: string | null;
+  candidate_specialization: string | null;
+  candidate_grade: string | null;
+  candidate_stack: string[];
+  message: string | null;
+  status: string;
+  created_at: string;
+  candidate_contacts: { email?: string | null; phone?: string | null; telegram?: string | null } | null;
+  contacts_revealed: boolean;
+}
+
+export async function listOpenVacancies(specializationCode?: string): Promise<Vacancy[]> {
+  return (
+    await api.get<Vacancy[]>("/candidates/me/vacancies", {
+      params: specializationCode ? { specialization_code: specializationCode } : {},
+    })
+  ).data;
+}
+
+export async function applyToVacancy(vacancyId: string, message: string): Promise<ApplicationCandidate> {
+  return (
+    await api.post<ApplicationCandidate>(`/candidates/me/vacancies/${vacancyId}/applications`, { message })
+  ).data;
+}
+
+export async function myApplications(): Promise<ApplicationCandidate[]> {
+  return (await api.get<ApplicationCandidate[]>("/candidates/me/applications")).data;
+}
+
+export async function listMyVacancies(): Promise<Vacancy[]> {
+  return (await api.get<Vacancy[]>("/employers/me/vacancies")).data;
+}
+
+export async function publishVacancy(payload: {
+  title: string;
+  description?: string;
+  specialization_code?: string;
+  grade?: string;
+  stack?: string[];
+  salary_from: number;
+  salary_to: number;
+}): Promise<Vacancy> {
+  return (await api.post<Vacancy>("/employers/me/vacancies", payload)).data;
+}
+
+export async function closeVacancy(vacancyId: string): Promise<Vacancy> {
+  return (await api.post<Vacancy>(`/employers/me/vacancies/${vacancyId}/close`)).data;
+}
+
+export async function vacancyApplications(vacancyId: string): Promise<ApplicationEmployer[]> {
+  return (await api.get<ApplicationEmployer[]>(`/employers/me/vacancies/${vacancyId}/applications`)).data;
+}
+
+export async function decideApplication(
+  applicationId: string,
+  status: "accepted" | "declined",
+): Promise<ApplicationEmployer> {
+  return (
+    await api.post<ApplicationEmployer>(`/employers/me/vacancies/applications/${applicationId}/decision`, {
+      status,
+    })
+  ).data;
+}
+
+// --- Регулярные короткие задания --------------------------------------------
+
+export interface RegularTask {
+  id: string;
+  title: string;
+  description: string | null;
+  specialization_code: string | null;
+  grade: string | null;
+  status: string;
+  company_name: string | null;
+  created_at: string;
+}
+
+export interface TaskSubmission {
+  id: string;
+  task_id: string;
+  candidate_reference: string | null;
+  candidate_name: string | null;
+  candidate_specialization: string | null;
+  candidate_grade: string | null;
+  solution: string;
+  status: string;
+  created_at: string;
+}
+
+export async function listMyTasks(): Promise<RegularTask[]> {
+  return (await api.get<RegularTask[]>("/employers/me/tasks")).data;
+}
+
+export async function createTask(payload: {
+  title: string;
+  description?: string;
+  specialization_code?: string;
+  grade?: string;
+}): Promise<RegularTask> {
+  return (await api.post<RegularTask>("/employers/me/tasks", payload)).data;
+}
+
+export async function taskSubmissions(taskId: string): Promise<TaskSubmission[]> {
+  return (await api.get<TaskSubmission[]>(`/employers/me/tasks/${taskId}/submissions`)).data;
+}
+
+export async function offeredTasks(): Promise<RegularTask[]> {
+  return (await api.get<RegularTask[]>("/candidates/me/tasks")).data;
+}
+
+export async function submitTask(taskId: string, solution: string): Promise<TaskSubmission> {
+  return (await api.post<TaskSubmission>(`/candidates/me/tasks/${taskId}/submissions`, { solution })).data;
+}
+
+// --- ИИ ---------------------------------------------------------------------
+
+export interface AIStatus {
+  provider: string;
+  available: boolean;
+  degraded: boolean;
+  model: string | null;
+  base_url?: string | null;
+  think?: boolean | null;
+  detail?: string | null;
+  hint: string;
+}
+
+export interface AIResult<T = Record<string, unknown>> {
+  data: T;
+  provider: string;
+  degraded: boolean;
+  latency_ms: number;
+  note: string | null;
+  warnings: string[];
+}
+
+export async function aiStatus(): Promise<AIStatus> {
+  return (await api.get<AIStatus>("/ai/status")).data;
+}
+
+export async function aiNeedDraft(brief: string): Promise<AIResult> {
+  return (await api.post<AIResult>("/ai/need/draft", { brief })).data;
+}
+
+export async function aiTaskDraft(payload: {
+  need_title: string;
+  stack?: string[];
+  grade?: string;
+}): Promise<AIResult> {
+  return (await api.post<AIResult>("/ai/task/draft", payload)).data;
+}
+
+export async function aiInvitationDraft(payload: {
+  company: string;
+  candidate_grade?: string | null;
+  stack?: string[];
+  salary_from: number;
+  salary_to: number;
+  role_title?: string | null;
+}): Promise<AIResult> {
+  return (await api.post<AIResult>("/ai/invitation/draft", payload)).data;
+}
+
+export async function aiProfileAnalyze(text: string): Promise<AIResult> {
+  return (await api.post<AIResult>("/ai/profile/analyze", { text })).data;
+}
+
+export async function aiCoverLetter(payload: {
+  vacancy_title: string;
+  company: string;
+  required_stack?: string[];
+  candidate_stack?: string[];
+  candidate_grade?: string | null;
+}): Promise<AIResult> {
+  return (await api.post<AIResult>("/ai/cover-letter", payload)).data;
+}
+
+export async function aiMatchExplain(payload: {
+  selection_id: string;
+  candidate_reference: string;
+}): Promise<AIResult> {
+  return (await api.post<AIResult>("/ai/match/explain", payload)).data;
+}
