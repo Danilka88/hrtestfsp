@@ -10,6 +10,7 @@ from __future__ import annotations
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from app.services.ai import AIError
 from app.services.auth import AuthError
 from app.services.candidates import ProfileError
 from app.services.employers import EmployerError
@@ -26,6 +27,7 @@ DOMAIN_ERRORS = (
     InvitationError,
     MarketplaceError,
     TestingError,
+    AIError,
 )
 
 

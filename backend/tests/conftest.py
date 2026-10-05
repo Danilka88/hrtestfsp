@@ -6,18 +6,24 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import AsyncIterator
 
-import pytest_asyncio
-from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from sqlalchemy.pool import StaticPool
+# Тесты не должны зависеть от локальной LLM: результат был бы недетерминированным
+# и медленным. Принудительно включаем демо-режим до создания настроек.
+os.environ["LLM_PROVIDER"] = "mock"
 
-import app.models  # noqa: F401  — регистрирует модели в Base.metadata
-from app.db.base import Base
-from app.db.session import get_session
-from app.main import app
-from app.services.reference import ensure_reference_data
+import pytest_asyncio  # noqa: E402
+from httpx import ASGITransport, AsyncClient  # noqa: E402
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine  # noqa: E402
+from sqlalchemy.pool import StaticPool  # noqa: E402
+
+import app.models  # noqa: E402,F401  — регистрирует модели в Base.metadata
+from app.db.base import Base  # noqa: E402
+from app.db.session import get_session  # noqa: E402
+from app.main import app  # noqa: E402
+from app.providers.registry import reset_llm_provider  # noqa: E402
+from app.services.reference import ensure_reference_data  # noqa: E402
 
 TEST_DATABASE_URL = "sqlite+aiosqlite://"
 
@@ -29,6 +35,7 @@ _current_factory = None
 @pytest_asyncio.fixture
 async def client() -> AsyncIterator[AsyncClient]:
     global _current_factory
+    reset_llm_provider()  # провайдер LLM пересобирается под демо-режим тестов
     engine = create_async_engine(
         TEST_DATABASE_URL,
         connect_args={"check_same_thread": False},

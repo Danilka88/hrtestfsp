@@ -8,22 +8,20 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import timedelta
-from uuid import uuid4
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.security import (
-    create_access_token,
-    create_refresh_token,
     hash_opaque_token,
     hash_password,
     new_opaque_token,
     utcnow,
-    verify_password,
 )
 from app.models.user import EmailVerificationToken, RefreshToken, User, UserRole
+from app.providers.auth import AuthCredentials, UserRecord, get_auth_provider
+from app.providers.base import ExternalIdentity
 from app.providers.registry import get_providers
 
 
@@ -132,29 +130,61 @@ async def verify_email(session: AsyncSession, token: str) -> User:
     return user
 
 
-def issue_tokens(session: AsyncSession, user: User) -> IssuedTokens:
-    """Выдаёт пару access/refresh; refresh сохраняется по jti для возможности отзыва."""
+async def issue_tokens(session: AsyncSession, user: User) -> IssuedTokens:
+    """Выдаёт пару access/refresh через активный провайдер аутентификации.
+
+    Локальный провайдер выпускает собственные JWT и регистрирует refresh по `jti`,
+    чтобы токен можно было отозвать. Внешний провайдер (Keycloak) выпускает
+    токены сам — тогда запись в БД не создаётся: отзыв выполняет провайдер.
+    """
     settings = get_settings()
-    jti = str(uuid4())
-    session.add(
-        RefreshToken(
-            jti=jti,
-            user_id=user.id,
-            expires_at=utcnow() + timedelta(days=settings.refresh_token_ttl_days),
-        )
+    provider = get_auth_provider()
+    identity = ExternalIdentity(
+        subject=user.id,
+        email=user.email,
+        claims={"role": user.role, "auth_provider": provider.name},
     )
+    pair = await provider.issue_tokens(identity, role=user.role)
+
+    if pair.refresh_jti is not None:
+        session.add(
+            RefreshToken(
+                jti=pair.refresh_jti,
+                user_id=user.id,
+                expires_at=pair.refresh_expires_at
+                or utcnow() + timedelta(days=settings.refresh_token_ttl_days),
+            )
+        )
     return IssuedTokens(
-        access_token=create_access_token(user.id, user.role),
-        refresh_token=create_refresh_token(user.id, jti),
-        expires_in=settings.access_token_ttl_minutes * 60,
+        access_token=pair.access_token,
+        refresh_token=pair.refresh_token,
+        expires_in=pair.expires_in,
     )
 
 
 async def authenticate(session: AsyncSession, *, email: str, password: str) -> User:
+    """Проверка учётных данных через активный провайдер аутентификации.
+
+    Провайдеру передаётся уже загруженная запись пользователя, поэтому сам он в
+    БД не ходит: локальная реализация сверяет Argon2-хэш, реализация Keycloak
+    проверяет учётные данные в realm и возвращает подтверждённую личность.
+    """
     user = await _get_user_by_email(session, email)
+    provider = get_auth_provider()
+    record = (
+        UserRecord(
+            user_id=user.id,
+            email=user.email,
+            password_hash=user.password_hash,
+            role=user.role,
+        )
+        if user is not None
+        else None
+    )
+    identity = await provider.authenticate(AuthCredentials(email=email, password=password), record)
     # Одинаковое сообщение для «нет пользователя» и «неверный пароль»,
     # чтобы не раскрывать существование аккаунта.
-    if user is None or not verify_password(password, user.password_hash):
+    if identity is None or user is None:
         raise AuthError(401, "Неверный email или пароль")
     if not user.is_active:
         raise AuthError(403, "Учётная запись отключена")
@@ -165,7 +195,7 @@ async def authenticate(session: AsyncSession, *, email: str, password: str) -> U
 
 async def login(session: AsyncSession, *, email: str, password: str) -> tuple[User, IssuedTokens]:
     user = await authenticate(session, email=email, password=password)
-    tokens = issue_tokens(session, user)
+    tokens = await issue_tokens(session, user)
     await session.commit()
     return user, tokens
 
@@ -188,7 +218,7 @@ async def refresh(session: AsyncSession, *, refresh_token: str) -> IssuedTokens:
         raise AuthError(401, "Пользователь недоступен")
 
     record.revoked_at = utcnow()
-    tokens = issue_tokens(session, user)
+    tokens = await issue_tokens(session, user)
     await session.commit()
     return tokens
 

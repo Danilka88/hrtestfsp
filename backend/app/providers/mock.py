@@ -7,12 +7,43 @@
 
 from __future__ import annotations
 
+import hashlib
 import logging
+import math
 import re
 
 from app.providers.base import FspAchievement
 
 logger = logging.getLogger(__name__)
+
+# Размерность офлайн-векторов. Согласована с демо-эмбеддингами: позволяет
+# сравнивать векторы, полученные хеш-векторизатором, между собой.
+HASH_VECTOR_DIM = 256
+_WORD_RE = re.compile(r"[a-zа-яё0-9+#.]+", re.IGNORECASE)
+
+
+def _hash_vector(text: str, dim: int = HASH_VECTOR_DIM) -> list[float]:
+    """Хеширующий мешок слов (feature hashing) — офлайн-замена эмбеддингов.
+
+    Каждый токен детерминированно отображается в координату вектора, значение
+    накапливается по частоте и нормируется. Косинус таких векторов отражает
+    лексическое пересечение: совпавшие термины (Python, PostgreSQL) сближают
+    тексты, что для сопоставления стека даёт тот же знак сигнала, что и
+    настоящие эмбеддинги, но без модели.
+    """
+    vector = [0.0] * dim
+    tokens = _WORD_RE.findall((text or "").lower())
+    for token in tokens:
+        if len(token) < 2:
+            continue
+        digest = hashlib.blake2b(token.encode("utf-8"), digest_size=4).digest()
+        index = int.from_bytes(digest, "big") % dim
+        vector[index] += 1.0
+    norm = math.sqrt(sum(value * value for value in vector))
+    if norm:
+        vector = [value / norm for value in vector]
+    return vector
+
 
 # Словарь технологий. Поиск идёт по подстроке в тексте, приведённом к нижнему регистру.
 _STACK_ALIASES: dict[str, list[str]] = {
@@ -84,11 +115,58 @@ _SOFT_HINTS = [
 ]
 
 
+def detect_stack(text: str) -> list[str]:
+    """Технологии, найденные в тексте (общий словарь демо-режима)."""
+    lowered = (text or "").lower()
+    return [name for name, aliases in _STACK_ALIASES.items() if any(a in lowered for a in aliases)]
+
+
+def detect_roles(text: str) -> list[str]:
+    """Роли, найденные в тексте по словарю подсказок."""
+    lowered = (text or "").lower()
+    return [role for role, hints in _ROLE_HINTS.items() if any(hint in lowered for hint in hints)]
+
+
+def detect_grade(text: str) -> str | None:
+    """Грейд, упомянутый в тексте (intern … lead)."""
+    lowered = (text or "").lower()
+    return next((code for code, hints in _GRADE_HINTS if any(hint in lowered for hint in hints)), None)
+
+
 class MockLLMProvider:
+    """Демо-реализация LLM: детерминированные ответы без обращений наружу.
+
+    Используется как запасной вариант, когда локальная модель недоступна
+    (например, на машине судьи без Ollama). Прикладные демо-ответы живут в
+    `app/services/ai.py` — там, где известна конкретная задача.
+    """
+
     name = "llm:mock"
 
     async def health(self) -> bool:
         return True
+
+    async def complete(
+        self,
+        prompt: str,
+        *,
+        system: str | None = None,
+        json_schema: dict | None = None,
+        max_tokens: int = 512,
+    ) -> str:
+        """Детерминированная заглушка: без модели осмысленный текст не генерируется."""
+        if json_schema is not None:
+            return "{}"
+        return ""
+
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        """Офлайн-векторизация: хеширующий мешок слов.
+
+        Это не нейросетевые эмбеддинги, а честная лексическая близость —
+        работает без модели и даёт сопоставимый по смыслу сигнал на терминах
+        (совпавшие технологии повышают косинус).
+        """
+        return [_hash_vector(text) for text in texts]
 
     async def extract_resume(self, text: str) -> dict:
         """Детерминированный разбор резюме без внешних вызовов.

@@ -37,6 +37,16 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@db:5432/${POSTGRES_DB:-app}
       REDIS_URL: redis://redis:6379/0
+      # Локальный LLM на хост-машине: контейнер обращается к Ollama по
+      # host.docker.internal. Если Ollama не запущена, платформа автоматически
+      # переходит на демо-данные — основной сценарий не ломается.
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      LLM_PROVIDER: ${LLM_PROVIDER:-auto}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-}
+      OLLAMA_EMBED_MODEL: ${OLLAMA_EMBED_MODEL:-}
+      SEMANTIC_MATCH_ENABLED: ${SEMANTIC_MATCH_ENABLED:-true}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       db:
         condition: service_healthy

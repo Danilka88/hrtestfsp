@@ -32,11 +32,38 @@ class Settings(BaseSettings):
     access_token_ttl_minutes: int = 30
     refresh_token_ttl_days: int = 30
 
-    # --- Провайдеры: mock | real ---
-    llm_provider: str = "mock"
+    # --- Провайдеры: mock | real | auto ---
+    # llm_provider:
+    #   auto   — пробуем реальный локальный LLM (Ollama); если недоступен,
+    #            автоматически отдаём детерминированные демо-данные (по умолчанию);
+    #   ollama — только реальный LLM, ошибка если недоступен;
+    #   mock   — только демо-данные, без обращений наружу.
+    llm_provider: str = "auto"
     fsp_provider: str = "mock"
     email_provider: str = "mock"
     storage_provider: str = "mock"
+
+    # --- Локальный LLM (Ollama) ---
+    # Любая открытая модель из библиотеки Ollama: gemma4, gemma3, qwen3, llama,
+    # mistral и т.д. Пустое значение = выбрать автоматически из уже скачанных.
+    ollama_base_url: str = "http://host.docker.internal:11434"
+    ollama_model: str = ""
+    ollama_embed_model: str = ""
+    llm_timeout_seconds: float = 30.0
+    # Reasoning-режим Gemma 4 замедляет короткие задачи в ~40 раз (9.8 с → 0.25 с);
+    # для извлечения полей и черновиков он избыточен и отключён по умолчанию.
+    llm_think: bool = False
+    semantic_match_enabled: bool = True
+
+    # --- Аутентификация: провайдер (local | keycloak) ---
+    # Абстракция AuthProvider: локальная реализация заменяется на OIDC/Keycloak
+    # без изменения бизнес-логики (совместимость с будущим ФСП ID).
+    auth_provider: str = "local"
+    # Задел под ФСП ID: заполняется при развёртывании realm Keycloak.
+    keycloak_base_url: str = ""
+    keycloak_realm: str = "fsp"
+    keycloak_client_id: str = ""
+    keycloak_client_secret: str = ""
 
     # --- Аутентификация ---
     email_verification_ttl_minutes: int = 24 * 60
