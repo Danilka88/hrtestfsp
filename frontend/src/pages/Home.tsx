@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 const concepts = [
   {
     title: "Обратный подбор",
@@ -50,9 +52,15 @@ export function HomePage() {
       </div>
 
       <div className="mt-8 rounded-xl border border-dashed border-slate-700 bg-slate-900/40 p-4 text-sm text-slate-400">
-        <strong className="text-slate-200">Статус: Этап 0 — каркас.</strong> Поднят backend (FastAPI,
-        health-пробы, OpenAPI), frontend (SPA), слой хранения и mock-провайдеры. Сквозные сценарии
-        кабинетов реализуются на следующих этапах.
+        <strong className="text-slate-200">Что уже работает.</strong> Регистрация с подтверждением
+        почты и роли, профиль кандидата (форма + PDF-резюме с автораспознаванием + генерация PDF),
+        обязательный путь «опрос → грейд → адаптивный тест → категория», кабинет работодателя
+        (потребность → подборка с объяснением каждого кандидата → приглашение с зарплатой),
+        раскрытие контактов только по согласию, связь с ФСП, вакансии и короткие задания.
+        {" "}
+        <Link to="/login" className="text-sky-400">
+          Войти в кабинет
+        </Link>
       </div>
     </div>
   );
