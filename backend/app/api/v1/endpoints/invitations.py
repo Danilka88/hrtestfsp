@@ -47,6 +47,20 @@ async def list_invitations(
     return [InvitationEmployerView.model_validate(v) for v in views]
 
 
+@router_employer.post(
+    "/{invitation_id}/revoke",
+    response_model=InvitationEmployerView,
+    summary="Отозвать отправленное приглашение",
+)
+async def revoke_invitation(
+    invitation_id: str,
+    user: User = Depends(employer_only),
+    session: AsyncSession = Depends(get_session),
+) -> InvitationEmployerView:
+    invitation = await invitation_service.revoke(session, user.id, invitation_id)
+    return InvitationEmployerView.model_validate(await invitation_service.employer_view(session, invitation))
+
+
 @router_candidate.get(
     "", response_model=list[InvitationCandidateView], summary="Входящие приглашения кандидата"
 )

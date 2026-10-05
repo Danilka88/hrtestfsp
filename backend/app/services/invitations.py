@@ -18,6 +18,7 @@ from app.models.employer import EmployerProfile
 from app.models.invitation import (
     STATUS_ACCEPTED,
     STATUS_DECLINED,
+    STATUS_REVOKED,
     STATUS_SENT,
     STATUS_VIEWED,
     Invitation,
@@ -138,6 +139,7 @@ async def employer_view(session: AsyncSession, invitation: Invitation) -> dict[s
         "decided_at": invitation.decided_at,
         "candidate_contacts": contacts,
         "contacts_revealed": revealed,
+        "can_revoke": invitation.status in (STATUS_SENT, STATUS_VIEWED),
     }
 
 
@@ -212,10 +214,29 @@ async def mark_viewed(session: AsyncSession, candidate_user_id: str, invitation_
     return invitation
 
 
+async def revoke(session: AsyncSession, employer_id: str, invitation_id: str) -> Invitation:
+    """Отзывает приглашение. Решение кандидата отменить нельзя — это история."""
+    invitation = await session.get(Invitation, invitation_id)
+    if invitation is None or invitation.employer_id != employer_id:
+        # Одинаковый ответ, чтобы не раскрывать существование чужих записей
+        raise InvitationError(404, "Приглашение не найдено")
+    if invitation.status in (STATUS_ACCEPTED, STATUS_DECLINED):
+        raise InvitationError(409, "По приглашению уже принято решение — отозвать его нельзя")
+    if invitation.status == STATUS_REVOKED:
+        raise InvitationError(409, "Приглашение уже отозвано")
+    invitation.status = STATUS_REVOKED
+    invitation.decided_at = utcnow()
+    await session.commit()
+    await session.refresh(invitation)
+    return invitation
+
+
 async def decide(
     session: AsyncSession, candidate_user_id: str, invitation_id: str, *, accept: bool
 ) -> Invitation:
     invitation = await _get_own_invitation(session, candidate_user_id, invitation_id)
+    if invitation.status == STATUS_REVOKED:
+        raise InvitationError(409, "Работодатель отозвал приглашение")
     if invitation.status in (STATUS_ACCEPTED, STATUS_DECLINED):
         raise InvitationError(409, "Решение по приглашению уже принято")
 

@@ -175,6 +175,7 @@
   <a href="#testing">Тестирование</a>
   <a href="#matching">Подбор</a>
   <a href="#rules">Правила</a>
+  <a href="#scenarios">Сценарии</a>
   <a href="#arch">Архитектура</a>
   <a href="#ai">ИИ-слой</a>
   <a href="#mvp">MVP</a>
@@ -476,9 +477,84 @@
   </div>
 </div></section>
 
-<!-- 8. ARCHITECTURE -->
+<!-- 8. SCENARIOS -->
+<section id="scenarios"><div class="wrap">
+  <h2><span class="n">08</span>Сценарии использования: полный разбор</h2>
+  <p class="sub">Какие маршруты есть у каждой роли и чем они подтверждены в ТЗ. Полная версия с
+  матрицей требований и маршрутом демонстрации — в <a href="../docs/07-scenarios.md"><code>docs/07-scenarios.md</code></a>.</p>
+
+  <div class="grid g2">
+    <div class="card"><h3><span class="num">A</span>Маршруты соискателя</h3>
+      <div class="flow">
+        <span class="step">Регистрация с согласиями</span><span class="step">→</span>
+        <span class="step">Подтверждение адреса</span><span class="step">→</span>
+        <span class="step">Профиль: форма / PDF / разбор моделью</span><span class="step">→</span>
+        <span class="step">Опрос по специализации</span><span class="step">→</span>
+        <span class="step">Выбор предполагаемого грейда</span><span class="step">→</span>
+        <span class="step">Адаптивный тест 10–16 заданий</span><span class="step">→</span>
+        <span class="step"><b>Авто-категория</b> (специализация × грейд)</span><span class="step">→</span>
+        <span class="step">Приглашения: принять / отклонить</span><span class="step">→</span>
+        <span class="step">Отклик на вакансию (доп.)</span><span class="step">→</span>
+        <span class="step">Регулярные задания</span><span class="step">→</span>
+        <span class="step">Приватность и связь с ФСП</span>
+      </div>
+      <p style="margin-top:12px"><b>Ветвления, каждое обработано:</b> незавершённый тест продолжается на
+      том же задании; после неуспеха доступен тест на уровень ниже (грейд не понижается
+      принудительно); смена грейда ограничена 90 днями; профиль без истории ФСП остаётся
+      корректным; истёкшая сессия продлевается или явно сообщает о себе.</p>
+    </div>
+
+    <div class="card"><h3><span class="num">B</span>Маршруты работодателя</h3>
+      <div class="flow">
+        <span class="step">Регистрация и профиль компании</span><span class="step">→</span>
+        <span class="step">Описание потребности</span><span class="step">→</span>
+        <span class="step"><b>Подборка</b> с объяснением по каждому</span><span class="step">→</span>
+        <span class="step">Уточнение без потери прежней версии</span><span class="step">→</span>
+        <span class="step">Поиск по банку с фильтрами</span><span class="step">→</span>
+        <span class="step"><b>Приглашение</b> с зарплатой</span><span class="step">→</span>
+        <span class="step">Статусы и отзыв приглашения</span><span class="step">→</span>
+        <span class="step">Контакты после принятия</span><span class="step">→</span>
+        <span class="step">Публикация и правка вакансии</span><span class="step">→</span>
+        <span class="step">Отклики: принять / отклонить</span><span class="step">→</span>
+        <span class="step">Короткие задания кандидатам</span>
+      </div>
+      <p style="margin-top:12px"><b>Ключевое отличие:</b> инициатива у работодателя — он находит
+      нужную категорию и сам выходит на конкретного человека. Вакансия для этого не обязательна:
+      приглашение можно направить напрямую из подборки или поиска.</p>
+    </div>
+  </div>
+
+  <div class="tw" style="margin-top:22px">
+    <table>
+      <thead><tr><th style="width:30%">Сквозное правило</th><th>Как обеспечивается</th></tr></thead>
+      <tbody>
+        <tr><td><b>Контакты скрыты</b> до принятия приглашения или отклика</td>
+            <td>Контакты отдаются только при статусе «принято»; при отказе, просмотре и отзыве — <code>null</code></td></tr>
+        <tr><td><b>Разграничение ролей и изоляция данных</b></td>
+            <td>Кандидат видит только свои приглашения и отклики, работодатель — только свои записи. Чужой метод → <code>403</code>, чужая запись → <code>404</code></td></tr>
+        <tr><td><b>Зарплата обязательна</b></td>
+            <td>В вакансии и в приглашении, диапазон «от–до» в рублях — кандидат видит условия до общения</td></tr>
+        <tr><td><b>Статусы видны обеим сторонам</b></td>
+            <td>отправлено → просмотрено → принято / отклонено; работодатель может <b>отозвать</b> приглашение, пока решения нет</td></tr>
+        <tr><td><b>Отсутствующие данные не додумываются</b></td>
+            <td>Критерий даёт вклад 0 и позицию не понижает; в интерфейсе — пометка «не оценено»</td></tr>
+        <tr><td><b>Отказ ИИ не ломает сценарий</b></td>
+            <td>Недоступная модель → демо-данные с пометкой <code>degraded</code>; грейд присваивает тест, не модель</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note" style="margin-top:18px">
+    <b>Вне объёма MVP — осознанно:</b> верификация компании-работодателя, модерация вакансий и
+    интеграция с ATS-системами вынесены ТЗ за рамки MVP. Для них подготовлена концепция
+    (<a href="../docs/04-anti-fraud-ats.md"><code>docs/04-anti-fraud-ats.md</code></a>), а не рабочая
+    реализация — это граница объёма, а не пропуск.
+  </div>
+</div></section>
+
+<!-- 9. ARCHITECTURE -->
 <section id="arch"><div class="wrap">
-  <h2><span class="n">08</span>Архитектура и стек</h2>
+  <h2><span class="n">09</span>Архитектура и стек</h2>
   <p class="sub">Три слоя: Frontend, Backend (API бизнес-логики), слой хранения. Внешние зависимости — за интерфейсами с mock-реализациями.</p>
 
   <div class="arch">
@@ -509,7 +585,7 @@
       <p>FastAPI 0.142 · Pydantic 2.13 · SQLAlchemy 2.1 (async) · PostgreSQL 16 · React 19 · TypeScript 7 · Vite 8 · Tailwind 4.
       Перечень зависимостей сверен с фактическими импортами: заявленных, но не используемых библиотек в нём нет.</p></div>
     <div class="card"><h3>Проверяемость</h3>
-      <p>253 автотеста (<code>pytest</code>, покрытие 97%), 8 сквозных проверок (<code>scripts/smoke-*.sh</code>),
+      <p>264 автотеста (<code>pytest</code>, покрытие 97%), 8 сквозных проверок (<code>scripts/smoke-*.sh</code>),
       линтер <code>ruff</code> — без замечаний, поиск мёртвого кода <code>vulture</code> — чисто,
       6 миграций БД. Всё воспроизводится одной командой.</p></div>
     <div class="card"><h3>Как запустить</h3>
@@ -552,7 +628,7 @@
 
 <!-- 9. AI LAYER -->
 <section id="ai"><div class="wrap">
-  <h2><span class="n">09</span>ИИ-слой: что делает модель и почему локально</h2>
+  <h2><span class="n">10</span>ИИ-слой: что делает модель и почему локально</h2>
   <p class="sub">Дополнительный функционал сверх ТЗ. Открытая модель выполняет рутинные текстовые
   операции и семантическое сопоставление, но <b>ядро решения не подменяет</b>: грейд присваивает тест,
   веса ранжирования фиксированы. Все семь функций вызываются из интерфейса обеих ролей — не только из API.</p>
@@ -632,13 +708,13 @@
 
 <!-- 10. MVP -->
 <section id="mvp"><div class="wrap">
-  <h2><span class="n">10</span>Скоуп MVP</h2>
+  <h2><span class="n">11</span>Скоуп MVP</h2>
   <p class="sub">Обязательный минимум, реалистично достижимый за время хакатона; дополнительное — добор баллов.</p>
 
   <div class="card" style="border-color:rgba(52,211,153,.5);margin-bottom:16px">
     <h3>Статус: реализовано полностью</h3>
     <p>Все позиции Must и Should ниже реализованы в <code>project/</code> и проверены на живом стеке
-    (4 сервиса здоровы, 253 автотеста, 8 сквозных проверок, прогон валидации).
+    (4 сервиса здоровы, 264 автотеста, 8 сквозных проверок, прогон валидации).
     Единственный внешний артефакт — презентация для питч-сессии.</p>
   </div>
 
@@ -676,7 +752,7 @@
 
 <!-- 11. COMPLIANCE -->
 <section id="compliance"><div class="wrap">
-  <h2><span class="n">11</span>Соответствие техническому заданию</h2>
+  <h2><span class="n">12</span>Соответствие техническому заданию</h2>
   <p class="sub">Требования ТЗ — построчно, с указанием того, чем каждое подтверждается в решении.
   Отмечено честно: все обязательные требования выполнены, а позиции, помеченные ТЗ как «желательно,
   но не обязательно для MVP», реализованы и выведены в интерфейс, а не оставлены на уровне API.</p>
@@ -684,9 +760,9 @@
   <div class="grid g3" style="margin-bottom:22px">
     <div class="stat"><div class="v up">33 из 33</div>
       <div class="l">позиций ТЗ подтверждено полностью</div></div>
-    <div class="stat"><div class="v">56</div>
+    <div class="stat"><div class="v">58</div>
       <div class="l">методов API в 14 группах, все описаны в OpenAPI</div></div>
-    <div class="stat"><div class="v up">253</div>
+    <div class="stat"><div class="v up">264</div>
       <div class="l">автотеста (покрытие 97%) и 8 сквозных проверок на живом стеке</div></div>
   </div>
 
@@ -834,7 +910,7 @@
 
 <!-- 12. ROADMAP -->
 <section id="road"><div class="wrap">
-  <h2><span class="n">12</span>План разработки</h2>
+  <h2><span class="n">13</span>План разработки</h2>
   <p class="sub">Demo-first: сначала сквозной путь, затем дополнительный функционал.</p>
   <div class="grid g2">
     <div class="tl">
@@ -854,7 +930,7 @@
 
 <!-- 13. VALIDATION -->
 <section id="valid"><div class="wrap">
-  <h2><span class="n">13</span>Валидация: процедура и измеренные результаты</h2>
+  <h2><span class="n">14</span>Валидация: процедура и измеренные результаты</h2>
   <p class="sub">Эталонной разметки нет — процедуру предложила команда и выполнила детерминированным скриптом. Ниже измеренные значения, а не план.</p>
   <div class="tw">
     <table>
@@ -883,7 +959,7 @@
 
 <!-- 14. SCORING -->
 <section id="score"><div class="wrap">
-  <h2><span class="n">14</span>Критерии оценки и трассировка</h2>
+  <h2><span class="n">15</span>Критерии оценки и трассировка</h2>
   <p class="sub">Куда направлены усилия: два ядра закрывают 60% оценки.</p>
 
   <div class="grid g2">
@@ -911,7 +987,7 @@
 
 <!-- 15. RUN & DEMO -->
 <section id="run"><div class="wrap">
-  <h2><span class="n">15</span>Запуск и демонстрация: пошаговая инструкция</h2>
+  <h2><span class="n">16</span>Запуск и демонстрация: пошаговая инструкция</h2>
   <p class="sub">Инструкция рассчитана на человека <b>без технического опыта</b>: что установить, как запустить
   одной командой, что нажимать в демонстрации и что должно появиться на экране.</p>
 
@@ -1151,7 +1227,7 @@ cd .. && bash scripts/verify-stack.sh                          # состоян�
 
 <!-- 16. SOURCES -->
 <section id="sources"><div class="wrap">
-  <h2><span class="n">16</span>Источники (37)</h2>
+  <h2><span class="n">17</span>Источники (37)</h2>
   <p class="sub">Все утверждения выше подкреплены проверяемыми ссылками.</p>
   <div class="src">
     <div id="src-1"><b>[1]</b> LHH — Active Placement: <a href="https://en.prnasia.com/releases/apac/Lee_Hecht_Harrison_Reinvents_Outplacement-182431.shtml">prnasia</a></div>

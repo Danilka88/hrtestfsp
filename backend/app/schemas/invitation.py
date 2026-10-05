@@ -50,6 +50,8 @@ class InvitationEmployerView(BaseModel):
     # Раскрываются только после принятия приглашения кандидатом
     candidate_contacts: ContactsOut | None = None
     contacts_revealed: bool = False
+    # Отозвать можно, пока кандидат не принял решение
+    can_revoke: bool = False
 
 
 class InvitationCandidateView(BaseModel):

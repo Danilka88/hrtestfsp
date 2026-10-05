@@ -528,6 +528,12 @@ function InvitationsTab() {
               {invitation.contact_method ? (
                 <p className="mt-1 text-xs text-slate-500">Способ связи: {invitation.contact_method}</p>
               ) : null}
+              {invitation.status === "revoked" ? (
+                <p className="mt-1 text-xs text-slate-500">
+                  Работодатель отозвал приглашение. Инициативу можно проявить самому — откликнуться на
+                  вакансии в разделе «Вакансии».
+                </p>
+              ) : null}
             </div>
             <div className="flex flex-col items-end gap-2">
               <StatusBadge status={invitation.status} />

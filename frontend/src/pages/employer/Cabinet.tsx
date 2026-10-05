@@ -406,8 +406,11 @@ function SelectionTab() {
 }
 
 function InvitationsTab() {
+  const toast = useToast();
   const [invitations, setInvitations] = useState<EmployerInvitation[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [revokeFor, setRevokeFor] = useState<EmployerInvitation | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -421,10 +424,34 @@ function InvitationsTab() {
     void load();
   }, [load]);
 
+  async function revoke() {
+    if (!revokeFor) return;
+    setBusy(true);
+    try {
+      await apiClient.revokeInvitation(revokeFor.id);
+      toast.success(
+        "Приглашение отозвано",
+        "Кандидат больше не сможет его принять — можно отправить новое с другими условиями",
+      );
+      setRevokeFor(null);
+      await load();
+    } catch (err) {
+      toast.error("Не удалось отозвать приглашение", errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (error) return <Alert kind="error">{error}</Alert>;
 
   return (
     <div className="space-y-4">
+      <SectionNote>
+        Приглашение — основная механика сервиса: инициативу проявляет работодатель. Кандидат видит
+        компанию, предложение и зарплату <b>до</b> начала общения. Статусы: отправлено → просмотрено →
+        принято или отклонено. Пока кандидат не принял решение, приглашение можно отозвать — например,
+        если условия изменились.
+      </SectionNote>
       <Alert kind="info">
         Контакты кандидата появляются здесь только после того, как он принял приглашение или
         откликнулся сам.
@@ -464,10 +491,44 @@ function InvitationsTab() {
                 <p className="mt-2 text-xs text-slate-600">Контакты скрыты</p>
               )}
             </div>
-            <StatusBadge status={invitation.status} />
+            <div className="flex flex-col items-end gap-2">
+              <StatusBadge status={invitation.status} />
+              {invitation.can_revoke ? (
+                <Button variant="danger" onClick={() => setRevokeFor(invitation)}>
+                  Отозвать
+                </Button>
+              ) : null}
+            </div>
           </div>
         </Card>
       ))}
+
+      <Modal
+        open={revokeFor !== null}
+        title="Отозвать приглашение?"
+        onClose={() => setRevokeFor(null)}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setRevokeFor(null)}>
+              Оставить
+            </Button>
+            <Button variant="danger" disabled={busy} onClick={() => void revoke()}>
+              {busy ? "Отзываю…" : "Отозвать"}
+            </Button>
+          </>
+        }
+      >
+        <p>
+          Приглашение кандидату{" "}
+          <b>{revokeFor?.candidate_name ?? revokeFor?.candidate_reference}</b> будет отозвано: кандидат
+          больше не сможет его принять, а вы получите возможность отправить новое приглашение с другими
+          условиями.
+        </p>
+        <p className="mt-2 text-sm text-slate-400">
+          Если кандидат уже принял или отклонил приглашение, отозвать его нельзя — решение остаётся в
+          истории у обеих сторон.
+        </p>
+      </Modal>
     </div>
   );
 }

@@ -244,6 +244,8 @@ function EmployerVacancies() {
   const [salaryTo, setSalaryTo] = useState("320000");
   const [applications, setApplications] = useState<Record<string, ApplicationEmployer[]>>({});
   const [openVacancy, setOpenVacancy] = useState<string | null>(null);
+  // Если задано — форма работает в режиме правки уже опубликованной вакансии
+  const [editing, setEditing] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [aiBusy, setAiBusy] = useState(false);
   const [aiResult, setAiResult] = useState<apiClient.AIResult | null>(null);
@@ -282,29 +284,50 @@ function EmployerVacancies() {
     }
   }
 
-  async function publish() {
+  async function save() {
     setBusy(true);
+    const payload = {
+      title,
+      description,
+      specialization_code: specialization,
+      grade,
+      stack: stack.split(",").map((item) => item.trim()).filter(Boolean),
+      salary_from: Number(salaryFrom),
+      salary_to: Number(salaryTo),
+    };
     try {
-      await apiClient.publishVacancy({
-        title,
-        description,
-        specialization_code: specialization,
-        grade,
-        stack: stack.split(",").map((item) => item.trim()).filter(Boolean),
-        salary_from: Number(salaryFrom),
-        salary_to: Number(salaryTo),
-      });
-      toast.success("Вакансия опубликована", "Кандидаты увидят её в разделе «Вакансии»");
+      if (editing) {
+        await apiClient.updateVacancy(editing, payload);
+        toast.success("Вакансия обновлена", "Кандидаты увидят новую редакцию");
+      } else {
+        await apiClient.publishVacancy(payload);
+        toast.success("Вакансия опубликована", "Кандидаты увидят её в разделе «Вакансии»");
+      }
       setTitle("");
       setDescription("");
       setBrief("");
       setAiResult(null);
+      setEditing(null);
       await load();
     } catch (err) {
-      toast.error("Не удалось опубликовать вакансию", errorMessage(err));
+      toast.error(editing ? "Не удалось сохранить изменения" : "Не удалось опубликовать вакансию", errorMessage(err));
     } finally {
       setBusy(false);
     }
+  }
+
+  /** Подставляет вакансию в форму — правка идёт через ту же форму, что публикация. */
+  function startEditing(vacancy: Vacancy) {
+    setEditing(vacancy.id);
+    setTitle(vacancy.title);
+    setDescription(vacancy.description ?? "");
+    setSpecialization(vacancy.specialization_code ?? "");
+    setGrade(vacancy.grade ?? "");
+    setStack((vacancy.stack ?? []).join(", "));
+    setSalaryFrom(String(vacancy.salary_from));
+    setSalaryTo(String(vacancy.salary_to));
+    setBrief("");
+    setAiResult(null);
   }
 
   async function loadApplications(vacancyId: string) {
@@ -393,9 +416,22 @@ function EmployerVacancies() {
         </div>
         <AISourceNote result={aiResult} />
         <div className="mt-3">
-          <Button onClick={() => void publish()} disabled={busy || !title}>
-            Опубликовать вакансию
+          <Button onClick={() => void save()} disabled={busy || !title}>
+            {editing ? "Сохранить изменения" : "Опубликовать вакансию"}
           </Button>
+          {editing ? (
+            <Button
+              variant="ghost"
+              disabled={busy}
+              onClick={() => {
+                setEditing(null);
+                setTitle("");
+                setDescription("");
+              }}
+            >
+              Отмена
+            </Button>
+          ) : null}
         </div>
       </Card>
 
@@ -417,9 +453,14 @@ function EmployerVacancies() {
                     Отклики
                   </Button>
                   {vacancy.status === "published" ? (
-                    <Button variant="danger" onClick={() => void close(vacancy.id)}>
-                      Закрыть
-                    </Button>
+                    <>
+                      <Button variant="ghost" onClick={() => startEditing(vacancy)}>
+                        Изменить
+                      </Button>
+                      <Button variant="danger" onClick={() => void close(vacancy.id)}>
+                        Закрыть
+                      </Button>
+                    </>
                   ) : null}
                 </div>
               </div>

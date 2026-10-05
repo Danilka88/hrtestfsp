@@ -290,6 +290,8 @@ export interface EmployerInvitation {
   status: string;
   created_at: string;
   contacts_revealed: boolean;
+  /** Отозвать можно, пока кандидат не принял решение */
+  can_revoke: boolean;
   candidate_contacts: {
     email?: string | null;
     phone?: string | null;
@@ -522,6 +524,10 @@ export async function employerInvitations(): Promise<EmployerInvitation[]> {
   return (await api.get<EmployerInvitation[]>("/employers/me/invitations")).data;
 }
 
+export async function revokeInvitation(id: string): Promise<EmployerInvitation> {
+  return (await api.post<EmployerInvitation>(`/employers/me/invitations/${id}/revoke`)).data;
+}
+
 export async function sendInvitation(payload: {
   candidate_reference: string;
   message?: string;
@@ -620,6 +626,22 @@ export async function publishVacancy(payload: {
 }): Promise<Vacancy> {
   return (await api.post<Vacancy>("/employers/me/vacancies", payload)).data;
 }
+
+export async function updateVacancy(
+  vacancyId: string,
+  payload: {
+    title: string;
+    description?: string;
+    specialization_code?: string;
+    grade?: string;
+    stack: string[];
+    salary_from: number;
+    salary_to: number;
+  },
+): Promise<Vacancy> {
+  return (await api.put<Vacancy>(`/employers/me/vacancies/${vacancyId}`, payload)).data;
+}
+
 
 export async function closeVacancy(vacancyId: string): Promise<Vacancy> {
   return (await api.post<Vacancy>(`/employers/me/vacancies/${vacancyId}/close`)).data;

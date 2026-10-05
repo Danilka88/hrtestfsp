@@ -363,3 +363,87 @@ async def test_invitation_can_reference_selection(client: AsyncClient, db_factor
     ).json()
     assert len(listing) == 1
     assert listing[0]["status"] == "sent"
+
+
+# --- Отзыв приглашения --------------------------------------------------------
+#
+# ТЗ требует статусы, отражающие ход взаимодействия. Отзыв — дополнение к ним:
+# отправленное по ошибке приглашение не должно висеть на кандидате.
+
+
+async def _revoke(client: AsyncClient, token: str, invitation_id: str) -> Response:
+    return await client.post(f"/api/v1/employers/me/invitations/{invitation_id}/revoke", headers=_auth(token))
+
+
+async def test_employer_revokes_invitation_before_decision(client: AsyncClient, db_factory) -> None:
+    candidate_id = await _make_candidate(client, db_factory, "revokecand@example.com")
+    candidate_token = await _login_only(client, "revokecand@example.com")
+    employer_token = await _employer(client, "revokeemp@example.com")
+
+    created = (await _send(client, employer_token, _reference(candidate_id))).json()
+    assert created["can_revoke"] is True
+
+    revoked = await _revoke(client, employer_token, created["id"])
+    assert revoked.status_code == 200, revoked.text
+    assert revoked.json()["status"] == "revoked"
+    # Отозванное отзывать больше нельзя, и контакты не раскрыты
+    assert revoked.json()["can_revoke"] is False
+    assert revoked.json()["contacts_revealed"] is False
+
+    # Кандидат видит отзыв и не может принять решение
+    inbound = (await client.get("/api/v1/candidates/me/invitations", headers=_auth(candidate_token))).json()
+    assert inbound[0]["status"] == "revoked"
+    decision = await client.post(
+        f"/api/v1/candidates/me/invitations/{created['id']}/decision",
+        json={"status": "accepted"},
+        headers=_auth(candidate_token),
+    )
+    assert decision.status_code == 409
+
+    # Повторный отзыв — тоже отказ
+    assert (await _revoke(client, employer_token, created["id"])).status_code == 409
+
+
+async def test_revoke_is_rejected_after_candidate_decided(client: AsyncClient, db_factory) -> None:
+    """Решение кандидата — история, отменить его работодатель не может."""
+    candidate_id = await _make_candidate(client, db_factory, "revokedecided@example.com")
+    candidate_token = await _login_only(client, "revokedecided@example.com")
+    employer_token = await _employer(client, "revokedecidedemp@example.com")
+
+    created = (await _send(client, employer_token, _reference(candidate_id))).json()
+    await client.post(
+        f"/api/v1/candidates/me/invitations/{created['id']}/decision",
+        json={"status": "declined"},
+        headers=_auth(candidate_token),
+    )
+    response = await _revoke(client, employer_token, created["id"])
+    assert response.status_code == 409
+
+
+async def test_revoke_touches_only_own_invitations(client: AsyncClient, db_factory) -> None:
+    candidate_id = await _make_candidate(client, db_factory, "revokeown@example.com")
+    author = await _employer(client, "revokeauthor@example.com")
+    stranger = await _employer(client, "revokestranger@example.com")
+    candidate_token = await _login_only(client, "revokeown@example.com")
+
+    created = (await _send(client, author, _reference(candidate_id))).json()
+    # Чужой работодатель не должен узнать о существовании записи — ответ как у несуществующей
+    assert (await _revoke(client, stranger, created["id"])).status_code == 404
+    # Кандидат отзывать не может: это действие стороны работодателя
+    assert (await _revoke(client, candidate_token, created["id"])).status_code == 403
+
+
+async def test_revoked_invitation_does_not_block_new_one(client: AsyncClient, db_factory) -> None:
+    """После отзыва работодатель может отправить приглашение заново с другими условиями."""
+    candidate_id = await _make_candidate(client, db_factory, "revokenew@example.com")
+    employer_token = await _employer(client, "revokenewemp@example.com")
+
+    created = (await _send(client, employer_token, _reference(candidate_id))).json()
+    await _revoke(client, employer_token, created["id"])
+
+    again = await _send(
+        client, employer_token, _reference(candidate_id), salary_from=300000, salary_to=350000
+    )
+    assert again.status_code == 200, again.text
+    assert again.json()["status"] == "sent"
+    assert again.json()["salary_from"] == 300000

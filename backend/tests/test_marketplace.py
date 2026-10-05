@@ -376,3 +376,97 @@ async def test_task_submission_refreshes_profile_activity(client: AsyncClient, d
         user = (await session.execute(select(User).where(User.email == email))).scalar_one()
         after = await market.last_activity_at(session, user.id)
         assert after is not None and (utcnow() - after).days == 0
+
+
+# --- Правка вакансии -----------------------------------------------------------
+#
+# ТЗ перечисляет редактирование вакансии среди возможностей работодателя.
+
+
+async def test_employer_updates_own_vacancy(client: AsyncClient) -> None:
+    token = await _employer(client, "vac-edit@example.com")
+    vacancy = await _vacancy(client, token)
+
+    updated = await client.put(
+        f"/api/v1/employers/me/vacancies/{vacancy['id']}",
+        json={
+            "title": "Backend-разработчик (senior)",
+            "description": "Команда платежей, расширение",
+            "specialization_code": "backend",
+            "grade": "senior",
+            "stack": ["Python", "PostgreSQL", "Kafka"],
+            "salary_from": 380000,
+            "salary_to": 450000,
+        },
+        headers=_auth(token),
+    )
+    assert updated.status_code == 200, updated.text
+    body = updated.json()
+    assert body["title"] == "Backend-разработчик (senior)"
+    assert body["grade"] == "senior"
+    assert body["salary_from"] == 380000
+    assert body["stack"] == ["Python", "PostgreSQL", "Kafka"]
+    # Вакансия остаётся одна и та же — правка не создаёт дубликат
+    listing = (await client.get("/api/v1/employers/me/vacancies", headers=_auth(token))).json()
+    assert len(listing) == 1
+
+
+async def test_vacancy_update_validates_rules_and_ownership(client: AsyncClient) -> None:
+    author = await _employer(client, "vac-edit-author@example.com")
+    stranger = await _employer(client, "vac-edit-stranger@example.com")
+    vacancy = await _vacancy(client, author)
+
+    payload = {
+        "title": "Обновление",
+        "specialization_code": "backend",
+        "grade": "middle",
+        "stack": [],
+        "salary_from": 300000,
+        "salary_to": 350000,
+    }
+    # Чужую вакансию править нельзя
+    assert (
+        await client.put(
+            f"/api/v1/employers/me/vacancies/{vacancy['id']}", json=payload, headers=_auth(stranger)
+        )
+    ).status_code == 404
+    # Правила зарплаты и грейда те же, что при публикации
+    assert (
+        await client.put(
+            f"/api/v1/employers/me/vacancies/{vacancy['id']}",
+            json={**payload, "salary_from": 900000, "salary_to": 100000},
+            headers=_auth(author),
+        )
+    ).status_code == 400
+    assert (
+        await client.put(
+            f"/api/v1/employers/me/vacancies/{vacancy['id']}",
+            json={**payload, "grade": "godlike"},
+            headers=_auth(author),
+        )
+    ).status_code == 400
+    # Несуществующая вакансия
+    assert (
+        await client.put("/api/v1/employers/me/vacancies/deadbeef-0000", json=payload, headers=_auth(author))
+    ).status_code == 404
+
+
+async def test_closed_vacancy_cannot_be_edited(client: AsyncClient) -> None:
+    """Закрытая вакансия — архив: правка запрещена, чтобы условия не менялись задним числом."""
+    token = await _employer(client, "vac-edit-closed@example.com")
+    vacancy = await _vacancy(client, token)
+    await client.post(f"/api/v1/employers/me/vacancies/{vacancy['id']}/close", headers=_auth(token))
+
+    response = await client.put(
+        f"/api/v1/employers/me/vacancies/{vacancy['id']}",
+        json={
+            "title": "Правка закрытой",
+            "specialization_code": "backend",
+            "grade": "middle",
+            "stack": [],
+            "salary_from": 300000,
+            "salary_to": 350000,
+        },
+        headers=_auth(token),
+    )
+    assert response.status_code == 409

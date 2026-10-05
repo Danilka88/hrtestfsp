@@ -44,6 +44,17 @@ async def my_vacancies(
     return [VacancyOut.model_validate(await market.vacancy_view(session, v)) for v in vacancies]
 
 
+@router_employer.put("/{vacancy_id}", response_model=VacancyOut, summary="Изменить опубликованную вакансию")
+async def update_vacancy(
+    vacancy_id: str,
+    payload: VacancyIn,
+    user: User = Depends(employer_only),
+    session: AsyncSession = Depends(get_session),
+) -> VacancyOut:
+    vacancy = await market.update_vacancy(session, user.id, vacancy_id, payload.model_dump())
+    return VacancyOut.model_validate(await market.vacancy_view(session, vacancy))
+
+
 @router_employer.post("/{vacancy_id}/close", response_model=VacancyOut, summary="Закрыть вакансию")
 async def close_vacancy(
     vacancy_id: str,

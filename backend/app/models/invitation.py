@@ -20,8 +20,11 @@ STATUS_SENT = "sent"
 STATUS_VIEWED = "viewed"
 STATUS_ACCEPTED = "accepted"
 STATUS_DECLINED = "declined"
+# Работодатель может отозвать приглашение, пока кандидат не принял решение:
+# отправленное по ошибке предложение не должно висеть на кандидате.
+STATUS_REVOKED = "revoked"
 
-ALL_STATUSES = (STATUS_SENT, STATUS_VIEWED, STATUS_ACCEPTED, STATUS_DECLINED)
+ALL_STATUSES = (STATUS_SENT, STATUS_VIEWED, STATUS_ACCEPTED, STATUS_DECLINED, STATUS_REVOKED)
 
 
 class Invitation(Base):

@@ -93,6 +93,31 @@ async def create_vacancy(session: AsyncSession, employer_id: str, payload: dict[
     return vacancy
 
 
+async def update_vacancy(
+    session: AsyncSession, employer_id: str, vacancy_id: str, payload: dict[str, Any]
+) -> Vacancy:
+    """Правка вакансии работодателем. Правила те же, что при публикации."""
+    vacancy = await session.get(Vacancy, vacancy_id)
+    if vacancy is None or vacancy.employer_id != employer_id:
+        raise MarketplaceError(404, "Вакансия не найдена")
+    if vacancy.status == VACANCY_CLOSED:
+        raise MarketplaceError(409, "Вакансия закрыта — правка недоступна")
+
+    _validate_salary(payload["salary_from"], payload["salary_to"])
+    _validate_grade(payload.get("grade"))
+
+    vacancy.title = payload["title"]
+    vacancy.description = payload.get("description")
+    vacancy.specialization_id = await _specialization_id(session, payload.get("specialization_code"))
+    vacancy.grade_code = payload.get("grade")
+    vacancy.stack = list(payload.get("stack") or [])
+    vacancy.salary_from = payload["salary_from"]
+    vacancy.salary_to = payload["salary_to"]
+    await session.commit()
+    await session.refresh(vacancy)
+    return vacancy
+
+
 async def vacancy_view(session: AsyncSession, vacancy: Vacancy) -> dict[str, Any]:
     company = (
         await session.execute(select(EmployerProfile).where(EmployerProfile.user_id == vacancy.employer_id))
