@@ -125,7 +125,7 @@ async def _seed_candidate(
         user.fsp_id = fsp_id
         profile = CandidateProfile(
             user_id=user.id,
-            full_name=f"Кандидат {email.split('@')[0]}",
+            full_name=f"Кандидат {email.split('@', 1)[0]}",
             contacts={"email": email, "phone": "+7 000 000-00-00", "telegram": "@secret"},
             specialization=specialization,
             grade=grade,

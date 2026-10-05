@@ -87,12 +87,13 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def _validate_security_settings(self) -> Settings:
         """Защита от запуска с небезопасным секретом вне локального окружения."""
-        if self.environment != "local":
-            if len(self.jwt_secret) < 32 or "change-me" in self.jwt_secret or "insecure" in self.jwt_secret:
-                raise ValueError(
-                    "JWT_SECRET должен быть не короче 32 символов и не содержать "
-                    "заглушек ('change-me', 'insecure') вне локального окружения"
-                )
+        if self.environment != "local" and (
+            len(self.jwt_secret) < 32 or "change-me" in self.jwt_secret or "insecure" in self.jwt_secret
+        ):
+            raise ValueError(
+                "JWT_SECRET должен быть не короче 32 символов и не содержать "
+                "заглушек ('change-me', 'insecure') вне локального окружения"
+            )
         return self
 
 

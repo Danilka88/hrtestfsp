@@ -338,7 +338,7 @@ async def list_open_tasks(
         (await session.execute(query.order_by(RegularTask.created_at.desc()).limit(limit))).scalars().all()
     )
     if profile is not None and profile.specialization:
-        preferred = [
+        return [
             t
             for t in tasks
             if t.specialization_id is None
@@ -347,7 +347,6 @@ async def list_open_tasks(
                 and await _specialization_code(session, t.specialization_id) == profile.specialization
             )
         ]
-        return preferred
     return tasks
 
 

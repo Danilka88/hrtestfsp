@@ -82,7 +82,8 @@ class Item(Base):
     difficulty: Mapped[float] = mapped_column(Float, nullable=False, index=True)
     discrimination: Mapped[float] = mapped_column(Float, default=1.0, nullable=False)
 
-    # {"question": ..., "options": [...], "correct_index": n, "template": ..., "params": {...}}
+    # payload описывает задание: текст вопроса, варианты ответа, индекс верного,
+    # имя шаблона и параметры генерации (см. services/item_factory.py)
     payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
 
     version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)

@@ -31,7 +31,7 @@ DOMAIN_ERRORS = (
 )
 
 
-async def _domain_error_handler(request: Request, exc: Exception) -> JSONResponse:
+async def _domain_error_handler(_request: Request, exc: Exception) -> JSONResponse:
     status_code = getattr(exc, "status_code", 400)
     detail = getattr(exc, "detail", str(exc))
     return JSONResponse(status_code=status_code, content={"detail": detail})

@@ -248,7 +248,8 @@ class MockEmailProvider:
         return True
 
     async def send(self, to: str, subject: str, body: str) -> None:
-        logger.info("[mock-email] to=%s subject=%s", to, subject)
+        preview = body if len(body) <= 60 else body[:57] + "..."
+        logger.info("[mock-email] to=%s subject=%s body=%r", to, subject, preview)
 
 
 class MockStorageProvider:

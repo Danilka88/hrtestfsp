@@ -7,6 +7,10 @@ venv/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+# Отчёты о покрытии: результат проверки, а не часть решения
+.coverage
+.coverage.*
+htmlcov/
 
 # Node
 node_modules/

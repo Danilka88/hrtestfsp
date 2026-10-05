@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import io
 import logging
-import os
+from pathlib import Path
 from typing import Any
 from xml.sax.saxutils import escape
 
@@ -49,10 +49,10 @@ def ensure_fonts() -> bool:
         return _font_available
 
     for regular, bold in _FONT_CANDIDATES:
-        if os.path.exists(regular):
+        if Path(regular).exists():
             try:
                 pdfmetrics.registerFont(TTFont(FONT_NAME, regular))
-                bold_path = bold if os.path.exists(bold) else regular
+                bold_path = bold if Path(bold).exists() else regular
                 pdfmetrics.registerFont(TTFont(FONT_BOLD_NAME, bold_path))
                 _font_available = True
                 logger.info("PDF-профиль: используется шрифт %s", regular)

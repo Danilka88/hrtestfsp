@@ -115,7 +115,7 @@ class OllamaLLMProvider:
                 return configured
             # допускаем запись без тега: "gemma4" → "gemma4:12b-mlx"
             for name in available:
-                if name.split(":")[0] == configured.split(":")[0]:
+                if name.split(":", 1)[0] == configured.split(":", 1)[0]:
                     return name
             raise OllamaUnavailable(
                 f"Модель '{configured}' не найдена в Ollama. Доступны: {', '.join(available) or '—'}"

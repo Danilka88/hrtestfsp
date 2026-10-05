@@ -65,7 +65,7 @@ project/
     scripts/
       seed_demo.py             # демонстрационные данные
       validate_solution.py     # процедура валидации решения
-    tests/                     # pytest — 133 теста
+    tests/                     # pytest — 253 теста, покрытие 97%
   frontend/                    # React 19 + TypeScript + Vite SPA
     src/{api,auth,components,pages,styles}/
   seed/                        # пояснения к генерации демонстрационных данных
@@ -131,7 +131,7 @@ npm run dev        # http://localhost:5173 (проксирует /api на :8000
 Проверки:
 
 ```bash
-cd backend && env -u PYTHONPATH .venv/bin/python -m pytest -q   # 133 теста
+cd backend && env -u PYTHONPATH .venv/bin/python -m pytest -q   # 253 теста
 bash ../scripts/smoke-api.sh                                    # smoke-проверка API
 cd frontend && npm run build                                    # сборка SPA + строгая типизация
 ```
@@ -195,7 +195,7 @@ PDF), **настройки приватности профиля** (что им�
 уведомления в интерфейсе (toast), демо-данные, docker-compose и smoke-скрипты
 (`smoke-api.sh`, `smoke-auth.sh`, `smoke-candidate.sh`, `smoke-testing.sh`,
 `smoke-employer.sh`, `smoke-invitations.sh`, `smoke-marketplace.sh`,
-`smoke-ai.sh`, `verify-stack.sh`). Тестов — 133.
+`smoke-ai.sh`, `verify-stack.sh`). Тестов — 253, покрытие кода — 97% (`make test-cov`).
 
 Валидация решения:
 
@@ -212,7 +212,8 @@ cd backend
 env -u PYTHONPATH .venv/bin/ruff check .      # линтер: без замечаний
 env -u PYTHONPATH .venv/bin/ruff format --check .
 env -u PYTHONPATH .venv/bin/vulture app --min-confidence 80   # мёртвый код: чисто
-env -u PYTHONPATH .venv/bin/python -m pytest -q               # 133 теста
+env -u PYTHONPATH .venv/bin/python -m pytest -q               # 253 теста
+env -u PYTHONPATH .venv/bin/python -m pytest -q --cov=app --cov-report=term-missing  # покрытие 97%
 cd ../frontend && npm run build               # включает строгую проверку типов tsc
 cd .. && bash scripts/smoke-ai.sh             # ИИ: источник ответа и деградация
 ```
@@ -232,6 +233,10 @@ cd .. && bash scripts/smoke-ai.sh             # ИИ: источник отве�
   версию (`POST /selections/{id}/refine`) с сохранением прежней, а не перезагружает
   экран; приглашение помечается просмотренным при открытии вкладки; переключатели
   приватности сохраняются на сервере, а не только в состоянии формы.
+- **Измеритель проверяется наравне с кодом.** Покрытие считается ядром
+  `sysmon` (`[tool.coverage.run] core = "sysmon"`): штатный C-трассировщик
+  в этом окружении занижает результат на одном и том же прогоне (42% против
+  90% на одном файле). Без этой настройки метрика вводит в заблуждение.
 - **Числа в документации сверяются с фактом.** Количество методов API, тестов,
   миграций и источников берётся из работающей системы, а не из ранних заметок.
 

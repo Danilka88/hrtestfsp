@@ -509,7 +509,7 @@
       <p>FastAPI 0.142 · Pydantic 2.13 · SQLAlchemy 2.1 (async) · PostgreSQL 16 · React 19 · TypeScript 7 · Vite 8 · Tailwind 4.
       Перечень зависимостей сверен с фактическими импортами: заявленных, но не используемых библиотек в нём нет.</p></div>
     <div class="card"><h3>Проверяемость</h3>
-      <p>133 автотеста (<code>pytest</code>), 8 сквозных проверок (<code>scripts/smoke-*.sh</code>),
+      <p>253 автотеста (<code>pytest</code>, покрытие 97%), 8 сквозных проверок (<code>scripts/smoke-*.sh</code>),
       линтер <code>ruff</code> — без замечаний, поиск мёртвого кода <code>vulture</code> — чисто,
       6 миграций БД. Всё воспроизводится одной командой.</p></div>
     <div class="card"><h3>Как запустить</h3>
@@ -638,7 +638,7 @@
   <div class="card" style="border-color:rgba(52,211,153,.5);margin-bottom:16px">
     <h3>Статус: реализовано полностью</h3>
     <p>Все позиции Must и Should ниже реализованы в <code>project/</code> и проверены на живом стеке
-    (4 сервиса здоровы, 133 автотеста, 8 сквозных проверок, прогон валидации).
+    (4 сервиса здоровы, 253 автотеста, 8 сквозных проверок, прогон валидации).
     Единственный внешний артефакт — презентация для питч-сессии.</p>
   </div>
 
@@ -686,8 +686,8 @@
       <div class="l">позиций ТЗ подтверждено полностью</div></div>
     <div class="stat"><div class="v">56</div>
       <div class="l">методов API в 14 группах, все описаны в OpenAPI</div></div>
-    <div class="stat"><div class="v up">133</div>
-      <div class="l">автотеста и 8 сквозных проверок на живом стеке</div></div>
+    <div class="stat"><div class="v up">253</div>
+      <div class="l">автотеста (покрытие 97%) и 8 сквозных проверок на живом стеке</div></div>
   </div>
 
   <h3>Кабинет «Кандидат»</h3>
@@ -811,7 +811,7 @@
             <td>Веб-сервис независим от ОС; вёрстка адаптируется под планшет и мобильный</td></tr>
         <tr><td>Качество кода и работоспособность прототипа</td>
             <td><span class="tag must">выполнено ✓</span></td>
-            <td>133 автотеста, линтер без замечаний, мёртвого кода нет, зависимости сверены с фактическими импортами</td></tr>
+            <td>253 автотеста (покрытие 97%), линтер с расширенным набором правил без замечаний, мёртвого кода нет, зависимости сверены с фактическими импортами</td></tr>
       </tbody>
     </table>
   </div>
@@ -1122,7 +1122,8 @@ docker compose exec -T backend python scripts/seed_demo.py</pre>
   <p>Все проверки воспроизводимы и выполняются в терминале. Автотесты запускаются в локальном
   окружении Python (папка <code>backend/.venv</code> в поставке уже создана):</p>
   <pre>cd backend
-.venv/bin/python -m pytest -q                                  # 133 теста
+.venv/bin/python -m pytest -q                                  # 253 теста
+.venv/bin/python -m pytest -q --cov=app                        # покрытие 97%
 .venv/bin/python scripts/validate_solution.py --runs 120       # метрики валидации
 cd .. && bash scripts/verify-stack.sh                          # состояние всех сервисов</pre>
   <p style="color:var(--mut)">Если папки <code>.venv</code> нет, создайте окружение заново:</p>

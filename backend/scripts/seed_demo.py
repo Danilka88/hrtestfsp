@@ -9,12 +9,12 @@
 from __future__ import annotations
 
 import asyncio
-import os
 import sys
+from pathlib import Path
 from typing import Any
 
 # Позволяет запускать скрипт и как `python scripts/seed_demo.py`, и как `python -m scripts.seed_demo`
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from sqlalchemy import select
 
@@ -141,10 +141,8 @@ async def seed() -> dict[str, int]:
 
     async with factory() as session:
         await ensure_reference_data(session)
-        specializations = {
-            code: ident
-            for code, ident in (await session.execute(select(Specialization.code, Specialization.id))).all()
-        }
+        rows = (await session.execute(select(Specialization.code, Specialization.id))).all()
+        specializations = dict(rows)
 
         for candidate in DEMO_CANDIDATES:
             exists = (

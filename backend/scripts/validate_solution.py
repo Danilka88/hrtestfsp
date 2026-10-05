@@ -19,14 +19,14 @@ seed), не требует БД и внешних сервисов — резу�
 from __future__ import annotations
 
 import argparse
-import os
 import random
 import statistics
 import sys
 from collections.abc import Sequence
 from dataclasses import dataclass, replace
+from pathlib import Path
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.services.fit import compute_fit, stack_overlap  # noqa: E402
 from app.services.item_factory import generate_items  # noqa: E402
