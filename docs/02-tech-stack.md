@@ -25,7 +25,8 @@ lock-файлах** (`requirements.txt` / `package-lock.json`) при сборк
 | email-validator | 2.3.0 | Валидация email |
 | httpx | 0.28.1 | HTTP-клиент для провайдеров (LLM, ФСП) |
 | Jinja2 | 3.1.6 | Шаблоны генерации PDF-профиля |
-| PyMuPDF | 1.28.2 | Извлечение текста из PDF-резюме |
+| pypdf | 6.19.0 | Извлечение текста из PDF-резюме (BSD-3) |
+| reportlab | 5.0.1 | Генерация стандартизированного PDF-профиля (BSD) |
 | sentence-transformers | 6.1.0 | Эмбеддинги (русскоязычные модели) для семантического матчинга |
 | pgvector | 0.5.0 | Векторный поиск в PostgreSQL |
 | GigaChat SDK | 0.2.3 | LLM-провайдер (разбор резюме, генерация заданий) — за интерфейсом |
@@ -74,8 +75,11 @@ lock-файлах** (`requirements.txt` / `package-lock.json`) при сборк
 
 Предпочтение — открытые лицензии (MIT / Apache-2.0 / BSD):
 FastAPI, SQLAlchemy, Pydantic, React, Vite, TailwindCSS — MIT; PostgreSQL —
-PostgreSQL License; Redis — BSD (v7) / RSALv2+SSPLv1; PyMuPDF — AGPL-3.0
-*(требует внимания: при необходимости заменить на PDF-парсер под MIT, напр.
-`pdfminer.six`, либо использовать MuPDF-компонент с учётом лицензии)*.
+PostgreSQL License; Redis — BSD (v7) / RSALv2+SSPLv1.
+
+Для работы с PDF выбраны **pypdf (BSD-3)** и **reportlab (BSD)** вместо PyMuPDF
+(AGPL-3.0): AGPL потребовала бы распространять условия на всё решение, что
+противоречит требованию открытого кода под разрешительной лицензией. Для
+кириллицы в контейнер устанавливается `fonts-dejavu-core`.
 
 Код решения предоставляется открытым, не скомпилированным, без обфускации.
