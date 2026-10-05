@@ -154,7 +154,7 @@ async def test_all_correct_assigns_high_grade(client: AsyncClient, db_factory) -
     result = await _run_test(client, token, db_factory, correct=True)
 
     assert result["status"] == "completed"
-    assert 6 <= result["items_answered"] <= 12
+    assert 10 <= result["items_answered"] <= 16
     assert result["result_grade"] in GRADE_ORDER
     assert GRADE_ORDER.index(result["result_grade"]) >= GRADE_ORDER.index("middle")
     assert result["category_id"] is not None

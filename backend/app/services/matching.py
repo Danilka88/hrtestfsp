@@ -41,6 +41,10 @@ class CandidateSignals:
     fsp_achievements: Optional[int] = None      # число подтверждённых достижений
     days_since_last_task: Optional[int] = None  # свежесть (регулярные задания)
     semantic_fit: Optional[float] = None        # 0..1, соответствие потребности
+    # Соответствие запрошенной категории (специализация × грейд). Выдача
+    # формируется на основании категорий, поэтому кандидаты запрошенной
+    # категории идут выше — это первый ключ сортировки, а не слагаемое балла.
+    in_requested_category: Optional[bool] = None
 
 
 @dataclass
@@ -185,11 +189,20 @@ def score_candidate(signals: CandidateSignals) -> ScoredCandidate:
 def rank_candidates(signals: Sequence[CandidateSignals]) -> List[ScoredCandidate]:
     """Ранжирование подборки.
 
-    Порядок детерминирован: сначала по score, затем по candidate_id —
-    результат воспроизводим при повторном расчёте.
+    Порядок: сначала кандидаты запрошенной категории (специализация × грейд),
+    затем — остальные; внутри каждой группы по баллу рубрики. Такой порядок
+    прямо следует правилу «выдача формируется на основании категорий, внутри
+    категории — по силе подтверждённого профиля».
+
+    Сортировка детерминирована: при равенстве баллов порядок задаёт candidate_id.
     """
     scored = [score_candidate(s) for s in signals]
-    scored.sort(key=lambda c: (-c.score, c.candidate_id))
+    category_flag = {
+        s.candidate_id: bool(s.in_requested_category) for s in signals
+    }
+
+    scored.sort(key=lambda c: (not category_flag[c.candidate_id], -c.score, c.candidate_id))
+
     for position, candidate in enumerate(scored, start=1):
         candidate.reasons.insert(
             0,
@@ -200,4 +213,14 @@ def rank_candidates(signals: Sequence[CandidateSignals]) -> List[ScoredCandidate
                 contribution=0.0,
             ),
         )
+        if category_flag.get(candidate.candidate_id):
+            candidate.reasons.insert(
+                1,
+                Reason(
+                    code="category_match",
+                    text="Кандидат относится к запрошенной категории (специализация × грейд)",
+                    value=1.0,
+                    contribution=0.0,
+                ),
+            )
     return scored

@@ -164,6 +164,7 @@ async def _signals_for(
     required_stack: Sequence[str],
     required_specialization: Optional[str],
     required_grade: Optional[str],
+    in_requested_category: Optional[bool] = None,
 ) -> Tuple[CandidateSignals, Dict[str, Any]]:
     """Сигналы кандидата: сила теста, достижения ФСП, свежесть, соответствие."""
     last_session = (
@@ -212,6 +213,7 @@ async def _signals_for(
         fsp_achievements=fsp_count,
         days_since_last_task=fresh_days,
         semantic_fit=fit,
+        in_requested_category=in_requested_category,
     )
     debug = {
         "theta": theta,
@@ -242,17 +244,32 @@ async def search_candidates(
         has_fsp=query.has_fsp,
     )
 
-    scored: List[Tuple[Any, CandidateProfile, User, Dict[str, Any]]] = []
+    scored: List[Tuple[Any, CandidateProfile, User, Dict[str, Any], CandidateSignals]] = []
     for profile, user in rows:
+        # Соответствие запрошенной категории: выдача строится по категориям,
+        # поэтому такие кандидаты получают приоритет в порядке выдачи.
+        category_match: Optional[bool] = None
+        if query.specialization_code or query.grade:
+            category_match = (
+                (not query.specialization_code or profile.specialization == query.specialization_code)
+                and (not query.grade or profile.grade == query.grade)
+            )
         signals, debug = await _signals_for(
             session, profile, user,
             required_stack=query.stack,
             required_specialization=query.specialization_code,
             required_grade=query.grade,
+            in_requested_category=category_match,
         )
-        scored.append((score_candidate(signals), profile, user, debug))
+        scored.append((score_candidate(signals), profile, user, debug, signals))
 
-    scored.sort(key=lambda item: (-item[0].score, item[2].id))
+    scored.sort(
+        key=lambda item: (
+            not bool(item[4].in_requested_category),
+            -item[0].score,
+            item[2].id,
+        )
+    )
     total = len(scored)
     page = scored[query.offset: query.offset + query.limit]
 
@@ -393,6 +410,9 @@ async def build_selection(
             required_stack=required_stack,
             required_specialization=specialization_code,
             required_grade=grade,
+            in_requested_category=(
+                None if not grade else profile.grade in grade_by_category.values()
+            ),
         )
         signals.append(prepared)
         debug_map[user.id] = debug

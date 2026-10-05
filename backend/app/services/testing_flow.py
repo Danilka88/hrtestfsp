@@ -45,9 +45,9 @@ from app.services.testing import (
 
 logger = logging.getLogger(__name__)
 
-MIN_ITEMS = 6
-MAX_ITEMS = 12
-TARGET_STANDARD_ERROR = 0.45
+MIN_ITEMS = 10
+MAX_ITEMS = 16
+TARGET_STANDARD_ERROR = 0.38
 FAST_ANSWER_MS = 1500
 
 
