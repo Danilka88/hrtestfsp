@@ -29,12 +29,17 @@
 
   /* NAV */
   nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(14px);
-      background:rgba(10,16,32,.82);border-bottom:1px solid var(--line)}
-  nav .wrap{display:flex;gap:8px;align-items:center;height:56px;overflow-x:auto}
-  nav .brand{font-weight:800;letter-spacing:.3px;white-space:nowrap;margin-right:14px;
+      background:rgba(10,16,32,.92);border-bottom:1px solid var(--line)}
+  /* Все разделы видны сразу: ссылки переносятся по строкам, а не прокручиваются вбок */
+  nav .wrap{display:flex;flex-wrap:wrap;gap:5px;align-items:center;padding:9px 22px}
+  nav .brand{font-weight:800;letter-spacing:.3px;white-space:nowrap;margin-right:12px;
       background:linear-gradient(90deg,var(--acc),var(--acc2));-webkit-background-clip:text;background-clip:text;color:transparent}
-  nav a{color:var(--mut);font-size:13.5px;white-space:nowrap;padding:6px 9px;border-radius:8px}
+  nav a{color:var(--mut);font-size:12.5px;white-space:nowrap;padding:5px 9px;border-radius:8px;
+      border:1px solid transparent;transition:background .15s,color .15s,border-color .15s}
   nav a:hover{color:var(--fg);background:var(--card);text-decoration:none}
+  nav a.active{color:#fff;background:var(--card);border-color:var(--line2)}
+  nav a.active::before{content:"▸ ";color:var(--acc)}
+  @media(max-width:900px){nav .wrap{padding:8px 18px} nav a{font-size:12px;padding:4px 8px}}
 
   /* HERO */
   header{padding:64px 0 40px}
@@ -171,6 +176,7 @@
   <a href="#matching">Подбор</a>
   <a href="#rules">Правила</a>
   <a href="#arch">Архитектура</a>
+  <a href="#ai">ИИ-слой</a>
   <a href="#mvp">MVP</a>
   <a href="#road">План</a>
   <a href="#valid">Валидация</a>
@@ -193,7 +199,7 @@
     <span class="chip"><b>35%</b> — вес механики подбора в оценке</span>
     <span class="chip"><b>25%</b> — тестирование и категоризация</span>
     <span class="chip"><b>2</b> ядра решения</span>
-    <span class="chip"><b>30</b> источников</span>
+    <span class="chip"><b>37</b> источников</span>
     <span class="chip"><b>Оффлайн</b> демо на seed-данных</span>
   </div>
 </header>
@@ -204,9 +210,9 @@
   <p class="sub">Универсальные площадки исчерпали ресурс: издержки несут обе стороны, результативность подбора минимальна.</p>
 
   <div class="grid g4" style="margin-bottom:20px">
-    <div class="stat"><div class="v down">−25%</div><div class="l">рынок вакансий в РФ за год; в ИТ — около <b>−20%</b><sup><a href="#src-13">13</a></sup></div></div>
-    <div class="stat"><div class="v up">+25%</div><div class="l">рост числа активных резюме на этом фоне<sup><a href="#src-13">13</a></sup></div></div>
-    <div class="stat"><div class="v down">−11…36%</div><div class="l">сокращение вакансий в ИТ, при росте резюме на <b>20–30%</b> ежемесячно<sup><a href="#src-12">12</a></sup></div></div>
+    <div class="stat"><div class="v down">−12%</div><div class="l">ИТ-вакансий в РФ год к году, а в первом полугодии 2025 — <b>−20%</b><sup><a href="#src-13">13</a><a href="#src-37">37</a></sup></div></div>
+    <div class="stat"><div class="v up">+14%</div><div class="l">активных резюме за тот же период: конкуренция за место растёт<sup><a href="#src-13">13</a></sup></div></div>
+    <div class="stat"><div class="v">66%</div><div class="l">работодателей уже отбирают по <b>проверенным навыкам</b>, а не по словам в резюме<sup><a href="#src-13">13</a></sup></div></div>
     <div class="stat"><div class="v">85%</div><div class="l">работ находятся через сети, лишь <b>15%</b> — через job-борды<sup><a href="#src-1">1</a></sup></div></div>
   </div>
 
@@ -219,7 +225,7 @@
       формат работы — на универсальных платформах <b>не формализована</b>.</p></div>
     <div class="card"><h3><span class="num">3</span>Рынок ИТ</h3>
       <p>Вал нерелевантных откликов при <b>дефиците опытных профи</b>, которые не сидят на классических job-сайтах:
-      закрыть вакансию за месяц — уже роскошь.<sup><a href="#src-12">12</a></sup></p></div>
+      нехватку нужных навыков отмечают <b>93%</b> компаний, в ИТ — <b>64%</b>.<sup><a href="#src-13">13</a><a href="#src-12">12</a></sup></p></div>
   </div>
 </div></section>
 
@@ -327,7 +333,7 @@
     <div class="cbox full">
       <h4>Cost Structure</h4>
       <ul>
-        <li>Разработка и поддержка · инфраструктура (VPS, LLM API) · модерация и антифрод · юридическое (152-ФЗ)</li>
+        <li>Разработка и поддержка · инфраструктура (VPS, локальная LLM) · модерация и антифрод · юридическое (152-ФЗ)</li>
       </ul>
     </div>
     <div class="cbox full">
@@ -503,9 +509,9 @@
       <p>FastAPI 0.142 · Pydantic 2.13 · SQLAlchemy 2.1 (async) · PostgreSQL 16 · React 19 · TypeScript 7 · Vite 8 · Tailwind 4.
       Перечень зависимостей сверен с фактическими импортами: заявленных, но не используемых библиотек в нём нет.</p></div>
     <div class="card"><h3>Проверяемость</h3>
-      <p>110 автотестов (<code>pytest</code>), 7 сквозных проверок (<code>scripts/smoke-*.sh</code>),
+      <p>133 автотеста (<code>pytest</code>), 8 сквозных проверок (<code>scripts/smoke-*.sh</code>),
       линтер <code>ruff</code> — без замечаний, поиск мёртвого кода <code>vulture</code> — чисто,
-      8 миграций БД. Всё воспроизводится одной командой.</p></div>
+      6 миграций БД. Всё воспроизводится одной командой.</p></div>
     <div class="card"><h3>Как запустить</h3>
       <p><code>docker compose up --build -d</code> → API <code>:8000/docs</code>, SPA <code>:8080</code>.<br>
       Демо-данные: <code>python scripts/seed_demo.py</code> (8 кандидатов, 2 работодателя, пароль <code>demo12345</code>).</p></div>
@@ -524,7 +530,7 @@
       + проверка подписи <code>id_token</code> по JWKS) без изменения бизнес-логики.</p></div>
   </div>
 
-  <h3 style="margin-top:28px">ИИ-слой: локальная открытая модель</h3>
+  <h3 style="margin-top:28px">ИИ-слой: локальная открытая модель <span style="font-weight:400;color:var(--dim);font-size:14px">— подробно в разделе 09</span></h3>
   <div class="grid g3" style="margin-top:10px">
     <div class="card" style="border-color:var(--vio)"><h3>Модель работает локально</h3>
       <p>Любая открытая модель через Ollama — например <b>Gemma 4</b> (лицензия Apache 2.0,
@@ -544,15 +550,95 @@
   </div>
 </div></section>
 
-<!-- 9. MVP -->
+<!-- 9. AI LAYER -->
+<section id="ai"><div class="wrap">
+  <h2><span class="n">09</span>ИИ-слой: что делает модель и почему локально</h2>
+  <p class="sub">Дополнительный функционал сверх ТЗ. Открытая модель выполняет рутинные текстовые
+  операции и семантическое сопоставление, но <b>ядро решения не подменяет</b>: грейд присваивает тест,
+  веса ранжирования фиксированы. Все семь функций вызываются из интерфейса обеих ролей — не только из API.</p>
+
+  <div class="grid g4" style="margin-bottom:22px">
+    <div class="stat"><div class="v up">7</div><div class="l">ИИ-функций в кабинетах кандидата и работодателя</div></div>
+    <div class="stat"><div class="v up">2</div><div class="l">модели: генерация текста и эмбеддинги для сопоставления</div></div>
+    <div class="stat"><div class="v up">0</div><div class="l">внешних API — резюме и профили не покидают контур (152-ФЗ)</div></div>
+    <div class="stat"><div class="v up">10–20 мс</div><div class="l">ответ демо-режима, если модель недоступна</div></div>
+  </div>
+
+  <h3>Какие задачи закрывает</h3>
+  <div class="tw" style="margin:10px 0 24px">
+    <table>
+      <thead><tr><th style="width:22%">Функция</th><th style="width:22%">Где в интерфейсе</th><th>Что делает модель</th></tr></thead>
+      <tbody>
+        <tr><td><b>Разбор профиля</b></td><td>Кандидат · «Профиль и ФСП»</td>
+            <td>Из вставленного текста резюме извлекает стек, роли и стаж, подсказывает, чего не хватает в профиле — вместо ручного заполнения полей</td></tr>
+        <tr><td><b>Черновик потребности</b></td><td>Работодатель · «Подбор кандидатов»</td>
+            <td>Из короткой заметки «нужен дата-инженер на Python и Spark, senior» собирает название роли, стек и описание команды — форма заполняется одной кнопкой</td></tr>
+        <tr><td><b>Текст приглашения</b></td><td>Работодатель · отправка приглашения</td>
+            <td>Пишет персональное предложение, подставляя название компании, грейд и диапазон зарплаты из формы</td></tr>
+        <tr><td><b>Объяснение попадания</b></td><td>Работодатель · карточка кандидата</td>
+            <td>Пересказывает сохранённые критерии ранжирования человеческим языком; рядом остаётся строгий расчёт по весам</td></tr>
+        <tr><td><b>Сопроводительное письмо</b></td><td>Кандидат · отклик на вакансию</td>
+            <td>Собирает письмо из профиля кандидата и текста вакансии — с обязательным уровнем зарплаты</td></tr>
+        <tr><td><b>Черновик задания</b></td><td>Работодатель · регулярные задания</td>
+            <td>Готовит заготовку короткой задачи по специализации и грейду — работодателю остаётся её вычитать</td></tr>
+        <tr><td><b>Семантические оценки</b></td><td>Подборка · критерий соответствия</td>
+            <td>Эмбеддинги сравнивают текст потребности с профилями кандидатов; критерий остаётся одним из четырёх, а не единственным</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Модель и почему именно такая</h3>
+  <div class="grid g3" style="margin-top:10px">
+    <div class="card" style="border-color:var(--vio)"><h3>Gemma 4 — что это по факту</h3>
+      <p>Открытая модель Google под лицензией <b>Apache 2.0</b>: разрешительная, без ограничений на
+      коммерческое использование. Смесь экспертов <b>MoE 26B ≈ 4B активных параметров</b> — качество крупной
+      модели при скорости небольшой; контекст до <b>256K</b> токенов, поддержка <b>140+ языков</b> включая русский.
+      Такое сочетание закрывает требование ТЗ об открытом коде и разрешительных лицензиях.<sup><a href="#src-31">31</a><a href="#src-32">32</a></sup></p></div>
+    <div class="card"><h3>Модель не прибита гвоздями</h3>
+      <p>Подключение через стандартный интерфейс <b>Ollama</b>: подойдут Qwen, Llama, Mistral и любая другая
+      открытая модель — при старте система сама определяет, что установлено, и использует это. Код не знает
+      о конкретной модели: работает абстракция провайдера, как и с остальными внешними сервисами.<sup><a href="#src-33">33</a><a href="#src-35">35</a></sup></p></div>
+    <div class="card" style="border-color:rgba(251,191,36,.45)"><h3>Если модели нет — демо идёт</h3>
+      <p>Те же семь функций отвечают детерминированными демо-данными за 10–20 мс и помечают ответ
+      <code>degraded=true</code>. Интерфейс честно показывает «ИИ: демо-режим» и не выдаёт заглушку
+      за работу модели. Поэтому демонстрация воспроизводима <b>оффлайн</b> — в том числе на машине судьи
+      без установленной модели.</p></div>
+  </div>
+
+  <div class="grid g3" style="margin-top:18px">
+    <div class="card"><h3>Замеры на реальной модели</h3>
+      <p>Отключение режима рассуждений (<code>think:false</code>) сократило ответ на коротких задачах
+      с <b>9.8 с до 0.25 с</b> — при извлечении полей длинные рассуждения не нужны. Принудительный формат
+      <code>format:"json"</code> убирает обёртку ответа в markdown: JSON разбирается без правок регулярками.
+      Черновик потребности из русской заметки на реальной модели — около <b>8 с</b>.</p></div>
+    <div class="card"><h3>Чего ИИ не делает</h3>
+      <p>Не присваивает грейд, не меняет веса ранжирования, не ранжирует кандидатов сам и не принимает
+      решений о найме. Позиция в подборке — результат фиксированной рубрики; модель <b>объясняет и ускоряет</b>,
+      но на порядок выдачи не влияет.</p></div>
+    <div class="card"><h3>Как переключить</h3>
+      <p>Переменные окружения: <code>LLM_PROVIDER</code> (<code>auto</code> | <code>ollama</code> | <code>mock</code>),
+      <code>OLLAMA_BASE_URL</code>, <code>OLLAMA_MODEL</code> (пусто — автоподбор),
+      <code>SEMANTIC_MATCH_ENABLED</code>. Состояние видно в интерфейсе и на
+      <code>/api/v1/ai/status</code>. Замеры и детали — <code>docs/06-ai.md</code>.</p></div>
+  </div>
+
+  <div class="note" style="margin-top:18px">
+    <b class="hl">Три режима.</b> <code>auto</code> — использует реальную модель, при её недоступности
+    уходит в демо-режим; <code>ollama</code> — только реальная модель; <code>mock</code> — всегда
+    демо-данные (нужно автотестам и оффлайн-демонстрации). Значок в интерфейсе честно показывает,
+    что работает сейчас: «ИИ: локальная модель» или «ИИ: демо-режим».
+  </div>
+</div></section>
+
+<!-- 10. MVP -->
 <section id="mvp"><div class="wrap">
-  <h2><span class="n">09</span>Скоуп MVP</h2>
+  <h2><span class="n">10</span>Скоуп MVP</h2>
   <p class="sub">Обязательный минимум, реалистично достижимый за время хакатона; дополнительное — добор баллов.</p>
 
   <div class="card" style="border-color:rgba(52,211,153,.5);margin-bottom:16px">
     <h3>Статус: реализовано полностью</h3>
     <p>Все позиции Must и Should ниже реализованы в <code>project/</code> и проверены на живом стеке
-    (4 сервиса здоровы, 110 автотестов, 7 сквозных проверок, прогон валидации).
+    (4 сервиса здоровы, 133 автотеста, 8 сквозных проверок, прогон валидации).
     Единственный внешний артефакт — презентация для питч-сессии.</p>
   </div>
 
@@ -588,20 +674,20 @@
   </div>
 </div></section>
 
-<!-- 10. COMPLIANCE -->
+<!-- 11. COMPLIANCE -->
 <section id="compliance"><div class="wrap">
-  <h2><span class="n">10</span>Соответствие техническому заданию</h2>
+  <h2><span class="n">11</span>Соответствие техническому заданию</h2>
   <p class="sub">Требования ТЗ — построчно, с указанием того, чем каждое подтверждается в решении.
-  Отмечено честно: все обязательные требования выполнены; позиции, помеченные самим ТЗ как
-  «желательно, но не обязательно для MVP», реализованы на уровне API.</p>
+  Отмечено честно: все обязательные требования выполнены, а позиции, помеченные ТЗ как «желательно,
+  но не обязательно для MVP», реализованы и выведены в интерфейс, а не оставлены на уровне API.</p>
 
   <div class="grid g3" style="margin-bottom:22px">
-    <div class="stat"><div class="v up">32 из 33</div>
+    <div class="stat"><div class="v up">33 из 33</div>
       <div class="l">позиций ТЗ подтверждено полностью</div></div>
-    <div class="stat"><div class="v">48</div>
+    <div class="stat"><div class="v">56</div>
       <div class="l">методов API в 14 группах, все описаны в OpenAPI</div></div>
-    <div class="stat"><div class="v up">110</div>
-      <div class="l">автотестов и 7 сквозных проверок на живом стеке</div></div>
+    <div class="stat"><div class="v up">133</div>
+      <div class="l">автотеста и 8 сквозных проверок на живом стеке</div></div>
   </div>
 
   <h3>Кабинет «Кандидат»</h3>
@@ -631,8 +717,8 @@
             <td><span class="tag must">выполнено ✓</span></td>
             <td>Два отдельных согласия в форме регистрации (обязательное и необязательное), привязка и отвязка ФСП ID</td></tr>
         <tr><td>Настройки: приватность — что именно видно работодателю</td>
-            <td><span class="tag should">API готов · UI в работе</span></td>
-            <td><code>PATCH /candidates/me/privacy</code> — серверная политика видимости работает; не выведен только переключатель в интерфейсе</td></tr>
+            <td><span class="tag must">выполнено ✓</span></td>
+            <td>Четыре переключателя в кабинете кандидата (стек, стаж, достижения ФСП, контакты в PDF) сохраняются через <code>PATCH /candidates/me/privacy</code>; значение переживает перезагрузку страницы</td></tr>
         <tr><td>Просмотр вакансий и самостоятельный отклик со списком статусов</td>
             <td><span class="tag must">выполнено ✓</span></td>
             <td>Вкладка «Вакансии» в кабинете кандидата: фильтр по специализации, отклик с ИИ-письмом, статусы своих откликов</td></tr>
@@ -725,7 +811,7 @@
             <td>Веб-сервис независим от ОС; вёрстка адаптируется под планшет и мобильный</td></tr>
         <tr><td>Качество кода и работоспособность прототипа</td>
             <td><span class="tag must">выполнено ✓</span></td>
-            <td>110 автотестов, линтер без замечаний, мёртвого кода нет, зависимости сверены с фактическими импортами</td></tr>
+            <td>133 автотеста, линтер без замечаний, мёртвого кода нет, зависимости сверены с фактическими импортами</td></tr>
       </tbody>
     </table>
   </div>
@@ -739,17 +825,16 @@
   </div>
 
   <div class="note" style="margin-top:12px">
-    <b class="hl">Единственная частично закрытая позиция.</b> Переключатель приватности профиля:
-    серверная политика видимости («что видно работодателю») работает и покрыта тестами, не выведен
-    только элемент управления в интерфейсе. Обязательные требования и сквозной путь пользователя
-    закрыты полностью; дополнительный функционал (вакансии с откликами и регулярные короткие
-    задания) выведен в интерфейс обеих ролей и проверен сквозным сценарием.
+    <b class="hl">Частично закрытых позиций нет.</b> Все обязательные требования ТЗ реализованы в
+    интерфейсе, а не только на уровне API: сквозной путь кандидата и работодателя, настройки
+    приватности профиля, публикация вакансий с откликами и регулярные короткие задания выведены
+    в кабинеты обеих ролей и проверены сквозным сценарием на живом стеке.
   </div>
 </div></section>
 
-<!-- 11. ROADMAP -->
+<!-- 12. ROADMAP -->
 <section id="road"><div class="wrap">
-  <h2><span class="n">11</span>План разработки</h2>
+  <h2><span class="n">12</span>План разработки</h2>
   <p class="sub">Demo-first: сначала сквозной путь, затем дополнительный функционал.</p>
   <div class="grid g2">
     <div class="tl">
@@ -767,9 +852,9 @@
   </div>
 </div></section>
 
-<!-- 12. VALIDATION -->
+<!-- 13. VALIDATION -->
 <section id="valid"><div class="wrap">
-  <h2><span class="n">12</span>Валидация: процедура и измеренные результаты</h2>
+  <h2><span class="n">13</span>Валидация: процедура и измеренные результаты</h2>
   <p class="sub">Эталонной разметки нет — процедуру предложила команда и выполнила детерминированным скриптом. Ниже измеренные значения, а не план.</p>
   <div class="tw">
     <table>
@@ -796,9 +881,9 @@
   <p class="sub" style="margin-top:14px">Повторить: <code>cd backend &amp;&amp; python scripts/validate_solution.py --runs 120</code></p>
 </div></section>
 
-<!-- 13. SCORING -->
+<!-- 14. SCORING -->
 <section id="score"><div class="wrap">
-  <h2><span class="n">13</span>Критерии оценки и трассировка</h2>
+  <h2><span class="n">14</span>Критерии оценки и трассировка</h2>
   <p class="sub">Куда направлены усилия: два ядра закрывают 60% оценки.</p>
 
   <div class="grid g2">
@@ -824,9 +909,9 @@
   </div>
 </div></section>
 
-<!-- 14. RUN & DEMO -->
+<!-- 15. RUN & DEMO -->
 <section id="run"><div class="wrap">
-  <h2><span class="n">14</span>Запуск и демонстрация: пошаговая инструкция</h2>
+  <h2><span class="n">15</span>Запуск и демонстрация: пошаговая инструкция</h2>
   <p class="sub">Инструкция рассчитана на человека <b>без технического опыта</b>: что установить, как запустить
   одной командой, что нажимать в демонстрации и что должно появиться на экране.</p>
 
@@ -1037,7 +1122,7 @@ docker compose exec -T backend python scripts/seed_demo.py</pre>
   <p>Все проверки воспроизводимы и выполняются в терминале. Автотесты запускаются в локальном
   окружении Python (папка <code>backend/.venv</code> в поставке уже создана):</p>
   <pre>cd backend
-.venv/bin/python -m pytest -q                                  # 110 автотестов
+.venv/bin/python -m pytest -q                                  # 133 теста
 .venv/bin/python scripts/validate_solution.py --runs 120       # метрики валидации
 cd .. && bash scripts/verify-stack.sh                          # состояние всех сервисов</pre>
   <p style="color:var(--mut)">Если папки <code>.venv</code> нет, создайте окружение заново:</p>
@@ -1057,9 +1142,9 @@ python3 -m venv .venv
   </div>
 </div></section>
 
-<!-- 15. SOURCES -->
+<!-- 16. SOURCES -->
 <section id="sources"><div class="wrap">
-  <h2><span class="n">15</span>Источники (30)</h2>
+  <h2><span class="n">16</span>Источники (37)</h2>
   <p class="sub">Все утверждения выше подкреплены проверяемыми ссылками.</p>
   <div class="src">
     <div id="src-1"><b>[1]</b> LHH — Active Placement: <a href="https://en.prnasia.com/releases/apac/Lee_Hecht_Harrison_Reinvents_Outplacement-182431.shtml">prnasia</a></div>
@@ -1073,14 +1158,14 @@ python3 -m venv .venv
     <div id="src-9"><b>[9]</b> Item exposure control (обзор): <a href="https://eric.ed.gov/?id=EJ838610">ERIC</a></div>
     <div id="src-10"><b>[10]</b> Explainable AI candidate ranking benchmark: <a href="https://modernrecruiter.ai/explainable-ai-candidate-ranking-benchmark.pdf">PDF</a></div>
     <div id="src-11"><b>[11]</b> XAI в найме: <a href="https://www.hubert.ai/insights/a-recruiters-guide-to-explainable-ai-in-hiring">Hubert</a></div>
-    <div id="src-12"><b>[12]</b> Нишевые площадки найма ИТ в РФ (2025): <a href="https://naimee.ai/hrzavtra/top-15-niche-platforms-it-hiring-russia-2025">naimee</a></div>
-    <div id="src-13"><b>[13]</b> РБК: ИТ-рынок и HR-прогноз 2026: <a href="https://trends.rbc.ru/trends/social/cmrm/698da33a9a79474de4341261">РБК Тренды</a></div>
+    <div id="src-12"><b>[12]</b> Нишевые каналы и площадки найма ИТ в РФ (2025): <a href="https://www.computerra.ru/327466/gde-ajtishniku-iskat-rabotu-v-2025-godu-stoit-li-nadeyatsya-na-hh-ru/">Компьютерра</a></div>
+    <div id="src-13"><b>[13]</b> hh.ru: ИТ-рынок 2025 — вакансии −12%, резюме +14%, 66% компаний отбирают по проверенным навыкам: <a href="https://www.cnews.ru/news/line/2025-07-30_issledovanie_hhru_dve_treti">CNews</a></div>
     <div id="src-14"><b>[14]</b> hh.ru: прогноз рынка труда 2026: <a href="https://hh.ru/article/prognoz-chto-budet-proiskhodit-na-rynke-truda-v-2026-godu">hh.ru</a></div>
     <div id="src-15"><b>[15]</b> Keycloak + Next.js + FastAPI: <a href="https://medium.com/@abdurcodex/securing-a-next-js-fastapi-app-with-keycloak-a-stateless-multi-tenant-blueprint-f8e47fdc2278">Medium</a></div>
     <div id="src-16"><b>[16]</b> 152-ФЗ: отдельное согласие с 01.09.2025: <a href="https://www.garant.ru/article/1862510">Гарант</a></div>
     <div id="src-17"><b>[17]</b> Реестр отечественного ПО: <a href="https://habr.com/ru/articles/908068">Habr</a></div>
     <div id="src-18"><b>[18]</b> Как выиграть хакатон — заметки жюри: <a href="https://blog.jetbrains.com/ai/2026/06/how-to-win-a-hackathon-notes-from-the-judging-table">JetBrains</a></div>
-    <div id="src-19"><b>[19]</b> Hackathon winning patterns (demo-first): <a href="https://github.com/bernieweb3/hackathon-ai-devkit/blob/main/skills/hackathon-shared-resources/knowledge/hackathon-winning-patterns.md">GitHub</a></div>
+    <div id="src-19"><b>[19]</b> Что оценивают судьи: работающее демо важнее слайдов: <a href="https://angelhack.com/blog/10-tips-to-help-you-rock-your-next-hackathon-demo/">AngelHack</a></div>
     <div id="src-20"><b>[20]</b> Two-sided marketplace cold start: <a href="https://jobtechalliance.com/two-sided-marketplace-cold-start-problem">Jobtech Alliance</a></div>
     <div id="src-21"><b>[21]</b> Recruitment MVP: marketplace challenges: <a href="https://mvphub.tech/blog/recruitment-mvp-development-two-sided-marketplace-challenges">mvphub</a></div>
     <div id="src-22"><b>[22]</b> Извлечение навыков из вакансий РФ (NER vs LLM): <a href="https://arxiv.org/html/2407.19816v1">arXiv</a></div>
@@ -1092,14 +1177,40 @@ python3 -m venv .venv
     <div id="src-28"><b>[28]</b> Грейды junior/middle/senior: <a href="https://habr.com/ru/companies/habr_career/articles/846530">Habr Карьера</a></div>
     <div id="src-29"><b>[29]</b> Федерация спортивного программирования России: <a href="https://fsp-russia.ru">fsp-russia.ru</a></div>
     <div id="src-30"><b>[30]</b> OAuth blueprint Keycloak + FastAPI: <a href="https://gist.github.com/mkamrani/3c67ee533d7ae0a42e7b18b3e95c24ff">Gist</a></div>
+    <div id="src-31"><b>[31]</b> Ollama — библиотека моделей (gemma4): <a href="https://ollama.com/library/gemma4">ollama.com</a></div>
+    <div id="src-32"><b>[32]</b> Gemma 4 — карточка модели, лицензия Apache 2.0: <a href="https://ai.google.dev/gemma/docs/core/model_card_4">ai.google.dev</a></div>
+    <div id="src-33"><b>[33]</b> Gemma 3 Technical Report — архитектура и MoE: <a href="https://arxiv.org/abs/2503.19786">arXiv</a></div>
+    <div id="src-34"><b>[34]</b> LLM-скрининг резюме: качество и ограничения: <a href="https://arxiv.org/html/2504.02870v1">arXiv</a></div>
+    <div id="src-35"><b>[35]</b> Ollama API — генерация и эмбеддинги: <a href="https://github.com/ollama/ollama/blob/main/docs/api.md">GitHub</a></div>
+    <div id="src-36"><b>[36]</b> Заметки судьи: демо и честно названные ограничения повышают оценку: <a href="https://dev.to/kurbaitaev/what-judges-actually-score-notes-from-a-year-of-hackathon-judging-3p4l">dev.to</a></div>
+    <div id="src-37"><b>[37]</b> hh.ru: сокращение ИТ-вакансий и вакансий для программистов: <a href="https://www.cnews.ru/news/top/2025-07-18_rossii_bolshe_ne_nuzhny_programmisty">CNews</a></div>
   </div>
 </div></section>
 
 <footer><div class="wrap">
   IT-Talent Match · сопроводительные документы: <code>docs/00-research.md</code>,
-  <code>docs/01-architecture.md</code>, <code>docs/02-tech-stack.md</code>, <code>docs/03-mvp-plan.md</code>.
-  Страница автономна и работает оффлайн.
+  <code>docs/01-architecture.md</code>, <code>docs/02-tech-stack.md</code>, <code>docs/03-mvp-plan.md</code>,
+  <code>docs/04-anti-fraud-ats.md</code>, <code>docs/05-validation.md</code>, <code>docs/06-ai.md</code>.
+  Эта страница — <code>docs/lean-canvas.html</code>; она автономна и работает оффлайн.
 </div></footer>
 
+<script>
+  // Навигация всегда показывает, где находится читатель: подсветка текущего раздела
+  (function () {
+    var links = Array.prototype.slice.call(document.querySelectorAll('nav a[href^="#"]'));
+    var map = {};
+    links.forEach(function (a) { map[a.getAttribute("href").slice(1)] = a; });
+    if (!("IntersectionObserver" in window)) return;
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        var link = map[entry.target.id];
+        if (!link || !entry.isIntersecting) return;
+        links.forEach(function (l) { l.classList.remove("active"); });
+        link.classList.add("active");
+      });
+    }, { rootMargin: "-15% 0px -75% 0px" });
+    document.querySelectorAll("section[id]").forEach(function (s) { observer.observe(s); });
+  })();
+</script>
 </body>
 </html>

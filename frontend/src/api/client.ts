@@ -307,6 +307,16 @@ export async function getCandidateProfile(): Promise<CandidateProfile> {
   return (await api.get<CandidateProfile>("/candidates/me/profile")).data;
 }
 
+/** Настройки приватности: что именно видит работодатель в выдаче. */
+export async function patchPrivacy(payload: {
+  show_contacts?: boolean;
+  show_stack?: boolean;
+  show_experience?: boolean;
+  show_fsp?: boolean;
+}): Promise<CandidateProfile> {
+  return (await api.patch<CandidateProfile>("/candidates/me/privacy", payload)).data;
+}
+
 export async function putCandidateProfile(
   payload: Record<string, unknown>,
 ): Promise<CandidateProfile> {

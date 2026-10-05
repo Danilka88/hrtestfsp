@@ -443,6 +443,8 @@ function ProfileTab() {
   const [aiResult, setAiResult] = useState<apiClient.AIResult | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [privacy, setPrivacy] = useState<Record<string, boolean>>({});
+  const [privacyBusy, setPrivacyBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -452,6 +454,7 @@ function ProfileTab() {
       setGrade(profile.grade ?? "");
       setStack(profile.stack.join(", "));
       setSummary(profile.summary ?? "");
+      setPrivacy(profile.privacy ?? {});
     } catch {
       /* профиль ещё не создан */
     }
@@ -535,6 +538,26 @@ function ProfileTab() {
     }
   }
 
+  /** Сохранение настроек видимости профиля для работодателя. */
+  async function savePrivacy(next: Record<string, boolean>) {
+    setPrivacy(next);
+    setPrivacyBusy(true);
+    try {
+      const updated = await apiClient.patchPrivacy({
+        show_stack: Boolean(next.show_stack),
+        show_experience: Boolean(next.show_experience),
+        show_fsp: Boolean(next.show_fsp),
+        show_contacts: Boolean(next.show_contacts),
+      });
+      setPrivacy(updated.privacy ?? next);
+      toast.success("Настройки приватности сохранены", "Работодатель увидит профиль согласно этим настройкам");
+    } catch (err) {
+      toast.error("Не удалось сохранить настройки", errorMessage(err));
+    } finally {
+      setPrivacyBusy(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <Card title="Профиль">
@@ -556,6 +579,40 @@ function ProfileTab() {
         <p className="mt-2 text-xs text-slate-500">
           Грейд присваивается тестом. Значение из формы используется только как исходное для профиля.
         </p>
+      </Card>
+
+      <Card title="Приватность: что видно работодателю">
+        <p className="mb-3 text-xs text-slate-500">
+          Настройки управляют только тем, какие блоки профиля показывает выдача. Контакты в любом
+          случае раскрываются лишь после того, как вы приняли приглашение или откликнулись сами.
+        </p>
+        <div className="space-y-2">
+          {(
+            [
+              ["show_stack", "Стек технологий", "какие технологии указаны в профиле"],
+              ["show_experience", "Стаж и опыт", "сколько лет опыта видит работодатель"],
+              ["show_fsp", "Достижения ФСП", "подтверждённые результаты соревнований"],
+              ["show_contacts", "Контакты в PDF-профиле", "показывать контакты в скачиваемом PDF"],
+            ] as Array<[string, string, string]>
+          ).map(([key, label, hint]) => (
+            <label
+              key={key}
+              className="flex items-start gap-3 rounded-lg border border-slate-800 p-3 text-sm"
+            >
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 rounded border-slate-700 bg-slate-950"
+                checked={Boolean(privacy[key])}
+                disabled={privacyBusy}
+                onChange={(event) => void savePrivacy({ ...privacy, [key]: event.target.checked })}
+              />
+              <span>
+                <span className="text-slate-200">{label}</span>
+                <span className="block text-xs text-slate-500">{hint}</span>
+              </span>
+            </label>
+          ))}
+        </div>
       </Card>
 
       <Card title="ИИ-разбор резюме">

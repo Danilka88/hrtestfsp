@@ -106,7 +106,9 @@ async def update_privacy(
     privacy = dict(profile.privacy or DEFAULT_PRIVACY)
     for field, value in payload.model_dump(exclude_none=True).items():
         privacy[field] = bool(value)
-    # Контакты не могут быть раскрыты без согласия на публикацию данных профиля
+    # Флаги видимости (стек, опыт, достижения ФСП) применяются при выдаче кандидата
+    # работодателю. Скрытие контактов обеспечивается отдельным правилом: контакты
+    # раскрываются только после принятия приглашения или самостоятельного отклика.
     profile.privacy = privacy
     await session.commit()
     await session.refresh(profile)
