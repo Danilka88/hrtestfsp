@@ -31,7 +31,7 @@ CAND=$(register_and_login "$CAND_EMAIL" candidate)
 [ -n "$EMP" ] && [ -n "$CAND" ] || { echo "ОШИБКА: не получены токены"; exit 1; }
 
 curl -s -o /dev/null -X PUT "$BASE/api/v1/employers/me/profile" -H "$JSON" \
-  -H "Authorization: Bearer $EMP" -d '{"company_name":"ООО «Маркетплейс Тест»"}'
+  -H "Authorization: Bearer $EMP" -d '{"company_name":"ООО «Проверка стека» ('"$STAMP"')"}'
 curl -s -o /dev/null -X PUT "$BASE/api/v1/candidates/me/profile" -H "$JSON" \
   -H "Authorization: Bearer $CAND" \
   -d '{"full_name":"Кандидат Инициативный","contacts":{"email":"'$CAND_EMAIL'","phone":"+7 905 111-22-33","telegram":"@init"},"specialization":"backend","grade":"middle","stack":["Python","Docker"]}'
@@ -59,7 +59,7 @@ def call(method, path, token, payload=None):
 
 print("\n== 1. публикация вакансии ==")
 status, vacancy = call("POST", "/api/v1/employers/me/vacancies", employer_token, {
-    "title": "Backend-разработчик (Python)",
+    "title": "[проверка] Backend-разработчик (Python)",
     "description": "Команда платежей",
     "specialization_code": "backend",
     "grade": "middle",
@@ -101,7 +101,7 @@ print(f"решение работодателя: {decided['status']}")
 
 print("\n== 5. регулярное короткое задание ==")
 status, task = call("POST", "/api/v1/employers/me/tasks", employer_token, {
-    "title": "Спроектируйте идемпотентный вебхук",
+    "title": "[проверка] Спроектируйте идемпотентный вебхук",
     "description": "Опишите подход или приведите код",
     "specialization_code": "backend",
 })

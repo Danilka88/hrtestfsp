@@ -1,6 +1,7 @@
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
-export function Card({ title, children, accent }: { title?: string; children: ReactNode; accent?: boolean }) {
+export function Card({ title, children, accent }: { title?: ReactNode; children: ReactNode; accent?: boolean }) {
   return (
     <section
       className={`rounded-xl border bg-slate-900/60 p-4 ${
@@ -171,4 +172,165 @@ export function gradesLabel(grade: string | null | undefined): string {
 
 export function money(value: number): string {
   return `${value.toLocaleString("ru-RU")} ₽`;
+}
+
+/**
+ * Модальное окно для действий.
+ *
+ * Все формы и подтверждения показываются здесь, а не под списком: при длинном
+ * списке форма «внизу» остаётся незамеченной, и нажатие кнопки выглядит как
+ * отсутствие реакции. Закрывается по Esc, клику по фону и крестику.
+ */
+export function Modal({
+  open,
+  title,
+  description,
+  onClose,
+  children,
+  footer,
+  wide,
+}: {
+  open: boolean;
+  title: string;
+  description?: ReactNode;
+  onClose: () => void;
+  children: ReactNode;
+  footer?: ReactNode;
+  wide?: boolean;
+}) {
+  const panel = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    panel.current?.focus();
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/75 p-4 backdrop-blur-sm"
+      onClick={onClose}
+      role="presentation"
+    >
+      <div
+        ref={panel}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        onClick={(event) => event.stopPropagation()}
+        className={`my-6 w-full ${wide ? "max-w-3xl" : "max-w-xl"} rounded-xl border border-slate-700 bg-slate-900 p-5 shadow-2xl outline-none`}
+      >
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-base font-semibold text-sky-300">{title}</h2>
+            {description ? (
+              <div className="mt-1 text-xs leading-relaxed text-slate-400">{description}</div>
+            ) : null}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Закрыть"
+            className="shrink-0 rounded-lg border border-slate-700 px-2 py-1 text-xs text-slate-400 transition hover:border-sky-500 hover:text-white"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="space-y-3">{children}</div>
+        {footer ? (
+          <div className="mt-5 flex flex-wrap gap-2 border-t border-slate-800 pt-4">{footer}</div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Пояснение по кнопке «?».
+ *
+ * Открывается по клику (а не только по наведению) — иначе на планшете и в
+ * демонстрации с тачскрином подсказку невозможно прочитать. Закрывается по
+ * Esc, клику вне подсказки и повторному нажатию.
+ */
+export function InfoTip({ text, label = "Пояснение" }: { text: string; label?: string }) {
+  const [open, setOpen] = useState(false);
+  const holder = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDocClick = (event: MouseEvent) => {
+      if (holder.current && !holder.current.contains(event.target as Node)) setOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <span ref={holder} className="relative inline-flex align-middle">
+      <button
+        type="button"
+        aria-label={label}
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+        className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full border border-slate-600 text-[10px] leading-none text-slate-400 transition hover:border-sky-500 hover:text-sky-300"
+      >
+        ?
+      </button>
+      {open ? (
+        <span
+          role="tooltip"
+          className="absolute left-1/2 top-6 z-40 w-72 -translate-x-1/2 rounded-lg border border-slate-700 bg-slate-900 p-3 text-left text-xs leading-relaxed font-normal text-slate-300 shadow-xl"
+        >
+          {text}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+/** Пояснение к разделу: что здесь происходит и зачем. */
+export function SectionNote({ children }: { children: ReactNode }) {
+  return (
+    <p className="mb-3 rounded-lg border border-slate-800 bg-slate-950/50 p-3 text-xs leading-relaxed text-slate-400">
+      {children}
+    </p>
+  );
+}
+
+/** Пустое состояние: объясняет, почему пусто и что сделать. */
+export function EmptyState({
+  title,
+  hint,
+  action,
+}: {
+  title: string;
+  hint?: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="rounded-lg border border-dashed border-slate-700 p-6 text-center">
+      <p className="text-sm text-slate-300">{title}</p>
+      {hint ? <p className="mx-auto mt-1 max-w-md text-xs text-slate-500">{hint}</p> : null}
+      {action ? <div className="mt-3 flex justify-center">{action}</div> : null}
+    </div>
+  );
 }

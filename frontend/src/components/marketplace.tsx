@@ -12,7 +12,7 @@ import type {
 import { errorMessage } from "../api/client";
 import { AIButton, AISourceNote, aiToastPayload } from "./ai";
 import { useToast } from "./toast";
-import { Alert, Button, Card, Field, StatusBadge, TextArea, gradesLabel, money } from "./ui";
+import { Button, Card, EmptyState, Field, InfoTip, Modal, SectionNote, StatusBadge, TextArea, gradesLabel, money } from "./ui";
 
 /**
  * Панели дополнительного функционала: вакансии с откликами и регулярные короткие
@@ -179,28 +179,33 @@ function CandidateVacancies() {
         </div>
       </Card>
 
-      {applyFor ? (
-        <Card title={`Отклик на «${applyFor.title}»`} accent>
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <AIButton onClick={() => void writeCoverLetter()} busy={aiBusy}>
-              Написать сопроводительное
-            </AIButton>
-            <span className="text-xs text-slate-500">
-              письмо соберётся из реального пересечения стека
-            </span>
-          </div>
-          <TextArea label="Сообщение работодателю" value={message} onChange={setMessage} rows={5} />
-          <AISourceNote result={aiResult} />
-          <div className="mt-3 flex gap-2">
+      <Modal
+        open={applyFor !== null}
+        title={applyFor ? `Отклик на «${applyFor.title}»` : "Отклик на вакансию"}
+        description="Отклик раскрывает работодателю ваши контакты: вместе с сообщением он увидит email и телефон из профиля."
+        onClose={() => setApplyFor(null)}
+        footer={
+          <>
             <Button onClick={() => void send()} disabled={busy}>
               Отправить отклик
             </Button>
             <Button variant="ghost" onClick={() => setApplyFor(null)}>
               Отмена
             </Button>
-          </div>
-        </Card>
-      ) : null}
+          </>
+        }
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <AIButton onClick={() => void writeCoverLetter()} busy={aiBusy}>
+            Написать сопроводительное
+          </AIButton>
+          <span className="text-xs text-slate-500">
+            письмо соберётся из реального пересечения стека
+          </span>
+        </div>
+        <TextArea label="Сообщение работодателю" value={message} onChange={setMessage} rows={6} />
+        <AISourceNote result={aiResult} />
+      </Modal>
 
       <Card title={`Мои отклики · ${applications.length}`}>
         <div className="space-y-2">
@@ -334,6 +339,11 @@ function EmployerVacancies() {
 
   return (
     <div className="space-y-4">
+      <SectionNote>
+        Вакансия — открытое предложение: кандидат может откликнуться сам. Зарплата обязательна, а
+        отклик сразу раскрывает вам контакты кандидата.
+      </SectionNote>
+
       <Card title="Публикация вакансии">
         <p className="mb-3 text-xs text-slate-500">
           Вакансия с обязательной зарплатой. Кандидат видит условия до начала общения.
@@ -414,69 +424,71 @@ function EmployerVacancies() {
                 </div>
               </div>
 
-              {openVacancy === vacancy.id ? (
-                <div className="mt-3 space-y-2 border-t border-slate-800 pt-3">
-                  {(applications[vacancy.id] ?? []).map((application) => (
-                    <div key={application.id} className="rounded-lg border border-slate-800 p-2">
-                      <div className="flex flex-wrap items-start justify-between gap-2">
-                        <div>
-                          <p className="text-sm font-medium">
-                            #{application.candidate_reference} · {application.candidate_name ?? "кандидат"}
-                          </p>
-                          <p className="text-xs text-slate-400">
-                            {application.candidate_specialization ?? "—"} /{" "}
-                            {gradesLabel(application.candidate_grade)}
-                            {application.candidate_stack.length
-                              ? ` · ${application.candidate_stack.join(", ")}`
-                              : ""}
-                          </p>
-                          {application.message ? (
-                            <p className="mt-1 max-w-xl text-sm text-slate-300">{application.message}</p>
-                          ) : null}
-                          {application.contacts_revealed ? (
-                            <p className="mt-1 text-xs text-emerald-300">
-                              Контакты открыты: {application.candidate_contacts?.email ?? "—"}
-                              {application.candidate_contacts?.phone
-                                ? ` · ${application.candidate_contacts.phone}`
-                                : ""}
-                            </p>
-                          ) : (
-                            <p className="mt-1 text-xs text-slate-600">Контакты скрыты</p>
-                          )}
-                        </div>
-                        <div className="flex flex-col items-end gap-2">
-                          <StatusBadge status={application.status} />
-                          {application.status === "submitted" || application.status === "viewed" ? (
-                            <div className="flex gap-2">
-                              <Button
-                                onClick={() => void decide(application.id, vacancy.id, "accepted")}
-                              >
-                                Принять
-                              </Button>
-                              <Button
-                                variant="danger"
-                                onClick={() => void decide(application.id, vacancy.id, "declined")}
-                              >
-                                Отклонить
-                              </Button>
-                            </div>
-                          ) : null}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {(applications[vacancy.id] ?? []).length === 0 ? (
-                    <p className="text-sm text-slate-500">Откликов на вакансию пока нет.</p>
-                  ) : null}
-                </div>
-              ) : null}
             </div>
           ))}
           {vacancies.length === 0 ? (
-            <p className="text-sm text-slate-500">Вы ещё не публиковали вакансии.</p>
+            <EmptyState
+              title="Вы ещё не публиковали вакансии"
+              hint="Публикация нужна, чтобы кандидат мог откликнуться сам — это дополнительный сценарий к приглашениям."
+            />
           ) : null}
         </div>
       </Card>
+
+      <Modal
+        open={openVacancy !== null}
+        title={`Отклики: ${vacancies.find((item) => item.id === openVacancy)?.title ?? "вакансия"}`}
+        description="Кандидат откликнулся сам — его контакты уже раскрыты, потому что отклик означает согласие на контакт."
+        onClose={() => setOpenVacancy(null)}
+        wide
+      >
+        {(openVacancy ? (applications[openVacancy] ?? []) : []).map((application) => (
+          <div key={application.id} className="rounded-lg border border-slate-800 p-3">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <p className="text-sm font-medium">
+                  #{application.candidate_reference} · {application.candidate_name ?? "кандидат"}
+                </p>
+                <p className="text-xs text-slate-400">
+                  {application.candidate_specialization ?? "—"} / {gradesLabel(application.candidate_grade)}
+                  {application.candidate_stack.length ? ` · ${application.candidate_stack.join(", ")}` : ""}
+                </p>
+                {application.message ? (
+                  <p className="mt-2 text-sm text-slate-300">{application.message}</p>
+                ) : null}
+                {application.contacts_revealed ? (
+                  <p className="mt-1 text-xs text-emerald-300">
+                    Контакты: {application.candidate_contacts?.email ?? "—"}
+                    {application.candidate_contacts?.phone ? ` · ${application.candidate_contacts.phone}` : ""}
+                  </p>
+                ) : null}
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                <StatusBadge status={application.status} />
+                {application.status === "submitted" || application.status === "viewed" ? (
+                  <div className="flex gap-2">
+                    <Button onClick={() => void decide(application.id, openVacancy ?? "", "accepted")}>
+                      Принять
+                    </Button>
+                    <Button
+                      variant="danger"
+                      onClick={() => void decide(application.id, openVacancy ?? "", "declined")}
+                    >
+                      Отклонить
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        ))}
+        {openVacancy && (applications[openVacancy] ?? []).length === 0 ? (
+          <EmptyState
+            title="Откликов пока нет"
+            hint="Кандидаты увидят вакансию в своём кабинете и смогут откликнуться."
+          />
+        ) : null}
+      </Modal>
     </div>
   );
 }
@@ -524,10 +536,11 @@ function CandidateTasks() {
 
   return (
     <div className="space-y-4">
-      <Alert kind="info">
-        Регулярные короткие задания поддерживают профиль в актуальном состоянии: работодатель
-        видит свежий сигнал о ваших навыках.
-      </Alert>
+      <SectionNote>
+        Короткие задания от работодателей поддерживают профиль в актуальном состоянии: система
+        учитывает, как давно вы решали задания, и это влияет на позицию в подборке. Отвечать можно
+        текстом — описывать подход, а не только готовый код.
+      </SectionNote>
 
       <Card title={`Задания от работодателей · ${tasks.length}`}>
         <div className="space-y-3">
@@ -548,29 +561,47 @@ function CandidateTasks() {
             </div>
           ))}
           {tasks.length === 0 ? (
-            <p className="text-sm text-slate-500">Пока заданий нет.</p>
+            <EmptyState
+              title="Пока заданий нет"
+              hint="Работодатели публикуют короткие задачи. Когда появится задание под вашу специализацию, оно окажется здесь."
+            />
           ) : null}
         </div>
       </Card>
 
-      {active ? (
-        <Card title={`Решение: ${active.title}`} accent>
-          <TextArea
-            label="Решение или подход к решению"
-            value={solution}
-            onChange={setSolution}
-            rows={6}
-          />
-          <div className="mt-3 flex gap-2">
+      <Modal
+        open={active !== null}
+        title={active ? `Решение: ${active.title}` : "Решение задания"}
+        description="Отправка решения обновляет дату активности профиля — работодатель видит, что вы работаете с задачами."
+        onClose={() => setActive(null)}
+        footer={
+          <>
             <Button onClick={() => void send()} disabled={busy || solution.trim().length === 0}>
               Отправить решение
             </Button>
             <Button variant="ghost" onClick={() => setActive(null)}>
               Отмена
             </Button>
-          </div>
-        </Card>
-      ) : null}
+          </>
+        }
+      >
+        {active?.description ? (
+          <p className="rounded-lg border border-slate-800 bg-slate-950/50 p-3 text-sm text-slate-300">
+            {active.description}
+          </p>
+        ) : null}
+        {active ? (
+          <p className="text-xs text-slate-400">
+            Компания: {active.company_name ?? "не указана"} · уровень: {gradesLabel(active.grade)}
+          </p>
+        ) : null}
+        <TextArea
+          label="Решение или подход к решению"
+          value={solution}
+          onChange={setSolution}
+          rows={8}
+        />
+      </Modal>
     </div>
   );
 }
@@ -655,7 +686,20 @@ function EmployerTasks() {
 
   return (
     <div className="space-y-4">
-      <Card title="Новое короткое задание">
+      <SectionNote>
+        Короткое задание — способ поддержать контакт с кандидатами: работодатель видит, кто и как
+        решает задачи, а кандидат подтверждает актуальность профиля. Задание можно сформулировать
+        вручную или дать платформе собрать черновик по специализации и грейду.
+      </SectionNote>
+
+      <Card
+        title={
+          <>
+            Новое задание
+            <InfoTip text="Задание увидят кандидаты вашей специализации и уровня, либо все кандидаты, если специализацию не указывать. Решение приходит текстом и попадает в раздел «Решения»." />
+          </>
+        }
+      >
         <p className="mb-3 text-xs text-slate-500">
           Задание до 20 минут: проверяет практическое мышление. Модель может предложить заготовку —
           её можно отредактировать перед публикацией.
@@ -723,32 +767,40 @@ function EmployerTasks() {
                   Решения
                 </Button>
               </div>
-
-              {openTask === task.id ? (
-                <div className="mt-3 space-y-2 border-t border-slate-800 pt-3">
-                  {(submissions[task.id] ?? []).map((submission) => (
-                    <div key={submission.id} className="rounded-lg border border-slate-800 p-2">
-                      <p className="text-sm font-medium">
-                        {submission.candidate_name ?? submission.candidate_reference} ·{" "}
-                        {gradesLabel(submission.candidate_grade)}
-                      </p>
-                      <p className="mt-1 whitespace-pre-wrap text-sm text-slate-300">
-                        {submission.solution}
-                      </p>
-                    </div>
-                  ))}
-                  {(submissions[task.id] ?? []).length === 0 ? (
-                    <p className="text-sm text-slate-500">Решений пока нет.</p>
-                  ) : null}
-                </div>
-              ) : null}
             </div>
           ))}
           {tasks.length === 0 ? (
-            <p className="text-sm text-slate-500">Вы ещё не создавали заданий.</p>
+            <EmptyState
+              title="Вы ещё не создавали заданий"
+              hint="Задания помогают поддерживать контакт с кандидатами и видеть, как они рассуждают."
+            />
           ) : null}
         </div>
       </Card>
+
+      <Modal
+        open={openTask !== null}
+        title="Решения кандидатов"
+        description="Решение приходит текстом от кандидата, которому предложено задание."
+        onClose={() => setOpenTask(null)}
+        wide
+      >
+        {(openTask ? (submissions[openTask] ?? []) : []).map((submission) => (
+          <div key={submission.id} className="rounded-lg border border-slate-800 p-3">
+            <p className="text-sm font-medium">
+              {submission.candidate_name ?? submission.candidate_reference} ·{" "}
+              {gradesLabel(submission.candidate_grade)}
+            </p>
+            <p className="mt-1 text-sm whitespace-pre-wrap text-slate-300">{submission.solution}</p>
+          </div>
+        ))}
+        {openTask && (submissions[openTask] ?? []).length === 0 ? (
+          <EmptyState
+            title="Решений пока нет"
+            hint="Кандидат увидит задание в своём кабинете и сможет прислать решение — оно появится здесь."
+          />
+        ) : null}
+      </Modal>
     </div>
   );
 }

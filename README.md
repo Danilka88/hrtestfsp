@@ -69,7 +69,7 @@ project/
   frontend/                    # React 19 + TypeScript + Vite SPA
     src/{api,auth,components,pages,styles}/
   seed/                        # пояснения к генерации демонстрационных данных
-  scripts/                     # smoke-проверки (8) + verify-stack.sh + make-sample-resume.py
+  scripts/                     # smoke-проверки (8), verify-stack.sh, reset-demo.sh, make-sample-resume.py
   docs/                        # сопроводительная документация (00–06 + лэндинг)
   docker-compose.yml           # backend, frontend, PostgreSQL, Redis — 4 сервиса
                                #   (Redis поднят как задел под кэш: код к нему не обращается)
@@ -83,10 +83,14 @@ project/
 
 ```bash
 cp .env.example .env
-docker compose up -d --build
+docker compose up -d --build      # миграции БД применяются автоматически при старте API
 docker compose ps                 # 4 сервиса в статусе Up (healthy)
 docker compose exec -T backend python scripts/seed_demo.py   # демо-данные
 ```
+
+> Схему базы создаёт сам контейнер API (`alembic upgrade head` перед запуском),
+> поэтому отдельный шаг с миграциями не нужен — ни на чистой машине, ни после
+> `docker compose down -v`.
 
 - SPA: http://localhost:8080
 - API и Swagger: http://localhost:8000/docs
@@ -133,6 +137,7 @@ npm run dev        # http://localhost:5173 (проксирует /api на :8000
 
 ```bash
 cd backend && env -u PYTHONPATH .venv/bin/python -m pytest -q   # 253 теста
+bash ../scripts/reset-demo.sh                                   # чистое состояние для демонстрации
 bash ../scripts/smoke-api.sh                                    # smoke-проверка API
 cd frontend && npm run build                                    # сборка SPA + строгая типизация
 ```

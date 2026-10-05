@@ -13,13 +13,20 @@ import { useAuth } from "../../auth/AuthContext";
 import { AIButton, AISourceNote, AIStatusBadge, aiToastPayload } from "../../components/ai";
 import { TasksPanel, VacanciesPanel } from "../../components/marketplace";
 import { useToast } from "../../components/toast";
-import { Alert, Button, Card, Field, StatusBadge, TextArea, gradesLabel, money } from "../../components/ui";
+import { Alert, Button, Card, EmptyState, Field, InfoTip, Modal, SectionNote, StatusBadge, TextArea, gradesLabel, money } from "../../components/ui";
 
 type Tab = "category" | "test" | "invitations" | "vacancies" | "tasks" | "profile";
 
 export function CandidateCabinet() {
   const { user, logout } = useAuth();
   const [tab, setTab] = useState<Tab>("category");
+  // Возврат в незавершённый тест: переносим кандидата в тест на том же задании
+  const [resume, setResume] = useState<{ specialization: string; targetGrade: string } | null>(null);
+
+  const continueTest = useCallback((specialization: string, targetGrade: string) => {
+    setResume({ specialization, targetGrade });
+    setTab("test");
+  }, []);
 
   return (
     <div className="space-y-5">
@@ -53,8 +60,8 @@ export function CandidateCabinet() {
         ))}
       </nav>
 
-      {tab === "category" ? <CategoryTab /> : null}
-      {tab === "test" ? <TestTab /> : null}
+      {tab === "category" ? <CategoryTab onContinueTest={continueTest} /> : null}
+      {tab === "test" ? <TestTab resume={resume} onResumeConsumed={() => setResume(null)} /> : null}
       {tab === "invitations" ? <InvitationsTab /> : null}
       {tab === "vacancies" ? <VacanciesPanel role="candidate" /> : null}
       {tab === "tasks" ? <TasksPanel role="candidate" /> : null}
@@ -63,7 +70,11 @@ export function CandidateCabinet() {
   );
 }
 
-function CategoryTab() {
+function CategoryTab({
+  onContinueTest,
+}: {
+  onContinueTest: (specialization: string, targetGrade: string) => void;
+}) {
   const [status, setStatus] = useState<CategoryStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,15 +90,63 @@ function CategoryTab() {
 
   return (
     <div className="space-y-4">
+      <SectionNote>
+        <b>Категория</b> — это пара «специализация × грейд». Её присваивает платформа по результату
+        теста, а не резюме: именно по категории работодатель находит кандидата и приглашает его.
+      </SectionNote>
+
+      {status.active_session ? (
+        <Alert kind="info">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span>
+              У вас <b>незавершённый тест</b> на грейд {gradesLabel(status.active_session.target_grade)}:
+              отвечено {status.active_session.items_answered} заданий. Прогресс сохранён — можно
+              продолжить с того же задания.
+            </span>
+            <Button
+              onClick={() =>
+                onContinueTest(status.specialization ?? "", status.active_session?.target_grade ?? "")
+              }
+            >
+              Продолжить тест
+            </Button>
+          </div>
+        </Alert>
+      ) : null}
+
       <div className="grid gap-4 sm:grid-cols-3">
-        <Card title="Специализация">
+        <Card
+          title={
+            <>
+              Специализация
+              <InfoTip text="Направление, по которому вы проходите тест. Меняется через новый опрос при следующем тестировании." />
+            </>
+          }
+        >
           <p className="text-lg">{status.specialization ?? "не выбрана"}</p>
         </Card>
-        <Card title="Грейд" accent>
+        <Card
+          title={
+            <>
+              Грейд
+              <InfoTip text="Уровень подтверждён тестом. Самооценка и текст резюме на него не влияют — поэтому работодатель доверяет этой категории больше, чем обычному резюме." />
+            </>
+          }
+          accent
+        >
           <p className="text-lg font-semibold text-sky-300">{gradesLabel(status.grade)}</p>
           <p className="mt-1 text-xs text-slate-500">определён тестом, не самооценкой</p>
         </Card>
-        <Card title="Смена грейда">
+        <Card
+          title={
+            <>
+              Смена грейда
+              <InfoTip
+                text={`Сменить грейд можно не чаще, чем раз в ${status.grade_change_cooldown_days} дней. Понижение не применяется автоматически: неудача на сложном уровне не отнимает уже подтверждённый грейд — результат остаётся только в истории.`}
+              />
+            </>
+          }
+        >
           <p className="text-sm">
             {status.grade_change_allowed
               ? "доступна"
@@ -117,42 +176,71 @@ function CategoryTab() {
       </Card>
 
       <Card title="История тестирования">
+        <SectionNote>
+          Каждая строка — одна попытка. Статус «в процессе» означает, что тест не доведён до конца:
+          его можно продолжить, ответы и прогресс сохраняются.
+        </SectionNote>
         {status.sessions.length ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs uppercase text-slate-500">
-                  <th className="py-1">Статус</th>
-                  <th className="py-1">Цель</th>
-                  <th className="py-1">Результат</th>
-                  <th className="py-1">Заданий</th>
-                  <th className="py-1">θ</th>
+                  <th className="py-1 pr-3">Статус</th>
+                  <th className="py-1 pr-3">Цель теста</th>
+                  <th className="py-1 pr-3">Результат</th>
+                  <th className="py-1 pr-3">Заданий</th>
+                  <th className="py-1 pr-3">
+                    θ
+                    <InfoTip text="Оценка уровня подготовки по модели Раша: 0 — средний уровень, больше 0 — выше среднего, меньше 0 — ниже. Грейд выводится именно из неё, а не из числа верных ответов напрямую." />
+                  </th>
+                  <th className="py-1">Действие</th>
                 </tr>
               </thead>
               <tbody>
                 {status.sessions.map((session) => (
                   <tr key={session.id} className="border-t border-slate-800">
-                    <td className="py-1">
+                    <td className="py-1 pr-3">
                       <StatusBadge status={session.status} />
                     </td>
-                    <td className="py-1">{gradesLabel(session.target_grade)}</td>
-                    <td className="py-1">{gradesLabel(session.result_grade)}</td>
-                    <td className="py-1">{session.items_answered}</td>
-                    <td className="py-1">{session.theta.toFixed(2)}</td>
+                    <td className="py-1 pr-3">{gradesLabel(session.target_grade)}</td>
+                    <td className="py-1 pr-3">{gradesLabel(session.result_grade)}</td>
+                    <td className="py-1 pr-3">{session.items_answered}</td>
+                    <td className="py-1 pr-3">{session.theta.toFixed(2)}</td>
+                    <td className="py-1">
+                      {session.status === "in_progress" ? (
+                        <Button
+                          variant="ghost"
+                          onClick={() => onContinueTest(status.specialization ?? "", session.target_grade)}
+                        >
+                          Продолжить
+                        </Button>
+                      ) : (
+                        <span className="text-xs text-slate-600">—</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         ) : (
-          <p className="text-sm text-slate-500">Тестов пока не было.</p>
+          <EmptyState
+            title="Тестов пока не было"
+            hint="Первый тест присваивает грейд: опрос по специализации → выбор уровня → адаптивные задания под ваши ответы."
+          />
         )}
       </Card>
     </div>
   );
 }
 
-function TestTab() {
+function TestTab({
+  resume,
+  onResumeConsumed,
+}: {
+  resume: { specialization: string; targetGrade: string } | null;
+  onResumeConsumed: () => void;
+}) {
   const [specializations, setSpecializations] = useState<Specialization[]>([]);
   const [specialization, setSpecialization] = useState("");
   const [grades, setGrades] = useState<string[]>([]);
@@ -174,6 +262,36 @@ function TestTab() {
       })
       .catch((err) => setError(errorMessage(err)));
   }, []);
+
+  // Возврат в незавершённый тест: шаг опроса пропускаем и продолжаем с того же задания.
+  useEffect(() => {
+    if (!resume || busy || sessionId) return;
+    let cancelled = false;
+    (async () => {
+      setBusy(true);
+      setError(null);
+      try {
+        setSpecialization(resume.specialization);
+        setTargetGrade(resume.targetGrade);
+        const session = await apiClient.startSession(resume.specialization, resume.targetGrade);
+        if (cancelled) return;
+        setSessionId(session.session_id);
+        setItem(session.item);
+        setItemStartedAt(Date.now());
+        setResult(null);
+        setLastVerdict(null);
+      } catch (err) {
+        if (!cancelled) setError(errorMessage(err));
+      } finally {
+        if (!cancelled) setBusy(false);
+        onResumeConsumed();
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- запуск строго один раз на переданный resume
+  }, [resume]);
 
   const startSurvey = useCallback(async () => {
     setBusy(true);
@@ -237,6 +355,12 @@ function TestTab() {
 
   return (
     <div className="space-y-4">
+      <SectionNote>
+        Обязательный путь: <b>опрос</b> по специализации → <b>заявленный грейд</b> → короткий{" "}
+        <b>адаптивный тест</b> (10–16 заданий, сложность подстраивается под ваши ответы). Категорию
+        платформа считает сама по результату — угадывать уровень не нужно, грейд не понижается за
+        неудачную попытку.
+      </SectionNote>
       <Card title="Шаг 1. Опрос по отрасли и специализации">
         <div className="flex flex-wrap items-end gap-3">
           <label className="text-sm">
@@ -330,6 +454,8 @@ function InvitationsTab() {
   const [invitations, setInvitations] = useState<CandidateInvitation[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Подтверждение решения: принятие и отказ необратимы, поэтому спрашиваем явно
+  const [confirm, setConfirm] = useState<{ id: string; action: "accepted" | "declined" } | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -377,14 +503,16 @@ function InvitationsTab() {
 
   return (
     <div className="space-y-4">
-      <Alert kind="info">
-        Зарплата и компания видны до начала общения. Контакты работодатель получает только после
-        вашего согласия.
-      </Alert>
+      <SectionNote>
+        Работодатель нашёл вас по подтверждённой категории. Название компании и зарплата видны{" "}
+        <b>до начала общения</b>, а ваши контакты он получит только после принятия — отклик и
+        приглашение работают именно так.
+      </SectionNote>
       {invitations.length === 0 ? (
-        <p className="text-sm text-slate-500">
-          Входящих приглашений нет. Работодатель сам находит вас по подтверждённой категории.
-        </p>
+        <EmptyState
+          title="Входящих приглашений нет"
+          hint="Работодатель сам находит кандидатов по категории и подтверждённому профилю — откликаться вслепую не нужно."
+        />
       ) : null}
       {invitations.map((invitation) => (
         <Card key={invitation.id} accent={invitation.status === "sent"}>
@@ -405,13 +533,16 @@ function InvitationsTab() {
               <StatusBadge status={invitation.status} />
               {invitation.status === "sent" || invitation.status === "viewed" ? (
                 <div className="flex gap-2">
-                  <Button disabled={busy} onClick={() => void decide(invitation.id, "accepted")}>
+                  <Button
+                    disabled={busy}
+                    onClick={() => setConfirm({ id: invitation.id, action: "accepted" })}
+                  >
                     Принять
                   </Button>
                   <Button
                     variant="danger"
                     disabled={busy}
-                    onClick={() => void decide(invitation.id, "declined")}
+                    onClick={() => setConfirm({ id: invitation.id, action: "declined" })}
                   >
                     Отклонить
                   </Button>
@@ -421,6 +552,37 @@ function InvitationsTab() {
           </div>
         </Card>
       ))}
+
+      <Modal
+        open={confirm !== null}
+        title={confirm?.action === "accepted" ? "Принять приглашение?" : "Отклонить приглашение?"}
+        description={
+          confirm?.action === "accepted"
+            ? "Работодатель получит ваши контакты и сможет связаться напрямую. Решение окончательное — изменить его потом нельзя."
+            : "Приглашение закроется, и работодатель не получит ваши контакты. Решение окончательное — вернуться к нему потом нельзя."
+        }
+        onClose={() => setConfirm(null)}
+        footer={
+          <>
+            <Button
+              variant={confirm?.action === "accepted" ? "primary" : "danger"}
+              disabled={busy}
+              onClick={() => {
+                if (confirm) void decide(confirm.id, confirm.action);
+              }}
+            >
+              {confirm?.action === "accepted" ? "Принять" : "Отклонить"}
+            </Button>
+            <Button variant="ghost" onClick={() => setConfirm(null)}>
+              Отмена
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-slate-400">
+          Это действие нельзя отменить: решение по приглашению фиксируется один раз.
+        </p>
+      </Modal>
     </div>
   );
 }

@@ -179,6 +179,13 @@ export interface CategoryStatus {
     items_answered: number;
     theta: number;
   }[];
+  /** Незавершённый тест: интерфейс предлагает его продолжить, а не проходить заново. */
+  active_session: {
+    session_id: string;
+    target_grade: string;
+    items_answered: number;
+    next_item: TestItem | null;
+  } | null;
 }
 
 export interface Reason {

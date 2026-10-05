@@ -132,6 +132,11 @@ class TestSession(Base):
     result_grade: Mapped[str | None] = mapped_column(String(20), nullable=True)
     warnings: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
 
+    # Задание, которое предъявлено кандидату и ещё не отвечено. Нужно, чтобы после
+    # перерыва вернуть ровно его, а не подбирать заново (подбор зависит от счётчика
+    # показов и после перерыва выдал бы другой вопрос).
+    pending_item_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+
     category_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("categories.id", ondelete="SET NULL"), nullable=True
     )

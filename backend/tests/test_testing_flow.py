@@ -227,3 +227,82 @@ async def test_exposure_counter_grows(client: AsyncClient, db_factory) -> None:
     async with db_factory() as session:
         used = (await session.execute(select(Item).where(Item.id.in_(result["seen_items"])))).scalars().all()
         assert all(item.exposure_count >= 1 for item in used)
+
+
+# --- Незавершённый тест: возврат вместо потери прогресса ---------------------
+
+
+async def _start(client, token, *, grade: str = "middle") -> dict:
+    response = await client.post(
+        "/api/v1/testing/sessions",
+        json={"specialization_code": "backend", "target_grade": grade},
+        headers=_auth(token),
+    )
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+async def test_unfinished_test_is_resumed_instead_of_restarted(client: AsyncClient, db_factory) -> None:
+    """Повторный вход в тест продолжает его, а не создаёт вторую сессию."""
+    token = await _login(client, "resume@example.com")
+    answers = await _answer_key(db_factory)
+    started = await _start(client, token)
+    session_id, item = started["session_id"], started["item"]
+
+    for _ in range(2):
+        response = await client.post(
+            f"/api/v1/testing/sessions/{session_id}/answers",
+            json={"item_id": item["id"], "answer_index": answers[item["id"]], "response_time_ms": 5000},
+            headers=_auth(token),
+        )
+        assert response.status_code == 200, response.text
+        body = response.json()
+        if body["finished"]:
+            break
+        item = body["next_item"]
+
+    again = await _start(client, token)
+    assert again["session_id"] == session_id, "должна вернуться та же сессия"
+    assert again["item"]["id"] == item["id"], "должно вернуться то же следующее задание"
+
+
+async def test_category_reports_active_session_for_resume(client: AsyncClient, db_factory) -> None:
+    """Кабинет видит, что тест не завершён, и с какого задания продолжить."""
+    token = await _login(client, "active-session@example.com")
+    started = await _start(client, token)
+
+    response = await client.get("/api/v1/testing/me/category", headers=_auth(token))
+    assert response.status_code == 200
+    active = response.json()["active_session"]
+
+    assert active is not None
+    assert active["session_id"] == started["session_id"]
+    assert active["items_answered"] == 0
+    assert active["target_grade"] == "middle"
+    assert active["next_item"]["id"] == started["item"]["id"]
+
+
+async def test_finished_test_is_not_offered_for_resume(client: AsyncClient, db_factory) -> None:
+    token = await _login(client, "finished-session@example.com")
+    await _run_test(client, token, db_factory, correct=True)
+
+    body = (await client.get("/api/v1/testing/me/category", headers=_auth(token))).json()
+    assert body["active_session"] is None
+
+
+async def test_viewing_category_does_not_inflate_exposure(client: AsyncClient, db_factory) -> None:
+    """Просмотр кабинета не должен считаться предъявлением задания."""
+    token = await _login(client, "exposure-resume@example.com")
+    started = await _start(client, token)
+    item_id = started["item"]["id"]
+
+    async with db_factory() as session:
+        before = (await session.execute(select(Item).where(Item.id == item_id))).scalar_one().exposure_count
+
+    for _ in range(3):
+        await client.get("/api/v1/testing/me/category", headers=_auth(token))
+
+    async with db_factory() as session:
+        after = (await session.execute(select(Item).where(Item.id == item_id))).scalar_one().exposure_count
+
+    assert after == before

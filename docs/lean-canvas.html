@@ -980,6 +980,8 @@ cd путь\к\папке\moscow_it_pratform_test\project      # Windows</pre>
   <pre>docker compose up -d --build</pre>
   <p style="color:var(--mut)">Первый запуск идёт 3–7 минут: скачиваются и собираются образы, в окне бегут
   строки логов. Это нормально. Когда управление вернётся и появится приглашение ввода — платформа запущена.</p>
+  <p style="color:var(--mut)">Схему базы создаёт сам контейнер API: миграции применяются
+  автоматически перед запуском сервера, отдельная команда не нужна.</p>
   <p>Проверить, что поднялись все четыре сервиса:</p>
   <pre>docker compose ps</pre>
   <p>В таблице должно быть четыре строки со статусом <b>Up … (healthy)</b>:
@@ -1080,11 +1082,15 @@ cd путь\к\папке\moscow_it_pratform_test\project      # Windows</pre>
 docker compose down -v     # остановить и удалить данные (полный сброс)</pre>
 
   <h3>Шаг 8. Чистая база перед показом</h3>
-  <p>Если вы ранее запускали автоматические проверки, в базе остались служебные учётные записи.
-  Чтобы демонстрация шла на чистых seed-данных, выполните три команды по порядку:</p>
-  <pre>docker compose down -v
-docker compose up -d --build
-docker compose exec -T backend python scripts/seed_demo.py</pre>
+  <p>Сквозные проверки (<code>scripts/smoke-*.sh</code>) работают на том же стенде, что и
+  демонстрация, поэтому после них в кабинетах остаются тестовые компании, вакансии и задания — они
+  помечены словом <b>[проверка]</b>, чтобы их нельзя было принять за реальные данные. Вернуть
+  чистое состояние — одна команда:</p>
+  <pre>bash scripts/reset-demo.sh</pre>
+  <p style="color:var(--mut)">Скрипт пересобирает стек с нуля, дожидается готовности API и загружает
+  демонстрационные данные. То же вручную: <code>docker compose down -v</code> →
+  <code>docker compose up -d --build</code> →
+  <code>docker compose exec -T backend python scripts/seed_demo.py</code>.</p>
 
   <h3>Если что-то не работает</h3>
   <div class="tw" style="margin-bottom:20px">

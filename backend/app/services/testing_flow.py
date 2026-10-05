@@ -153,6 +153,18 @@ async def start_session(
         raise TestingError(400, "Неизвестный грейд")
     spec = await get_specialization(session, specialization_code)
 
+    existing = await find_active_session(session, user_id)
+    if existing is not None:
+        # Незавершённый тест продолжается, а не начинается заново: иначе кандидат
+        # теряет прогресс, а в истории копятся брошенные сессии.
+        items = await _load_items(session, existing.specialization_id)
+        pending = await _pending_item(session, existing, items)
+        if pending is None:
+            raise TestingError(409, "Незавершённый тест исчерпал задания — завершите его ответом")
+        # Показ не увеличиваем: это же задание уже предъявлялось до перерыва.
+        await session.commit()
+        return existing, public_item(pending)
+
     items = await _load_items(session, spec.id)
     if not items:
         raise TestingError(503, "Банк заданий пуст")
@@ -172,6 +184,7 @@ async def start_session(
         raise TestingError(503, "Нет доступных заданий")
     item = next(i for i in items if i.id == first.id)
     item.exposure_count += 1
+    test_session.pending_item_id = item.id
 
     await session.commit()
     await session.refresh(test_session)
@@ -221,9 +234,35 @@ async def submit_answer(
     await session.flush()
 
     items = await _load_items(session, test_session.specialization_id)
+    next_item, estimate = await _next_item_for(session, test_session, items)
+
+    enough_items = test_session.item_count >= MIN_ITEMS
+    precise_enough = estimate.standard_error <= TARGET_STANDARD_ERROR
+    limit_reached = test_session.item_count >= MAX_ITEMS
+
+    if limit_reached or (enough_items and precise_enough) or next_item is None:
+        # Тест завершён: ожидающего ответа задания больше нет.
+        test_session.pending_item_id = None
+        result = await _finalize(session, test_session, estimate)
+        return AnswerOutcome(correct=correct, next_item=None, finished=True, result=result)
+
+    next_item.exposure_count += 1
+    # Запоминаем выданное задание: при перерыве кандидат вернётся к нему же.
+    test_session.pending_item_id = next_item.id
+    await session.commit()
+    return AnswerOutcome(correct=correct, next_item=public_item(next_item), finished=False)
+
+
+async def _next_item_for(
+    session: AsyncSession, test_session: TestSession, items: list[Item]
+) -> tuple[Item | None, AbilityEstimate]:
+    """Пересчитывает оценку по ответам и подбирает следующее задание.
+
+    Общая точка для выдачи следующего задания и для возврата в незавершённый тест:
+    логика подбора не должна расходиться между этими сценариями.
+    """
     responses = await _load_responses(session, test_session.id)
     items_map = {i.id: _item_to_core(i) for i in items}
-
     estimate = estimate_ability(
         [
             Response(item_id=r.item_id, correct=r.correct, response_time_ms=r.response_time_ms)
@@ -234,24 +273,59 @@ async def submit_answer(
     test_session.theta = estimate.theta
     test_session.standard_error = estimate.standard_error
 
-    enough_items = test_session.item_count >= MIN_ITEMS
-    precise_enough = estimate.standard_error <= TARGET_STANDARD_ERROR
-    limit_reached = test_session.item_count >= MAX_ITEMS
-
-    if limit_reached or (enough_items and precise_enough):
-        result = await _finalize(session, test_session, estimate)
-        return AnswerOutcome(correct=correct, next_item=None, finished=True, result=result)
-
     used = [r.item_id for r in responses]
-    nxt = select_next_item(list(items_map.values()), estimate.theta, used_item_ids=used)
-    if nxt is None:
-        result = await _finalize(session, test_session, estimate)
-        return AnswerOutcome(correct=correct, next_item=None, finished=True, result=result)
+    picked = select_next_item(list(items_map.values()), estimate.theta, used_item_ids=used)
+    if picked is None:
+        return None, estimate
+    return next((i for i in items if i.id == picked.id), None), estimate
 
-    next_item = next(i for i in items if i.id == nxt.id)
-    next_item.exposure_count += 1
-    await session.commit()
-    return AnswerOutcome(correct=correct, next_item=public_item(next_item), finished=False)
+
+async def _pending_item(session: AsyncSession, test_session: TestSession, items: list[Item]) -> Item | None:
+    """Задание, уже предъявленное кандидату: после перерыва возвращаем именно его."""
+    if test_session.pending_item_id:
+        known = next((i for i in items if i.id == test_session.pending_item_id), None)
+        if known is not None:
+            return known
+    item, _ = await _next_item_for(session, test_session, items)
+    if item is not None:
+        test_session.pending_item_id = item.id
+    return item
+
+
+async def find_active_session(session: AsyncSession, user_id: str) -> TestSession | None:
+    """Незавершённый тест кандидата, если он есть."""
+    return (
+        await session.execute(
+            select(TestSession)
+            .where(TestSession.user_id == user_id, TestSession.status == SESSION_IN_PROGRESS)
+            .order_by(TestSession.started_at.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+
+
+async def resume_session(session: AsyncSession, user_id: str) -> dict[str, Any] | None:
+    """Состояние незавершённого теста: сколько отвечено и какое задание следующее.
+
+    Только чтение: показы заданий здесь не увеличиваются, иначе одно и то же
+    задание считалось бы предъявленным при каждом открытии кабинета.
+    """
+    test_session = await find_active_session(session, user_id)
+    if test_session is None:
+        return None
+    items = await _load_items(session, test_session.specialization_id)
+    # Сначала — задание, которое кандидат уже видел; пересчёт только как запасной путь.
+    item = None
+    if test_session.pending_item_id:
+        item = next((i for i in items if i.id == test_session.pending_item_id), None)
+    if item is None:
+        item, _ = await _next_item_for(session, test_session, items)
+    return {
+        "session_id": test_session.id,
+        "target_grade": test_session.target_grade,
+        "items_answered": test_session.item_count,
+        "next_item": public_item(item) if item is not None else None,
+    }
 
 
 async def _load_responses(session: AsyncSession, session_id: str) -> list[ItemResponseRecord]:
@@ -431,4 +505,7 @@ async def current_category(session: AsyncSession, user_id: str) -> dict[str, Any
             }
             for s in sessions
         ],
+        # Незавершённый тест отдаём отдельно: интерфейс предлагает его продолжить,
+        # а не пройти заново с потерей прогресса.
+        "active_session": await resume_session(session, user_id),
     }

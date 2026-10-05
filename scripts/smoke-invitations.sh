@@ -33,7 +33,7 @@ EMP=$(register_and_login "$EMP_EMAIL" employer "$EMP_PASSWORD")
 [ -n "$EMP" ] || { echo "ОШИБКА: нет токена работодателя"; exit 1; }
 curl -s -o /dev/null -X PUT "$BASE/api/v1/employers/me/profile" -H "$JSON" \
   -H "Authorization: Bearer $EMP" \
-  -d '{"company_name":"ООО «Проверка Приглашений»","description":"Смоук-компания"}'
+  -d '{"company_name":"ООО «Проверка приглашений»","description":"Артефакт сквозной проверки"}'
 echo "готово"
 
 echo

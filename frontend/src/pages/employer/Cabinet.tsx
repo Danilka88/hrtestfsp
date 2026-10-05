@@ -18,8 +18,12 @@ import {
   Alert,
   Button,
   Card,
+  EmptyState,
   Field,
+  InfoTip,
+  Modal,
   ReasonList,
+  SectionNote,
   StatusBadge,
   TextArea,
   gradesLabel,
@@ -243,7 +247,20 @@ function SelectionTab() {
 
   return (
     <div className="space-y-4">
-      <Card title="Потребность">
+      <SectionNote>
+        Опишите потребность — платформа соберёт подборку кандидатов. Порядок в подборке не случайный:
+        сначала идут кандидаты <b>запрошенной категории</b> (специализация × грейд), внутри категории —
+        по силе подтверждённого профиля. Контакты скрыты до принятия приглашения.
+      </SectionNote>
+
+      <Card
+        title={
+          <>
+            Потребность
+            <InfoTip text="Чем точнее описание — специализация, грейд и стек, — тем осмысленнее подборка: эти признаки участвуют в расчёте соответствия. Зарплата в приглашении обязательна." />
+          </>
+        }
+      >
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Название роли" value={title} onChange={setTitle} />
           <label className="text-sm">
@@ -311,7 +328,15 @@ function SelectionTab() {
       {error ? <Alert kind="error">{error}</Alert> : null}
 
       {selection ? (
-        <Card title={`Подборка · ${selection.candidates.length} кандидатов`} accent>
+        <Card
+          title={
+            <>
+              Подборка · {selection.candidates.length} кандидатов
+              <InfoTip text="Веса фиксированы заранее: сила подтверждённого профиля 0.45, достижения ФСП 0.20, свежесть решений 0.10, соответствие потребности 0.25. Первым ключом идёт категория, поэтому кандидат запрошенного грейда и специализации всегда выше." />
+            </>
+          }
+          accent
+        >
           <p className="mb-3 text-xs text-slate-500">
             Рубрика {selection.rubric_version} · рекомендуемые категории:{" "}
             {selection.recommended_categories.join(", ") || "—"} · веса критериев зафиксированы до
@@ -330,7 +355,10 @@ function SelectionTab() {
               />
             ))}
             {selection.candidates.length === 0 ? (
-              <p className="text-sm text-slate-500">Кандидатов по этой потребности пока нет.</p>
+              <EmptyState
+                title="Кандидатов по этой потребности пока нет"
+                hint="Попробуйте уточнить стек или расширить грейд — подборка формируется по категории и подтверждённому профилю."
+              />
             ) : null}
           </div>
         </Card>
@@ -406,7 +434,10 @@ function InvitationsTab() {
         </Button>
       </div>
       {invitations.length === 0 ? (
-        <p className="text-sm text-slate-500">Приглашений пока нет.</p>
+        <EmptyState
+          title="Приглашений пока нет"
+          hint="Приглашение отправляется из подборки или из поиска по банку: кандидат увидит компанию и зарплату до начала общения."
+        />
       ) : null}
       {invitations.map((invitation) => (
         <Card key={invitation.id}>
@@ -640,8 +671,28 @@ function InvitePanel({
   }
 
   return (
-    <Card title={`Приглашение для ${candidate.reference}`} accent>
-      <div className="mb-3 flex flex-wrap items-center gap-2">
+    <Modal
+      open
+      title={`Приглашение кандидату ${candidate.reference}`}
+      description={
+        <>
+          Кандидат увидит название компании и зарплату <b>до начала общения</b>. Контакты
+          раскроются только после того, как он примет приглашение.
+        </>
+      }
+      onClose={onClose}
+      footer={
+        <>
+          <Button onClick={() => void send()} disabled={busy}>
+            Отправить приглашение
+          </Button>
+          <Button variant="ghost" onClick={onClose}>
+            Отмена
+          </Button>
+        </>
+      }
+    >
+      <div className="flex flex-wrap items-center gap-2">
         <AIButton onClick={() => void draftText()} busy={aiBusy} title="Собрать текст предложения">
           Сгенерировать текст
         </AIButton>
@@ -653,24 +704,10 @@ function InvitePanel({
         <Field label="Зарплата от, ₽ (обязательно)" value={salaryFrom} onChange={setSalaryFrom} />
         <Field label="Зарплата до, ₽ (обязательно)" value={salaryTo} onChange={setSalaryTo} />
       </div>
-      <div className="mt-3">
-        <TextArea label="Текст предложения" value={message} onChange={setMessage} rows={3} />
-        <AISourceNote result={aiResult} />
-      </div>
-      <div className="mt-3 flex gap-2">
-        <Button onClick={() => void send()} disabled={busy}>
-          Отправить приглашение
-        </Button>
-        <Button variant="ghost" onClick={onClose}>
-          Отмена
-        </Button>
-      </div>
-      {error ? (
-        <div className="mt-3">
-          <Alert kind="error">{error}</Alert>
-        </div>
-      ) : null}
-    </Card>
+      <TextArea label="Текст предложения" value={message} onChange={setMessage} rows={4} />
+      <AISourceNote result={aiResult} />
+      {error ? <Alert kind="error">{error}</Alert> : null}
+    </Modal>
   );
 }
 
@@ -794,7 +831,10 @@ function SearchTab() {
               />
             ))}
             {result.candidates.length === 0 ? (
-              <p className="text-sm text-slate-500">По заданным условиям кандидатов нет.</p>
+              <EmptyState
+                title="По заданным условиям кандидатов нет"
+                hint="Ослабьте один из фильтров — например, снимите требование по достижениям ФСП."
+              />
             ) : null}
           </div>
         </Card>

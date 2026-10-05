@@ -104,6 +104,15 @@ class SessionSummary(BaseModel):
     theta: float
 
 
+class ActiveSessionOut(BaseModel):
+    """Незавершённый тест: нужен интерфейсу, чтобы предложить «Продолжить»."""
+
+    session_id: str
+    target_grade: str
+    items_answered: int
+    next_item: ItemOut | None = None
+
+
 class CategoryStatusOut(BaseModel):
     specialization: str | None = None
     grade: str | None = None
@@ -113,3 +122,4 @@ class CategoryStatusOut(BaseModel):
     grade_options: list[str]
     grade_history: list[GradeHistoryEntry]
     sessions: list[SessionSummary]
+    active_session: ActiveSessionOut | None = None

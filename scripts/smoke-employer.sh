@@ -25,7 +25,7 @@ echo "получен access-токен"
 echo
 echo "== 2. профиль компании =="
 curl -s -X PUT "$BASE/api/v1/employers/me/profile" -H "$JSON" -H "Authorization: Bearer $ACCESS" \
-  -d '{"company_name":"ООО «Смоук Тест»","description":"Проверка подборки","industry":"it","contact_email":"hr@smoke.ru"}'
+  -d '{"company_name":"ООО «Проверка подборки»","description":"Артефакт сквозной проверки","industry":"it","contact_email":"hr@smoke.ru"}'
 echo
 
 echo
@@ -51,7 +51,7 @@ def call(method, path, payload=None):
 
 
 status, selection = call("POST", "/api/v1/employers/me/needs", {
-    "title": "Backend-разработчик (Python)",
+    "title": "[проверка] Backend-разработчик (Python)",
     "description": "Нужен человек в команду платежей",
     "specialization_code": "backend",
     "grade": "middle",
