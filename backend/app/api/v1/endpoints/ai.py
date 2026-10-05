@@ -28,6 +28,7 @@ from app.schemas.ai import (
     TaskDraftIn,
 )
 from app.services import employers as employer_service
+from app.services import suggest as suggestion
 from app.services.ai import AIError, get_ai
 
 logger = logging.getLogger(__name__)
@@ -176,3 +177,35 @@ async def semantic_scores(payload: SemanticScoresIn, user: User = Depends(any_us
     """Считает косинусную близость: с локальными эмбеддингами — семантическую."""
     result = await get_ai().semantic_scores(payload.need_text, payload.candidate_texts)
     return AIResultOut(**result.as_dict())
+
+
+# --- Подсказки по накопленным сигналам ----------------------------------------
+#
+# Надстройка над подбором, а не замена: веса рубрики и присвоение грейда тестом
+# не затрагиваются. Считается по данным платформы, модель — только для семантики.
+
+
+@router.get(
+    "/candidate/vacancy-hints",
+    summary="Вакансии, близкие к вашим интересам и категории",
+)
+async def candidate_vacancy_hints(
+    limit: int = 5,
+    user: User = Depends(candidate_only),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Подсказывает вакансии: сначала по вашим откликам, иначе по профилю и категории."""
+    return await suggestion.vacancy_hints(session, user.id, limit=max(1, min(limit, 20)))
+
+
+@router.get(
+    "/employer/candidate-hints",
+    summary="Кандидаты, близкие к вашим действиям",
+)
+async def employer_candidate_hints(
+    limit: int = 5,
+    user: User = Depends(employer_only),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Подсказывает кандидатов по вашим потребностям и приглашениям, кроме уже приглашённых."""
+    return await suggestion.candidate_hints(session, user.id, limit=max(1, min(limit, 20)))

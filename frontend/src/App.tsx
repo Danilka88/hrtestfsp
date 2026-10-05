@@ -6,8 +6,22 @@ import { Button } from "./components/ui";
 import { HealthPage } from "./pages/Health";
 import { HomePage } from "./pages/Home";
 import { LoginPage } from "./pages/Login";
+import { AdminCabinet } from "./pages/admin/Cabinet";
 import { CandidateCabinet } from "./pages/candidate/Cabinet";
 import { EmployerCabinet } from "./pages/employer/Cabinet";
+
+/** Кабинет по роли: у каждой роли свой раздел. */
+function cabinetPath(role: string | undefined): string {
+  if (role === "employer") return "/employer";
+  if (role === "admin") return "/admin";
+  return "/candidate";
+}
+
+const ROLE_LABELS: Record<string, string> = {
+  candidate: "соискатель",
+  employer: "работодатель",
+  admin: "администратор",
+};
 
 function Shell({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -15,8 +29,6 @@ function Shell({ children }: { children: ReactNode }) {
     `rounded-lg px-3 py-1.5 text-sm ${
       isActive ? "bg-slate-800 text-white" : "text-slate-400 hover:text-white"
     }`;
-
-  const cabinetPath = user?.role === "employer" ? "/employer" : "/candidate";
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -29,7 +41,7 @@ function Shell({ children }: { children: ReactNode }) {
             Обзор
           </NavLink>
           {!loading && user ? (
-            <NavLink to={cabinetPath} className={linkClass}>
+            <NavLink to={cabinetPath(user?.role)} className={linkClass}>
               Кабинет
             </NavLink>
           ) : null}
@@ -41,9 +53,9 @@ function Shell({ children }: { children: ReactNode }) {
             {loading ? null : user ? (
               <>
                 <span className="hidden text-xs text-slate-500 sm:inline">
-                  {user.email} · {user.role === "employer" ? "работодатель" : "соискатель"}
+                  {user.email} · {ROLE_LABELS[user.role] ?? user.role}
                 </span>
-                <Link to={cabinetPath}>
+                <Link to={cabinetPath(user?.role)}>
                   <Button variant="ghost">Мой кабинет</Button>
                 </Link>
               </>
@@ -69,12 +81,18 @@ function Shell({ children }: { children: ReactNode }) {
 }
 
 /** Маршрут, доступный только авторизованному пользователю нужной роли. */
-function Protected({ role, children }: { role: "candidate" | "employer"; children: ReactNode }) {
+function Protected({
+  role,
+  children,
+}: {
+  role: "candidate" | "employer" | "admin";
+  children: ReactNode;
+}) {
   const { user, loading } = useAuth();
   if (loading) return <p className="text-sm text-slate-500">Проверка сессии…</p>;
   if (!user) return <Navigate to="/login" replace />;
   if (user.role !== role) {
-    return <Navigate to={user.role === "employer" ? "/employer" : "/candidate"} replace />;
+    return <Navigate to={cabinetPath(user.role)} replace />;
   }
   return <>{children}</>;
 }
@@ -99,6 +117,14 @@ export default function App() {
           element={
             <Protected role="employer">
               <EmployerCabinet />
+            </Protected>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <Protected role="admin">
+              <AdminCabinet />
             </Protected>
           }
         />

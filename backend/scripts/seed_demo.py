@@ -17,16 +17,18 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import hash_password, utcnow
 from app.db.session import dispose_engine, get_session_factory
 from app.models.candidate import CandidateProfile
-from app.models.employer import EmployerProfile
+from app.models.employer import EmployerNeed, EmployerProfile, SelectionCandidate
 from app.models.testing import SESSION_COMPLETED, Specialization, TestSession
 from app.models.user import User, UserRole
 from app.services.reference import ensure_reference_data
 
 DEMO_PASSWORD = "demo12345"
+DEMO_ADMIN_EMAIL = "admin@demo.ru"
 
 DEMO_CANDIDATES: list[dict[str, Any]] = [
     {
@@ -135,6 +137,121 @@ DEMO_EMPLOYERS: list[dict[str, Any]] = [
 ]
 
 
+async def _seed_interactions(session: AsyncSession, specializations: dict[str, int]) -> int:
+    """Создаёт потребности и приглашения с разными статусами.
+
+    Нужно для демонстрации: кабинет администратора наблюдает за взаимодействием
+    сторон, а разделы работодателя и кандидата выглядят живыми. Статусы намеренно
+    разные — на них видно и воронку, и ликвидность рынка.
+    """
+    from app.schemas.employer import NeedIn
+    from app.schemas.invitation import InvitationCreate
+    from app.services import employers as employer_service
+    from app.services import invitations as invitation_service
+
+    plans = [
+        {
+            "employer": "hr@fintech-demo.ru",
+            "title": "Backend-разработчик (Python)",
+            "specialization": "backend",
+            "grade": "middle",
+            "stack": ["Python", "PostgreSQL", "Docker"],
+            "salary": (250000, 320000),
+            # (сколько кандидатов пригласить, действия по порядку)
+            "actions": ["accepted", "declined", "sent"],
+        },
+        {
+            "employer": "hr@digital-demo.ru",
+            "title": "Frontend-разработчик (React)",
+            "specialization": "frontend",
+            "grade": "senior",
+            "stack": ["React", "TypeScript"],
+            "salary": (300000, 380000),
+            "actions": ["viewed", "revoked", "sent"],
+        },
+    ]
+
+    created = 0
+    for plan in plans:
+        employer = (
+            await session.execute(select(User).where(User.email == plan["employer"]))
+        ).scalar_one_or_none()
+        if employer is None:
+            continue
+        if plan["specialization"] not in specializations:
+            continue
+
+        existing = (
+            await session.execute(
+                select(EmployerNeed).where(
+                    EmployerNeed.employer_id == employer.id, EmployerNeed.title == plan["title"]
+                )
+            )
+        ).scalar_one_or_none()
+        if existing is not None:
+            continue
+
+        need = await employer_service.create_need(
+            session,
+            employer.id,
+            NeedIn(
+                title=plan["title"],
+                description="Демонстрационная потребность для показа подбора.",
+                specialization_code=plan["specialization"],
+                grade=plan["grade"],
+                stack=plan["stack"],
+                salary_from=plan["salary"][0],
+                salary_to=plan["salary"][1],
+            ),
+        )
+        # Подборку строит отдельный шаг — так же, как это делает API при описании потребности
+        selection, _ = await employer_service.build_selection(session, employer.id, need)
+        if selection is None:
+            continue
+
+        in_selection = {
+            row.candidate_user_id
+            for row in (
+                await session.execute(
+                    select(SelectionCandidate).where(SelectionCandidate.selection_id == selection.id)
+                )
+            )
+            .scalars()
+            .all()
+        }
+        all_candidates = (
+            (await session.execute(select(User).where(User.role == UserRole.CANDIDATE))).scalars().all()
+        )
+        # Приглашаем именно из подборки: это и есть реальный путь работодателя.
+        candidates = [user for user in all_candidates if user.id in in_selection]
+        if not candidates:
+            candidates = list(all_candidates)
+        for user, action in zip(candidates, plan["actions"], strict=False):
+            invitation = await invitation_service.create_invitation(
+                session,
+                employer.id,
+                InvitationCreate(
+                    candidate_reference=invitation_service.reference_for(user.id),
+                    message="Демонстрационное приглашение: расскажем о команде и задачах.",
+                    salary_from=plan["salary"][0],
+                    salary_to=plan["salary"][1],
+                    contact_method="hr@demo.ru",
+                    need_id=need.id,
+                    selection_id=selection.id,
+                ),
+            )
+            created += 1
+            if action == "accepted":
+                await invitation_service.decide(session, user.id, invitation.id, accept=True)
+            elif action == "declined":
+                await invitation_service.decide(session, user.id, invitation.id, accept=False)
+            elif action == "viewed":
+                await invitation_service.mark_viewed(session, user.id, invitation.id)
+            elif action == "revoked":
+                await invitation_service.revoke(session, employer.id, invitation.id)
+    return created
+
+
 async def seed() -> dict[str, int]:
     factory = get_session_factory()
     created = {"candidates": 0, "employers": 0, "sessions": 0}
@@ -225,6 +342,30 @@ async def seed() -> dict[str, int]:
                 )
             )
             created["employers"] += 1
+
+        # Администратор: роль не саморегистрируемая, поэтому создаётся только здесь.
+        admin_exists = (
+            await session.execute(select(User).where(User.email == DEMO_ADMIN_EMAIL))
+        ).scalar_one_or_none()
+        if admin_exists is None:
+            session.add(
+                User(
+                    email=DEMO_ADMIN_EMAIL,
+                    password_hash=hash_password(DEMO_PASSWORD),
+                    role=UserRole.ADMIN,
+                    email_verified=True,
+                    is_active=True,
+                    consent_pdn_at=utcnow(),
+                    consent_pdn_version="pdn-v1",
+                )
+            )
+            created["admins"] = 1
+
+        await session.flush()
+
+        # Демонстрационные взаимодействия: без них кабинет администратора показывал бы
+        # пустые графики, а жюри не увидело бы основную механику — приглашение.
+        created["invitations"] = await _seed_interactions(session, specializations)
 
         await session.commit()
 

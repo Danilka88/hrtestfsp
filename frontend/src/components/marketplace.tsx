@@ -12,6 +12,7 @@ import type {
 import { errorMessage } from "../api/client";
 import { AIButton, AISourceNote, aiToastPayload } from "./ai";
 import { useToast } from "./toast";
+import { VacancyHints } from "./hints";
 import { Button, Card, EmptyState, Field, InfoTip, Modal, SectionNote, StatusBadge, TextArea, gradesLabel, money } from "./ui";
 
 /**
@@ -178,6 +179,8 @@ function CandidateVacancies() {
           ) : null}
         </div>
       </Card>
+
+      <VacancyHints onApply={setApplyFor} />
 
       <Modal
         open={applyFor !== null}

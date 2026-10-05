@@ -6,6 +6,13 @@ import type { Role } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { Alert, Button, Card, Field } from "../components/ui";
 
+/** Кабинет по роли — то же правило, что в маршрутизации приложения. */
+function cabinetPath(role: string): string {
+  if (role === "employer") return "/employer";
+  if (role === "admin") return "/admin";
+  return "/candidate";
+}
+
 export function LoginPage() {
   const { login, register, confirmEmail } = useAuth();
   const navigate = useNavigate();
@@ -26,7 +33,7 @@ export function LoginPage() {
     setError(null);
     try {
       const profile = await login(email, password);
-      navigate(profile.role === "employer" ? "/employer" : "/candidate");
+      navigate(cabinetPath(profile.role));
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -65,7 +72,7 @@ export function LoginPage() {
     try {
       await confirmEmail(pendingToken);
       const profile = await login(email, password);
-      navigate(profile.role === "employer" ? "/employer" : "/candidate");
+      navigate(cabinetPath(profile.role));
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -74,11 +81,13 @@ export function LoginPage() {
   }
 
   /** Вход в демонстрационный профиль одним нажатием — чтобы показ не начинался с ручного ввода. */
-  async function demoLogin(kind: Role) {
-    const account =
-      kind === "employer"
-        ? { email: "hr@fintech-demo.ru", password: "demo12345" }
-        : { email: "anna.kovaleva@demo.ru", password: "demo12345" };
+  async function demoLogin(kind: Role | "admin") {
+    const accounts: Record<string, { email: string; password: string }> = {
+      candidate: { email: "anna.kovaleva@demo.ru", password: "demo12345" },
+      employer: { email: "hr@fintech-demo.ru", password: "demo12345" },
+      admin: { email: "admin@demo.ru", password: "demo12345" },
+    };
+    const account = accounts[kind];
     setMode("login");
     setEmail(account.email);
     setPassword(account.password);
@@ -86,7 +95,7 @@ export function LoginPage() {
     setError(null);
     try {
       const profile = await login(account.email, account.password);
-      navigate(profile.role === "employer" ? "/employer" : "/candidate");
+      navigate(cabinetPath(profile.role));
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -226,12 +235,16 @@ export function LoginPage() {
             <Button variant="ghost" disabled={busy} onClick={() => void demoLogin("employer")}>
               Войти как работодатель
             </Button>
+            <Button variant="ghost" disabled={busy} onClick={() => void demoLogin("admin")}>
+              Войти как администратор
+            </Button>
           </div>
         </Card>
 
         <p className="text-center text-xs text-slate-500">
-          <code>anna.kovaleva@demo.ru</code> и <code>hr@fintech-demo.ru</code>, пароль{" "}
-          <code>demo12345</code> · <Link to="/health">Состояние сервиса</Link>
+          <code>anna.kovaleva@demo.ru</code>, <code>hr@fintech-demo.ru</code>,{" "}
+          <code>admin@demo.ru</code>, пароль <code>demo12345</code> ·{" "}
+          <Link to="/health">Состояние сервиса</Link>
         </p>
       </div>
     </div>

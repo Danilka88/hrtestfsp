@@ -13,6 +13,7 @@ import { errorMessage } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { AIButton, AISourceNote, AIStatusBadge, aiToastPayload } from "../../components/ai";
 import { TasksPanel, VacanciesPanel } from "../../components/marketplace";
+import { CandidateHints } from "../../components/hints";
 import { useToast } from "../../components/toast";
 import {
   Alert,
@@ -390,6 +391,8 @@ function SelectionTab() {
           </ul>
         </Card>
       ) : null}
+
+      <CandidateHints onInvite={setInviteFor} />
 
       {inviteFor ? (
         <InvitePanel

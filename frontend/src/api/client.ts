@@ -781,3 +781,148 @@ export async function aiMatchExplain(payload: {
 }): Promise<AIResult> {
   return (await api.post<AIResult>("/ai/match/explain", payload)).data;
 }
+
+// --- Кабинет администратора ---------------------------------------------------
+
+export interface AdminFunnelStage {
+  key: string;
+  title: string;
+  value: number;
+  share: number | null;
+  hint: string;
+}
+
+export interface AdminOverview {
+  generated_at: string;
+  people: {
+    candidates: number;
+    employers: number;
+    active_candidates: number;
+    active_employers: number;
+    verified_accounts: number;
+    candidate_employer_ratio: number | null;
+  };
+  funnel: AdminFunnelStage[];
+  liquidity: {
+    needs_total: number;
+    needs_with_selection: number;
+    needs_with_invitation: number;
+    selection_rate: number | null;
+    contact_rate: number | null;
+    invitations_total: number;
+    invitations_answered: number;
+    invitations_accepted: number;
+    invitations_stale: number;
+    response_rate: number | null;
+    accept_rate: number | null;
+    response_hours_median: number | null;
+  };
+  coverage: {
+    with_fsp: number;
+    fsp_share: number | null;
+    vacancies_open: number;
+    applications_total: number;
+    tasks_total: number;
+  };
+}
+
+export interface AdminCategory {
+  specialization: string;
+  specialization_title: string;
+  grade: string | null;
+  candidates: number;
+  needs: number;
+  invitations: number;
+  balance: string;
+  supply_per_need: number | null;
+}
+
+export interface AdminCompany {
+  employer_id: string;
+  company_name: string | null;
+  industry: string | null;
+  needs: number;
+  invitations: number;
+  accepted: number;
+  declined: number;
+  revoked: number;
+  waiting: number;
+  response_rate: number | null;
+  vacancies: number;
+}
+
+export interface AdminInteraction {
+  employers: { id: string; label: string }[];
+  candidates: { id: string; label: string; specialization: string | null; grade: string | null }[];
+  edges: { id: string; employer_id: string; candidate_id: string; status: string; created_at: string }[];
+  truncated: boolean;
+}
+
+export interface AdminAnomaly {
+  key: string;
+  severity: string;
+  title: string;
+  detail: string;
+  hint: string;
+}
+
+export async function adminOverview(): Promise<AdminOverview> {
+  return (await api.get<AdminOverview>("/admin/overview")).data;
+}
+
+export async function adminCategories(): Promise<AdminCategory[]> {
+  return (await api.get<AdminCategory[]>("/admin/categories")).data;
+}
+
+export async function adminCompanies(): Promise<AdminCompany[]> {
+  return (await api.get<AdminCompany[]>("/admin/companies")).data;
+}
+
+export async function adminInteractions(limit = 60): Promise<AdminInteraction> {
+  return (await api.get<AdminInteraction>("/admin/interactions", { params: { limit } })).data;
+}
+
+export async function adminAnomalies(): Promise<AdminAnomaly[]> {
+  return (await api.get<AdminAnomaly[]>("/admin/anomalies")).data;
+}
+
+export async function adminAiSummary(): Promise<AIResult> {
+  return (await api.post<AIResult>("/admin/ai/summary")).data;
+}
+
+export async function adminAiRecommendations(): Promise<AIResult> {
+  return (await api.post<AIResult>("/admin/ai/recommendations")).data;
+}
+
+// --- Подсказки по накопленным сигналам ----------------------------------------
+
+export interface HintItem {
+  id?: string;
+  reference?: string;
+  title?: string;
+  full_name?: string | null;
+  company_name?: string | null;
+  specialization?: string | null;
+  grade?: string | null;
+  stack?: string[];
+  salary_from?: number;
+  salary_to?: number;
+  score: number;
+  reasons: string[];
+  already_invited?: boolean;
+}
+
+export interface HintsResponse {
+  items: HintItem[];
+  anchor: string;
+  semantic_method: string;
+  note: string;
+}
+
+export async function candidateVacancyHints(limit = 5): Promise<HintsResponse> {
+  return (await api.get<HintsResponse>("/ai/candidate/vacancy-hints", { params: { limit } })).data;
+}
+
+export async function employerCandidateHints(limit = 5): Promise<HintsResponse> {
+  return (await api.get<HintsResponse>("/ai/employer/candidate-hints", { params: { limit } })).data;
+}
