@@ -180,7 +180,11 @@ async def _signals_for(
 
     theta = last_session.theta if last_session is not None else None
     test_strength = normalize_theta(theta)
-    last_activity = last_session.finished_at if last_session is not None else None
+
+    # Свежесть профиля: учитываются и завершённый тест, и участие в регулярных заданиях
+    from app.services.marketplace import last_activity_at
+
+    last_activity = await last_activity_at(session, user.id)
     fresh_days = days_since(last_activity)
 
     fsp_count: Optional[int] = None

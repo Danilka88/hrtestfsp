@@ -14,6 +14,7 @@ from app.services.auth import AuthError
 from app.services.candidates import ProfileError
 from app.services.employers import EmployerError
 from app.services.invitations import InvitationError
+from app.services.marketplace import MarketplaceError
 from app.services.resume import ResumeError
 from app.services.testing_flow import TestingError
 
@@ -23,6 +24,7 @@ DOMAIN_ERRORS = (
     ResumeError,
     EmployerError,
     InvitationError,
+    MarketplaceError,
     TestingError,
 )
 

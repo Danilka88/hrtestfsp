@@ -6,6 +6,7 @@
 from app.models.candidate import CandidateProfile
 from app.models.employer import EmployerNeed, EmployerProfile, Selection, SelectionCandidate
 from app.models.invitation import Invitation
+from app.models.marketplace import Application, RegularTask, TaskSubmission, Vacancy
 from app.models.testing import (
     Category,
     Grade,
@@ -36,4 +37,8 @@ __all__ = [
     "Selection",
     "SelectionCandidate",
     "Invitation",
+    "Vacancy",
+    "Application",
+    "RegularTask",
+    "TaskSubmission",
 ]
