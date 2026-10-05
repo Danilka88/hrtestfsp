@@ -11,7 +11,7 @@ import type {
 } from "../../api/client";
 import { errorMessage } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
-import { AIButton, AIStatusBadge, aiToastPayload } from "../../components/ai";
+import { AIButton, AISourceNote, AIStatusBadge, aiToastPayload } from "../../components/ai";
 import { TasksPanel, VacanciesPanel } from "../../components/marketplace";
 import { useToast } from "../../components/toast";
 import {
@@ -81,6 +81,9 @@ function SelectionTab() {
   const [history, setHistory] = useState<SelectionSummary[]>([]);
   const [explanations, setExplanations] = useState<Record<string, string>>({});
   const [aiBusyFor, setAiBusyFor] = useState<string | null>(null);
+  const [brief, setBrief] = useState("");
+  const [needAiBusy, setNeedAiBusy] = useState(false);
+  const [needAiResult, setNeedAiResult] = useState<apiClient.AIResult | null>(null);
   const [title, setTitle] = useState("Backend-разработчик (Python)");
   const [description, setDescription] = useState("Команда платежей");
   const [specialization, setSpecialization] = useState("backend");
@@ -196,6 +199,48 @@ function SelectionTab() {
     [selection, toast],
   );
 
+  /** ИИ-сборка потребности из короткой заметки: заполняет форму, но её можно править. */
+  const draftNeed = useCallback(async () => {
+    if (brief.trim().length < 5) return;
+    setNeedAiBusy(true);
+    setNeedAiResult(null);
+    try {
+      const result = await apiClient.aiNeedDraft(brief);
+      setNeedAiResult(result);
+      const data = result.data as {
+        title?: string;
+        description?: string;
+        stack?: string[];
+        specialization_code?: string;
+        grade?: string;
+      };
+      if (data.title) setTitle(data.title);
+      if (data.description) setDescription(data.description);
+      if (data.stack?.length) setStack(data.stack.join(", "));
+      if (data.specialization_code) setSpecialization(data.specialization_code);
+      if (data.grade) setGrade(data.grade);
+      const payload = aiToastPayload(result, "Потребность собрана");
+      toast.push(payload.kind, payload.text, payload.detail);
+    } catch (err) {
+      toast.error("Не удалось собрать потребность", errorMessage(err));
+    } finally {
+      setNeedAiBusy(false);
+    }
+  }, [brief, toast]);
+
+  /** Открывает сохранённую версию подборки — прежние результаты не теряются. */
+  const openVersion = useCallback(
+    async (id: string) => {
+      try {
+        setSelection(await apiClient.getSelection(id));
+        toast.info("Показана сохранённая версия подборки");
+      } catch (err) {
+        toast.error("Не удалось открыть версию", errorMessage(err));
+      }
+    },
+    [toast],
+  );
+
   return (
     <div className="space-y-4">
       <Card title="Потребность">
@@ -240,6 +285,18 @@ function SelectionTab() {
         <div className="mt-3">
           <TextArea label="Чем занимается команда и кто нужен" value={description} onChange={setDescription} rows={3} />
         </div>
+        <div className="mt-3 flex flex-wrap items-end gap-3">
+          <Field label="Коротко: кого ищете (для ИИ)" value={brief} onChange={setBrief} />
+          <AIButton
+            onClick={() => void draftNeed()}
+            busy={needAiBusy}
+            disabled={brief.trim().length < 5}
+            title="Собрать потребность из заметки"
+          >
+            Собрать потребность
+          </AIButton>
+        </div>
+        <AISourceNote result={needAiResult} />
         <div className="mt-3 flex gap-2">
           <Button onClick={() => void build()} disabled={busy}>
             Сформировать подборку
@@ -286,12 +343,19 @@ function SelectionTab() {
           </p>
           <ul className="space-y-1 text-sm">
             {history.map((item) => (
-              <li key={item.id} className="flex flex-wrap items-center gap-2 text-slate-300">
-                <span className="font-medium">{item.title}</span>
-                <span className="text-xs text-slate-500">
-                  {item.candidates_count} кандидатов
-                  {item.parent_selection_id ? " · уточнение предыдущей версии" : " · первичная"}
-                </span>
+              <li key={item.id}>
+                <button
+                  type="button"
+                  onClick={() => void openVersion(item.id)}
+                  className="flex w-full flex-wrap items-center gap-2 rounded-lg border border-slate-800 px-2 py-1.5 text-left text-slate-300 transition hover:border-sky-500/60 hover:text-white"
+                >
+                  <span className="font-medium">{item.title}</span>
+                  <span className="text-xs text-slate-500">
+                    {item.candidates_count} кандидатов
+                    {item.parent_selection_id ? " · уточнение предыдущей версии" : " · первичная"}
+                  </span>
+                  <span className="ml-auto text-xs text-sky-400">открыть</span>
+                </button>
               </li>
             ))}
           </ul>
@@ -516,6 +580,40 @@ function InvitePanel({
   const [message, setMessage] = useState("Приглашаем в команду");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [company, setCompany] = useState("");
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiResult, setAiResult] = useState<apiClient.AIResult | null>(null);
+
+  useEffect(() => {
+    apiClient
+      .getEmployerProfile()
+      .then((profile) => setCompany(String(profile.company_name ?? "")))
+      .catch(() => undefined);
+  }, []);
+
+  /** Черновик текста предложения: компания, грейд и зарплата подставляются из формы. */
+  async function draftText() {
+    setAiBusy(true);
+    setAiResult(null);
+    try {
+      const result = await apiClient.aiInvitationDraft({
+        company: company || "компания",
+        candidate_grade: candidate.grade,
+        stack: candidate.stack,
+        salary_from: Number(salaryFrom),
+        salary_to: Number(salaryTo),
+      });
+      setAiResult(result);
+      const text = String((result.data as { message?: string }).message ?? "");
+      if (text) setMessage(text);
+      const payload = aiToastPayload(result, "Текст приглашения готов");
+      toast.push(payload.kind, payload.text, payload.detail);
+    } catch (err) {
+      toast.error("Не удалось подготовить текст", errorMessage(err));
+    } finally {
+      setAiBusy(false);
+    }
+  }
 
   async function send() {
     setBusy(true);
@@ -543,12 +641,21 @@ function InvitePanel({
 
   return (
     <Card title={`Приглашение для ${candidate.reference}`} accent>
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <AIButton onClick={() => void draftText()} busy={aiBusy} title="Собрать текст предложения">
+          Сгенерировать текст
+        </AIButton>
+        <span className="text-xs text-slate-500">
+          компания, грейд и зарплата подставятся из формы
+        </span>
+      </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Зарплата от, ₽ (обязательно)" value={salaryFrom} onChange={setSalaryFrom} />
         <Field label="Зарплата до, ₽ (обязательно)" value={salaryTo} onChange={setSalaryTo} />
       </div>
       <div className="mt-3">
         <TextArea label="Текст предложения" value={message} onChange={setMessage} rows={3} />
+        <AISourceNote result={aiResult} />
       </div>
       <div className="mt-3 flex gap-2">
         <Button onClick={() => void send()} disabled={busy}>
