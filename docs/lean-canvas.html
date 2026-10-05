@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IT-Talent Match — платформа обратного подбора ИТ-специалистов</title>
+<style>
+  :root{
+    --bg:#0a1020; --bg2:#0e1730; --card:#121c38; --card2:#16223f;
+    --line:#243356; --line2:#2e4070;
+    --fg:#eaf0ff; --mut:#94a3c4; --dim:#67789e;
+    --acc:#38bdf8; --acc2:#22d3ee; --ok:#34d399; --warn:#fbbf24; --pink:#f472b6; --vio:#a78bfa;
+    --r:14px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:
+      radial-gradient(1200px 700px at 12% -10%, #16295c 0%, transparent 60%),
+      radial-gradient(900px 600px at 100% 0%, #0b3b4d 0%, transparent 55%),
+      var(--bg);
+    color:var(--fg);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--acc);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 22px}
+
+  /* NAV */
+  nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(14px);
+      background:rgba(10,16,32,.82);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;gap:8px;align-items:center;height:56px;overflow-x:auto}
+  nav .brand{font-weight:800;letter-spacing:.3px;white-space:nowrap;margin-right:14px;
+      background:linear-gradient(90deg,var(--acc),var(--acc2));-webkit-background-clip:text;background-clip:text;color:transparent}
+  nav a{color:var(--mut);font-size:13.5px;white-space:nowrap;padding:6px 9px;border-radius:8px}
+  nav a:hover{color:var(--fg);background:var(--card);text-decoration:none}
+
+  /* HERO */
+  header{padding:64px 0 40px}
+  .kicker{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;letter-spacing:.14em;
+      text-transform:uppercase;color:var(--acc2);border:1px solid var(--line2);
+      padding:6px 12px;border-radius:999px;background:rgba(34,211,238,.06)}
+  h1{font-size:clamp(30px,5.2vw,54px);line-height:1.08;margin:18px 0 12px;letter-spacing:-.02em}
+  h1 .g{background:linear-gradient(100deg,var(--acc),var(--acc2) 55%,var(--vio));
+      -webkit-background-clip:text;background-clip:text;color:transparent}
+  .lead{font-size:clamp(16px,2.1vw,20px);color:var(--mut);max-width:820px;margin:0 0 8px}
+  .pos{margin-top:16px;padding:16px 18px;border-left:3px solid var(--acc);
+      background:linear-gradient(90deg,rgba(56,189,248,.09),transparent);
+      border-radius:0 10px 10px 0;font-size:17px;max-width:900px}
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
+  .chip{border:1px solid var(--line2);background:var(--card);border-radius:999px;
+      padding:8px 14px;font-size:13px;color:var(--mut)}
+  .chip b{color:var(--fg)}
+
+  /* SECTIONS */
+  section{padding:46px 0;border-top:1px solid var(--line)}
+  h2{font-size:clamp(22px,3.1vw,32px);margin:0 0 6px;letter-spacing:-.01em}
+  h2 .n{color:var(--acc);font-variant-numeric:tabular-nums;margin-right:10px;font-weight:800}
+  .sub{color:var(--mut);margin:0 0 26px;max-width:880px}
+  h3{font-size:17px;margin:0 0 10px}
+  p{margin:0 0 12px}
+  sup a{font-size:11px;padding:0 2px;color:var(--acc2)}
+
+  .grid{display:grid;gap:16px}
+  .g2{grid-template-columns:repeat(2,1fr)}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  .g4{grid-template-columns:repeat(4,1fr)}
+  @media(max-width:900px){.g3,.g4{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:640px){.g2,.g3,.g4{grid-template-columns:1fr}}
+
+  .card{background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--line);
+      border-radius:var(--r);padding:18px}
+  .card h3{display:flex;gap:9px;align-items:center}
+  .card p:last-child{margin-bottom:0}
+  .num{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;
+      border-radius:8px;font-size:13px;font-weight:800;color:#04121f;
+      background:linear-gradient(135deg,var(--acc),var(--acc2));flex:0 0 auto}
+
+  .stat{background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--line);
+      border-radius:var(--r);padding:18px}
+  .stat .v{font-size:clamp(26px,4vw,38px);font-weight:800;letter-spacing:-.02em;line-height:1.1}
+  .stat .v.down{color:var(--pink)} .stat .v.up{color:var(--ok)}
+  .stat .l{color:var(--mut);font-size:13.5px;margin-top:6px}
+
+  .flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0 0}
+  .step{border:1px solid var(--line2);background:var(--card);border-radius:10px;padding:8px 12px;font-size:13.5px}
+  .arrow{color:var(--dim);font-weight:800}
+
+  /* LEAN CANVAS */
+  .canvas{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+  .canvas .full{grid-column:1/-1}
+  .cbox{background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--line);
+      border-radius:12px;padding:14px;min-height:120px}
+  .cbox h4{margin:0 0 8px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--acc2)}
+  .cbox ul{margin:0;padding-left:16px}
+  .cbox li{margin-bottom:6px;font-size:13.6px;color:#d6def2}
+  .cbox.hi{border-color:var(--acc);box-shadow:0 0 0 1px rgba(56,189,248,.25),0 10px 30px -18px var(--acc)}
+  .cbox.hi h4{color:var(--acc)}
+  @media(max-width:1000px){.canvas{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:640px){.canvas{grid-template-columns:1fr}}
+
+  /* TABLE */
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--acc2);font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:700}
+  tbody tr:hover{background:rgba(56,189,248,.045)}
+  .tw{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--card)}
+
+  /* BAR */
+  .bar{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+  .bar .nm{width:min(300px,52%);font-size:14px}
+  .bar .track{flex:1;height:10px;background:#1b2745;border-radius:99px;overflow:hidden;min-width:90px}
+  .bar .fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--acc),var(--acc2))}
+  .bar .pc{width:48px;text-align:right;font-variant-numeric:tabular-nums;color:var(--mut);font-size:13.5px}
+
+  /* CODE / FORMULA */
+  pre{background:#091128;border:1px solid var(--line2);
+      border-radius:12px;padding:16px;overflow-x:auto;font-size:13.5px;line-height:1.7;
+      font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cfe2ff;margin:0 0 12px}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      background:#1a2547;padding:2px 6px;border-radius:6px;font-size:13px;color:#bfe3ff}
+
+  /* ARCH */
+  .arch{display:grid;gap:10px}
+  .layer{border:1px solid var(--line2);border-radius:12px;padding:12px;background:var(--card)}
+  .layer .t{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--acc2);margin-bottom:8px}
+  .mods{display:flex;flex-wrap:wrap;gap:6px}
+  .mod{border:1px solid var(--line);background:#0f1a34;border-radius:8px;padding:6px 10px;font-size:12.5px;color:#cbd6ef}
+  .mod.p{border-color:var(--vio);color:#dcd0ff}
+  .arch .down{text-align:center;color:var(--dim);font-size:18px;line-height:1}
+
+  /* TIMELINE */
+  .tl{position:relative;margin-left:6px;padding-left:26px}
+  .tl:before{content:"";position:absolute;left:7px;top:6px;bottom:6px;width:2px;
+      background:linear-gradient(180deg,var(--acc),var(--acc2),transparent)}
+  .tl .it{position:relative;margin-bottom:16px}
+  .tl .it:before{content:"";position:absolute;left:-24px;top:6px;width:12px;height:12px;border-radius:50%;
+      background:var(--bg);border:2px solid var(--acc)}
+  .tl .it.done:before{background:var(--acc)}
+  .tl .h{font-weight:700}
+  .tl .d{color:var(--mut);font-size:13.6px}
+
+  .tag{display:inline-block;font-size:11.5px;padding:3px 9px;border-radius:999px;border:1px solid var(--line2);
+      color:var(--mut);margin:0 6px 6px 0}
+  .tag.must{border-color:rgba(52,211,153,.5);color:#8ef0c9;background:rgba(52,211,153,.08)}
+  .tag.should{border-color:rgba(251,191,36,.5);color:#fde08a;background:rgba(251,191,36,.08)}
+  .tag.bonus{border-color:rgba(167,139,250,.5);color:#d9ccff;background:rgba(167,139,250,.08)}
+
+  .note{border:1px dashed var(--line2);border-radius:12px;padding:14px;color:var(--mut);font-size:13.8px;
+      background:rgba(148,163,196,.05)}
+  .hl{color:var(--fg);font-weight:600}
+
+  /* SOURCES */
+  .src{columns:2;column-gap:26px;font-size:13.2px}
+  @media(max-width:760px){.src{columns:1}}
+  .src div{break-inside:avoid;margin-bottom:7px;color:var(--mut)}
+  .src b{color:var(--acc2);font-variant-numeric:tabular-nums}
+  footer{padding:34px 0 60px;color:var(--dim);font-size:13px;border-top:1px solid var(--line)}
+</style>
+</head>
+<body>
+
+<nav><div class="wrap">
+  <span class="brand">IT-Talent Match</span>
+  <a href="#problem">Проблема</a>
+  <a href="#mech">Механики</a>
+  <a href="#canvas">Lean Canvas</a>
+  <a href="#research">Исследование</a>
+  <a href="#rules">Правила</a>
+  <a href="#arch">Архитектура</a>
+  <a href="#mvp">MVP</a>
+  <a href="#road">План</a>
+  <a href="#valid">Валидация</a>
+  <a href="#score">Критерии</a>
+  <a href="#sources">Источники</a>
+</div></nav>
+
+<header class="wrap">
+  <span class="kicker">Хакатон · MVP · Обратный подбор</span>
+  <h1>Цифровая платформа <span class="g">обратного подбора</span><br>ИТ-специалистов</h1>
+  <p class="lead">Соискатели автоматически распределяются по категориям на основе
+  <b>объективно подтверждаемого профиля</b>. Работодатель находит нужную категорию и
+  <b>сам</b> выходит на конкретного человека с предложением и уровнем зарплаты.</p>
+  <div class="pos">«Работодатель находит <b>подтверждённую категорию</b> и сам приглашает —
+  <b>с зарплатой сразу</b>, без вала резюме. Кандидат получает приглашения, а не откликается вслепую».</div>
+
+  <div class="chips">
+    <span class="chip"><b>35%</b> — вес механики подбора в оценке</span>
+    <span class="chip"><b>25%</b> — тестирование и категоризация</span>
+    <span class="chip"><b>2</b> ядра решения</span>
+    <span class="chip"><b>30</b> источников</span>
+    <span class="chip"><b>Оффлайн</b> демо на seed-данных</span>
+  </div>
+</header>
+
+<!-- 1. PROBLEM -->
+<section id="problem"><div class="wrap">
+  <h2><span class="n">01</span>Проблема</h2>
+  <p class="sub">Универсальные площадки исчерпали ресурс: издержки несут обе стороны, результативность подбора минимальна.</p>
+
+  <div class="grid g4" style="margin-bottom:20px">
+    <div class="stat"><div class="v down">−25%</div><div class="l">рынок вакансий в РФ за год; в ИТ — около <b>−20%</b><sup><a href="#src-13">13</a></sup></div></div>
+    <div class="stat"><div class="v up">+25%</div><div class="l">рост числа активных резюме на этом фоне<sup><a href="#src-13">13</a></sup></div></div>
+    <div class="stat"><div class="v down">−11…36%</div><div class="l">сокращение вакансий в ИТ, при росте резюме на <b>20–30%</b> ежемесячно<sup><a href="#src-12">12</a></sup></div></div>
+    <div class="stat"><div class="v">85%</div><div class="l">работ находятся через сети, лишь <b>15%</b> — через job-борды<sup><a href="#src-1">1</a></sup></div></div>
+  </div>
+
+  <div class="grid g3">
+    <div class="card"><h3><span class="num">1</span>Работодатель</h3>
+      <p>Вручную фильтрует сотни нерелевантных откликов силами дорогих специалистов. Формальное резюме
+      фиксирует стек и места работы, но <b>не подтверждает практическую компетентность</b> — отбор сводится к совпадению ключевых слов.</p></div>
+    <div class="card"><h3><span class="num">2</span>Кандидат</h3>
+      <p>Откликается вслепую и не получает обратной связи. Отраслевая специфика — стек, грейд, роль в команде,
+      формат работы — на универсальных платформах <b>не формализована</b>.</p></div>
+    <div class="card"><h3><span class="num">3</span>Рынок ИТ</h3>
+      <p>Вал нерелевантных откликов при <b>дефиците опытных профи</b>, которые не сидят на классических job-сайтах:
+      закрыть вакансию за месяц — уже роскошь.<sup><a href="#src-12">12</a></sup></p></div>
+  </div>
+</div></section>
+
+<!-- 2. MECHANICS -->
+<section id="mech"><div class="wrap">
+  <h2><span class="n">02</span>Два ядра решения</h2>
+  <p class="sub">Смысловой центр продукта — механика, принципиально отличная от прямого отклика кандидата на вакансию.</p>
+
+  <div class="grid g2">
+    <div class="card" style="border-color:var(--line2)">
+      <h3><span class="num">A</span>Механика тестирования</h3>
+      <p class="sub" style="margin-bottom:12px">Категория определяется не резюме, а обязательным путём при регистрации.</p>
+      <div class="flow">
+        <span class="step">Опрос по отрасли и специализации</span><span class="arrow">→</span>
+        <span class="step">Выбор предполагаемого грейда</span><span class="arrow">→</span>
+        <span class="step">Тест на заявленный грейд</span><span class="arrow">→</span>
+        <span class="step">Авто-присвоение категории</span>
+      </div>
+      <p style="margin-top:12px;color:var(--mut)">Категория = <b class="hl">специализация × грейд</b>
+      (например, «бэкенд с опытом», «фронтенд до года»). Внутри категории кандидаты ранжируются по силе профиля.</p>
+    </div>
+
+    <div class="card" style="border-color:var(--acc);box-shadow:0 0 0 1px rgba(56,189,248,.25)">
+      <h3><span class="num">B</span>Обратная механика подбора <span class="tag bonus">35% оценки</span></h3>
+      <p class="sub" style="margin-bottom:12px">Инициатива у работодателя — ориентир модели LHH «работа находит человека».</p>
+      <div class="flow">
+        <span class="step">Потребность работодателя</span><span class="arrow">→</span>
+        <span class="step">Подборка категорий и кандидатов</span><span class="arrow">→</span>
+        <span class="step">Приглашение с указанием ЗП</span><span class="arrow">→</span>
+        <span class="step">Принятие → раскрытие контактов</span>
+      </div>
+      <p style="margin-top:12px;color:var(--mut)">Приглашение — <b class="hl">без обязательной привязки к вакансии</b>.
+      Контакты кандидата раскрываются только после принятия или самостоятельного отклика.</p>
+    </div>
+  </div>
+</div></section>
+
+<!-- 3. LEAN CANVAS -->
+<section id="canvas"><div class="wrap">
+  <h2><span class="n">03</span>Lean Canvas</h2>
+  <p class="sub">Классическая сетка Эша Маури; блоки, критичные для хакатона, выделены.</p>
+
+  <div class="canvas">
+    <div class="cbox">
+      <h4>Problem</h4>
+      <ul>
+        <li>Работодатель тратит дорогое время на вал нерелевантных откликов; нет объективного сигнала о компетентности</li>
+        <li>Кандидат откликается вслепую, без обратной связи</li>
+        <li>ИТ-специфика не формализована на универсальных площадках</li>
+      </ul>
+    </div>
+    <div class="cbox">
+      <h4>Solution</h4>
+      <ul>
+        <li>Обязательный путь: опрос → грейд → адаптивный тест → категория</li>
+        <li>Обратный подбор: подборка → приглашение с ЗП → раскрытие контактов по согласию</li>
+        <li>Верифицированный профиль + регулярные короткие задания</li>
+      </ul>
+    </div>
+    <div class="cbox hi">
+      <h4>Unique Value Proposition</h4>
+      <ul>
+        <li>Работодатель находит <b>уже подтверждённую категорию</b> и сам приглашает — с зарплатой сразу, без вала резюме</li>
+        <li>Кандидат <b>получает</b> приглашения, а не откликается вслепую</li>
+        <li>Верификация = тест + подтверждённые достижения</li>
+      </ul>
+    </div>
+    <div class="cbox">
+      <h4>Unfair Advantage</h4>
+      <ul>
+        <li>Данные и бренд Федерации спортивного программирования</li>
+        <li>Объективные результаты соревнований как эксклюзивный сигнал</li>
+        <li>Нет у универсальных площадок<sup><a href="#src-29">29</a></sup></li>
+      </ul>
+    </div>
+    <div class="cbox">
+      <h4>Customer Segments</h4>
+      <ul>
+        <li>Работодатели ИТ (нанимающие менеджеры / HR)</li>
+        <li>Кандидаты ИТ (junior → senior)</li>
+        <li>Участники соревновательного движения</li>
+        <li>Партнёр — владелец данных о достижениях</li>
+      </ul>
+    </div>
+
+    <div class="cbox">
+      <h4>Key Metrics</h4>
+      <ul>
+        <li>Доля релевантных в топ-10 выдачи</li>
+        <li>Конверсия приглашение → принятие</li>
+        <li>Время до первого приглашения</li>
+        <li>Стабильность грейда при повторном тесте</li>
+        <li>Дискриминативность заданий</li>
+      </ul>
+    </div>
+    <div class="cbox">
+      <h4>Channels</h4>
+      <ul>
+        <li>Прямые продажи в ИТ-компании</li>
+        <li>Партнёрство с сообществами и соревнованиями</li>
+        <li>Конференции, Habr, Telegram</li>
+        <li>Реферальная программа</li>
+      </ul>
+    </div>
+    <div class="cbox full">
+      <h4>Cost Structure</h4>
+      <ul>
+        <li>Разработка и поддержка · инфраструктура (VPS, LLM API) · модерация и антифрод · юридическое (152-ФЗ)</li>
+      </ul>
+    </div>
+    <div class="cbox full">
+      <h4>Revenue Streams · <span style="color:var(--dim);text-transform:none;letter-spacing:0">в MVP не реализуем — только модель</span></h4>
+      <ul>
+        <li>Подписка работодателя (SaaS) · платный контакт / success-fee · премиум кандидата · партнёрство с ФСП</li>
+      </ul>
+    </div>
+  </div>
+</div></section>
+
+<!-- 4. RESEARCH -->
+<section id="research"><div class="wrap">
+  <h2><span class="n">04</span>Исследование: что подтверждено рынком</h2>
+  <p class="sub">Референсные механики «работа находит человека» — уже работающие модели, на которые мы опираемся.</p>
+
+  <div class="tw" style="margin-bottom:18px">
+    <table>
+      <thead><tr><th>Референс</th><th>Механика</th><th>Что берём</th></tr></thead>
+      <tbody>
+        <tr><td><b>LHH</b> (Lee Hecht Harrison)<sup><a href="#src-1">1</a><a href="#src-2">2</a></sup></td>
+            <td>Active Placement: переход от «человек ищет работу» к «работа находит человека»; талант продвигается напрямую работодателям. Только 15% находят работу через job-борды, 85% — через сети</td>
+            <td>Вектор механики: инициатива у работодателя, продвижение кандидата, а не публикация вакансии</td></tr>
+        <tr><td><b>Hired / Vettery</b><sup><a href="#src-3">3</a><a href="#src-5">5</a></sup></td>
+            <td>Маркетплейс: работодатель направляет interview request прямо кандидату; доски вакансий не показываются</td>
+            <td>Сценарий «приглашение работодателя конкретному человеку» как основной</td></tr>
+        <tr><td><b>Reverse job board</b><sup><a href="#src-4">4</a></sup></td>
+            <td>Кандидат публикует профиль, работодатель просматривает и выходит на контакт</td>
+            <td>Профиль-центричность вместо вакансия-центричности</td></tr>
+        <tr><td><b>Underdog.io</b><sup><a href="#src-5">5</a></sup></td>
+            <td>Одобренные кандидаты «выходят в лайв» партиями; модерация повышает доверие работодателя</td>
+            <td>Идея верификации и «качества» базы (у нас — тест + достижения)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="grid g3">
+    <div class="card"><h3>Курица и яйцо<sup><a href="#src-20">20</a><a href="#src-21">21</a></sup></h3>
+      <p>Двусторонний маркетплейс: работодатели не приходят без базы, кандидаты — без вакансий.
+      Сначала определяем, supply- или demand-constrained. Для хакатона закрывается seed-данными.</p></div>
+    <div class="card"><h3>Объяснимость (XAI)<sup><a href="#src-10">10</a><a href="#src-11">11</a></sup></h3>
+      <p>Рыночный стандарт: рубрика с критериями и весами, зафиксированная до просмотра пула,
+      evidence-trail под каждый критерий; отсутствующие данные не додумываются.</p></div>
+    <div class="card"><h3>Хакатон: demo-first<sup><a href="#src-18">18</a><a href="#src-19">19</a></sup></h3>
+      <p>Выигрывают проекты со сквозным демо-путём и узким скоупом («одна вещь хорошо»),
+      а не пять функций наполовину. Сначала проблема для жюри, потом технология.</p></div>
+    <div class="card"><h3>NLP и русский язык<sup><a href="#src-22">22</a><a href="#src-23">23</a></sup></h3>
+      <p>LLM даёт лучшую обобщаемость при извлечении навыков из русскоязычных текстов;
+      для семантического матчинга — русскоязычные эмбеддинги.</p></div>
+    <div class="card"><h3>Регуляторика<sup><a href="#src-16">16</a></sup></h3>
+      <p>С 1 сентября 2025 согласие на обработку персональных данных оформляется
+      <b>отдельным документом</b>, а не спрятанным в оферте.</p></div>
+    <div class="card"><h3>Готовые площадки<sup><a href="#src-12">12</a></sup></h3>
+      <p>Нишевые площадки РФ концентрируют ИТ-аудиторию, но решают задачу отклика, а не обратного
+      подбора с объективной верификацией квалификации.</p></div>
+  </div>
+</div></section>
+
+<!-- 5. TESTING MECHANIC -->
+<section id="testing"><div class="wrap">
+  <h2><span class="n">05</span>Механика тестирования: решаем противоречие</h2>
+  <p class="sub">Единый набор заданий быстро расходится по рынку. Генерация «на лету» под каждого не гарантирует
+  сопоставимую сложность. Решение — <b>гибрид «параметрическая генерация + калибровка + адаптивность»</b>.</p>
+
+  <div class="grid g3">
+    <div class="card"><h3><span class="num">1</span>Параметрическая генерация</h3>
+      <p>Задание описывается шаблоном и параметрами. Из шаблона рождается уникальный вариант,
+      но сложность задаётся <b>параметрами</b>, а не текстом.<sup><a href="#src-7">7</a></sup></p></div>
+    <div class="card"><h3><span class="num">2</span>Адаптивная выдача (IRT)</h3>
+      <p>Оценка способности θ обновляется после каждого ответа; следующее задание выбирается как
+      максимизирующее информацию.<sup><a href="#src-6">6</a><a href="#src-7">7</a></sup></p></div>
+    <div class="card"><h3><span class="num">3</span>Контроль показов (exposure)</h3>
+      <p>Лимит показов и счётчик у каждого задания, ротация версий, взвешенный отбор —
+      защита от «расхождения заданий по рынку».<sup><a href="#src-9">9</a></sup></p></div>
+    <div class="card"><h3><span class="num">4</span>Детекция компрометации</h3>
+      <p>Мониторинг баллов и <b>времени ответа</b> в реальном времени выявляет «слитые» задания
+      и ответы по предзнанию.<sup><a href="#src-6">6</a><a href="#src-8">8</a></sup></p></div>
+    <div class="card"><h3><span class="num">5</span>Анти-плагиат кода</h3>
+      <p>Для задач с кодом — сравнение по нормализованным токенам/AST между сессиями.<sup><a href="#src-26">26</a></sup></p></div>
+    <div class="card"><h3><span class="num">6</span>Скоринг по рубрике → грейд</h3>
+      <p>Итог — не бинарная метка, а балл по критериям, отображённый на шкалу грейдов
+      с доверительным интервалом.<sup><a href="#src-28">28</a></sup></p></div>
+  </div>
+
+  <div class="note" style="margin-top:18px">
+    <b class="hl">Правила смены грейда:</b> грейд не понижается принудительно — после неуспеха доступен тест на уровень ниже;
+    успешный кандидат может повысить грейд. Любая <b>смена</b> ограничена по времени (значение по умолчанию — 3 месяца).
+    Первичное присвоение грейда сменой не считается.<br><br>
+    <b class="hl">Регулярные короткие задания:</b> система периодически предлагает кандидату задачу от работодателя — решить
+    или предложить подход. Это поддерживает профиль в актуальном состоянии и даёт работодателю свежий сигнал.
+    Прокторинг доступен на рынке РФ.<sup><a href="#src-25">25</a></sup>
+  </div>
+</div></section>
+
+<!-- 6. MATCHING -->
+<section id="matching"><div class="wrap">
+  <h2><span class="n">06</span>Механика подбора и объяснимость</h2>
+  <p class="sub">Прозрачная взвешенная функция ранжирования; каждый кандидат в подборке получает обоснование попадания.</p>
+
+  <div class="grid g2">
+    <div>
+      <pre>score = w1 · test_strength        # сила подтверждённого профиля
+      + w2 · fsp_achievements     # подтверждённые достижения ФСП
+      + w3 · freshness            # активность в регулярных заданиях
+      + w4 · semantic_fit         # соответствие потребности (эмбеддинги)</pre>
+      <p style="color:var(--mut)">Критерии и веса <b class="hl">фиксируются до просмотра пула</b>;
+      отсутствующие данные не додумываются; аудит высоких, средних и низких рангов.<sup><a href="#src-10">10</a><a href="#src-11">11</a></sup></p>
+    </div>
+    <div class="card" style="border-color:var(--acc)">
+      <h3>Пример evidence-trail</h3>
+      <ul style="margin:0;padding-left:18px;font-size:14px;line-height:1.85">
+        <li>Тест на грейд <b>middle</b> пройден с оценкой θ = 0.72</li>
+        <li>Подтверждено <b>2</b> достижения: призёр регионального чемпионата (2025), финалист всероссийской олимпиады (2024)</li>
+        <li>Решил <b>3</b> задания работодателей за последний месяц</li>
+        <li>Совпадение стека по потребности: <b>Python, PostgreSQL, Docker</b></li>
+      </ul>
+      <p style="margin-top:12px;color:var(--mut);font-size:13.5px">Такой же принцип — при «нет истории ФСП»: блок явно
+      помечается как <b>«нет данных»</b>, без додумывания.</p>
+    </div>
+  </div>
+</div></section>
+
+<!-- 7. RULES -->
+<section id="rules"><div class="wrap">
+  <h2><span class="n">07</span>Обязательные правила данных и видимости</h2>
+  <p class="sub">Реализуются сервисным слоем политик — это требования, а не пожелания.</p>
+  <div class="grid g4">
+    <div class="card"><h3><span class="num">1</span>Зарплата обязательна</h3>
+      <p>И в вакансии, и в приглашении — диапазон «от–до», в рублях. Кандидат видит условия
+      <b>до начала общения</b>.</p></div>
+    <div class="card"><h3><span class="num">2</span>Контакты скрыты</h3>
+      <p>Работодатель не видит контакты кандидата до момента принятия приглашения или
+      самостоятельного отклика.</p></div>
+    <div class="card"><h3><span class="num">3</span>Статусы</h3>
+      <p>Приглашения и отклики имеют статусы (отправлено, просмотрено, принято, отклонено);
+      обе стороны видят актуальный статус.</p></div>
+    <div class="card"><h3><span class="num">4</span>Регистрация по email</h3>
+      <p>С подтверждением адреса. Верификация компании и модерация вакансий на MVP не требуются —
+      это вне рамок MVP.</p></div>
+  </div>
+</div></section>
+
+<!-- 8. ARCHITECTURE -->
+<section id="arch"><div class="wrap">
+  <h2><span class="n">08</span>Архитектура и стек</h2>
+  <p class="sub">Три слоя: Frontend, Backend (API бизнес-логики), слой хранения. Внешние зависимости — за интерфейсами с mock-реализациями.</p>
+
+  <div class="arch">
+    <div class="layer"><div class="t">Клиент</div>
+      <div class="mods"><span class="mod">Браузер · Кабинет кандидата</span><span class="mod">Браузер · Кабинет работодателя</span></div></div>
+    <div class="down">▼ &nbsp; HTTPS / REST · OpenAPI</div>
+    <div class="layer"><div class="t">Frontend — SPA</div>
+      <div class="mods"><span class="mod">React 19</span><span class="mod">TypeScript 7</span><span class="mod">Vite 8</span><span class="mod">TanStack Query</span><span class="mod">Tailwind 4</span><span class="mod">nginx</span></div></div>
+    <div class="down">▼ &nbsp; /api/v1/*</div>
+    <div class="layer"><div class="t">Backend — FastAPI (модульный монолит)</div>
+      <div class="mods">
+        <span class="mod">auth &amp; RBAC</span><span class="mod">candidates</span><span class="mod">employers</span>
+        <span class="mod">testing</span><span class="mod">items</span><span class="mod">matching</span>
+        <span class="mod">invitations</span><span class="mod">vacancies</span><span class="mod">tasks</span>
+        <span class="mod">fsp</span><span class="mod">notifications</span><span class="mod">admin</span>
+      </div>
+      <div class="mods" style="margin-top:8px">
+        <span class="mod p">providers: LLM · FSP · Email · Storage · Code-similarity (моки)</span>
+      </div>
+    </div>
+    <div class="down">▼</div>
+    <div class="layer"><div class="t">Слой хранения</div>
+      <div class="mods"><span class="mod">PostgreSQL 16 + pgvector</span><span class="mod">Redis 7</span><span class="mod">Файлы: PDF-резюме / профили</span></div></div>
+  </div>
+
+  <div class="grid g3" style="margin-top:20px">
+    <div class="card"><h3>Почему так</h3>
+      <p>Разделение слоёв и слабо связанные модули — по требованиям; при необходимости модули выделяются
+      в сервисы без переписывания логики.</p></div>
+    <div class="card"><h3>Mock-first</h3>
+      <p>LLM, реестр ФСП, почта, хранилище, прокторинг — за интерфейсами. Демо воспроизводимо
+      <b>оффлайн</b>, без внешних сервисов.</p></div>
+    <div class="card"><h3>Совместимость с Keycloak</h3>
+      <p>Аутентификация через абстракцию <code>AuthProvider</code>: локальная реализация заменяется
+      на OIDC-провайдера без изменения бизнес-логики.</p></div>
+  </div>
+</div></section>
+
+<!-- 9. MVP -->
+<section id="mvp"><div class="wrap">
+  <h2><span class="n">09</span>Скоуп MVP</h2>
+  <p class="sub">Обязательный минимум, реалистично достижимый за время хакатона; дополнительное — добор баллов.</p>
+
+  <div class="grid g2">
+    <div class="card" style="border-color:rgba(52,211,153,.4)">
+      <h3>Must — обязательно</h3>
+      <p>
+        <span class="tag must">Регистрация email + подтверждение, RBAC</span>
+        <span class="tag must">Профиль: форма + PDF с распознаванием</span>
+        <span class="tag must">Автогенерация PDF-профиля</span>
+        <span class="tag must">Опрос → грейд → тест → категория</span>
+        <span class="tag must">История тестов, лимит смены грейда</span>
+        <span class="tag must">Профиль компании и потребность</span>
+        <span class="tag must">Подборка + поиск по банку + фильтры</span>
+        <span class="tag must">Объяснимость выдачи</span>
+        <span class="tag must">Приглашение с обязательной ЗП</span>
+        <span class="tag must">Статусы, сокрытие контактов</span>
+        <span class="tag must">Кандидат без истории ФСП</span>
+        <span class="tag must">OpenAPI · Docker · демо-данные · документация</span>
+      </p>
+    </div>
+    <div class="card" style="border-color:rgba(251,191,36,.4)">
+      <h3>Should — добор баллов (7%)</h3>
+      <p>
+        <span class="tag should">Регулярные короткие задания</span>
+        <span class="tag should">Отклик кандидата на открытые вакансии</span>
+        <span class="tag should">Публикация вакансий работодателем</span>
+        <span class="tag should">Адаптивная вёрстка</span>
+        <span class="tag should">Концепция защиты от фиктивных вакансий</span>
+        <span class="tag should">Концепция интеграции с ATS</span>
+      </p>
+    </div>
+  </div>
+</div></section>
+
+<!-- 10. ROADMAP -->
+<section id="road"><div class="wrap">
+  <h2><span class="n">10</span>План разработки</h2>
+  <p class="sub">Demo-first: сначала сквозной путь, затем дополнительный функционал.</p>
+  <div class="grid g2">
+    <div class="tl">
+      <div class="it"><div class="h">Этап 0 · Каркас</div><div class="d">Структура, docker-compose, FastAPI-скелет, SPA, health-check</div></div>
+      <div class="it"><div class="h">Этап 1 · Аутентификация</div><div class="d">Email + подтверждение, JWT, RBAC, согласия 152-ФЗ</div></div>
+      <div class="it"><div class="h">Этап 2 · Профиль</div><div class="d">Форма, загрузка PDF + распознавание, генерация PDF-профиля</div></div>
+      <div class="it"><div class="h">Этап 3 · Ядро №1</div><div class="d">Опрос, банк заданий, адаптивный тест, категория, лимит смены грейда</div></div>
+    </div>
+    <div class="tl">
+      <div class="it"><div class="h">Этап 4 · Ядро №2</div><div class="d">Потребность → подборка → ранжирование → объяснимость, поиск</div></div>
+      <div class="it"><div class="h">Этап 5 · Контакт</div><div class="d">Приглашения, статусы, раскрытие контактов, ветка без ФСП</div></div>
+      <div class="it"><div class="h">Этап 6 · Доп. функционал</div><div class="d">Регулярные задания, вакансии и отклики, адаптив, антифрод/ATS</div></div>
+      <div class="it"><div class="h">Этапы 7–8 · Сдача и валидация</div><div class="d">Seed-данные, развёртывание, документация, презентация, метрики</div></div>
+    </div>
+  </div>
+</div></section>
+
+<!-- 11. VALIDATION -->
+<section id="valid"><div class="wrap">
+  <h2><span class="n">11</span>Валидация: как доказываем качество</h2>
+  <p class="sub">Эталонной разметки нет — команда предлагает собственную процедуру оценки и приводит результаты.</p>
+  <div class="tw">
+    <table>
+      <thead><tr><th>Что проверяем</th><th>Метрика</th><th>Процедура</th></tr></thead>
+      <tbody>
+        <tr><td>Релевантность подбора</td><td>Precision@5 / Precision@10</td><td>Синтетические пары «потребность – кандидат» с ручной разметкой; доля релевантных в топе</td></tr>
+        <tr><td>Согласованность теста</td><td>Стабильность грейда</td><td>Повторные прохождения одних и тех же профилей</td></tr>
+        <tr><td>Дискриминативность заданий</td><td>Разделение слабых и сильных</td><td>Сравнение с экспертной оценкой; разброс θ по группам</td></tr>
+        <tr><td>Корректность категоризации</td><td>Доля верно отнесённых</td><td>Сопоставление с ручной разметкой специализации и грейда</td></tr>
+        <tr><td>Устойчивость к утечке</td><td>Доля «засвеченных» заданий</td><td>Симуляция обмена заданиями; срабатывание exposure-контроля и детекции аномалий</td></tr>
+        <tr><td>Обработка без ФСП</td><td>100% корректных веток</td><td>Кандидат без идентификатора проходит весь путь без ошибок</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div></section>
+
+<!-- 12. SCORING -->
+<section id="score"><div class="wrap">
+  <h2><span class="n">12</span>Критерии оценки и трассировка</h2>
+  <p class="sub">Куда направлены усилия: два ядра закрывают 60% оценки.</p>
+
+  <div class="grid g2">
+    <div>
+      <div class="bar"><span class="nm">Новая механика подбора</span><span class="track"><span class="fill" style="width:100%"></span></span><span class="pc">35%</span></div>
+      <div class="bar"><span class="nm">Тестирование, валидация, категоризация</span><span class="track"><span class="fill" style="width:71%"></span></span><span class="pc">25%</span></div>
+      <div class="bar"><span class="nm">Удобство интерфейса</span><span class="track"><span class="fill" style="width:29%"></span></span><span class="pc">10%</span></div>
+      <div class="bar"><span class="nm">Питч-сессия</span><span class="track"><span class="fill" style="width:29%"></span></span><span class="pc">10%</span></div>
+      <div class="bar"><span class="nm">Техническая проработка</span><span class="track"><span class="fill" style="width:20%"></span></span><span class="pc">7%</span></div>
+      <div class="bar"><span class="nm">Дополнительный функционал</span><span class="track"><span class="fill" style="width:20%"></span></span><span class="pc">7%</span></div>
+      <div class="bar"><span class="nm">Полнота реализации и документация</span><span class="track"><span class="fill" style="width:17%"></span></span><span class="pc">6%</span></div>
+    </div>
+    <div class="card"><h3>Чем закрываем</h3>
+      <ul style="margin:0;padding-left:18px;font-size:14px;line-height:1.9">
+        <li><b>Подбор (35%)</b> — подборка, ранжирование, объяснимость, приглашение без привязки к вакансии</li>
+        <li><b>Тестирование (25%)</b> — гибридная механика, лимит смены грейда, процедура валидации с числами</li>
+        <li><b>Интерфейс (10%)</b> — единый понятный сквозной путь в обоих кабинетах</li>
+        <li><b>Техника (7%)</b> — архитектура, Docker, OpenAPI, скорость, тесты</li>
+        <li><b>Полнота (6%)</b> — обязательные шаги, ветка без ФСП, документация</li>
+        <li><b>Доп. функционал (7%)</b> — отклики/вакансии, регулярные задания, антифрод/ATS, адаптив</li>
+      </ul>
+    </div>
+  </div>
+</div></section>
+
+<!-- 13. SOURCES -->
+<section id="sources"><div class="wrap">
+  <h2><span class="n">13</span>Источники (30)</h2>
+  <p class="sub">Все утверждения выше подкреплены проверяемыми ссылками.</p>
+  <div class="src">
+    <div id="src-1"><b>[1]</b> LHH — Active Placement: <a href="https://en.prnasia.com/releases/apac/Lee_Hecht_Harrison_Reinvents_Outplacement-182431.shtml">prnasia</a></div>
+    <div id="src-2"><b>[2]</b> LHH — «jobs finding people»: <a href="https://presswire.com/release/active-placement-drives-shift-people-finding-jobs-jobs-finding-people">presswire</a></div>
+    <div id="src-3"><b>[3]</b> Vettery acquires Hired: <a href="https://techcrunch.com/2020/11/23/vettery-acquires-hired">TechCrunch</a></div>
+    <div id="src-4"><b>[4]</b> What is a reverse job board: <a href="https://cavuno.com/blog/what-is-a-reverse-job-board">cavuno</a></div>
+    <div id="src-5"><b>[5]</b> Underdog.io reverse marketplace: <a href="https://underdog.io/blog/how-underdog-works">underdog</a></div>
+    <div id="src-6"><b>[6]</b> Детекция компрометации заданий в CAT: <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC12433998">PMC</a></div>
+    <div id="src-7"><b>[7]</b> On-the-fly item generation: <a href="https://ejournals.bc.edu/index.php/jtla/article/download/1663/1505/0">JTLA</a></div>
+    <div id="src-8"><b>[8]</b> ITC Guidelines on Security of Tests: <a href="https://www.intestcom.org/files/guideline_test_security.pdf">inTestCom</a></div>
+    <div id="src-9"><b>[9]</b> Item exposure control (обзор): <a href="https://eric.ed.gov/?id=EJ838610">ERIC</a></div>
+    <div id="src-10"><b>[10]</b> Explainable AI candidate ranking benchmark: <a href="https://modernrecruiter.ai/explainable-ai-candidate-ranking-benchmark.pdf">PDF</a></div>
+    <div id="src-11"><b>[11]</b> XAI в найме: <a href="https://www.hubert.ai/insights/a-recruiters-guide-to-explainable-ai-in-hiring">Hubert</a></div>
+    <div id="src-12"><b>[12]</b> Нишевые площадки найма ИТ в РФ (2025): <a href="https://naimee.ai/hrzavtra/top-15-niche-platforms-it-hiring-russia-2025">naimee</a></div>
+    <div id="src-13"><b>[13]</b> РБК: ИТ-рынок и HR-прогноз 2026: <a href="https://trends.rbc.ru/trends/social/cmrm/698da33a9a79474de4341261">РБК Тренды</a></div>
+    <div id="src-14"><b>[14]</b> hh.ru: прогноз рынка труда 2026: <a href="https://hh.ru/article/prognoz-chto-budet-proiskhodit-na-rynke-truda-v-2026-godu">hh.ru</a></div>
+    <div id="src-15"><b>[15]</b> Keycloak + Next.js + FastAPI: <a href="https://medium.com/@abdurcodex/securing-a-next-js-fastapi-app-with-keycloak-a-stateless-multi-tenant-blueprint-f8e47fdc2278">Medium</a></div>
+    <div id="src-16"><b>[16]</b> 152-ФЗ: отдельное согласие с 01.09.2025: <a href="https://www.garant.ru/article/1862510">Гарант</a></div>
+    <div id="src-17"><b>[17]</b> Реестр отечественного ПО: <a href="https://habr.com/ru/articles/908068">Habr</a></div>
+    <div id="src-18"><b>[18]</b> Как выиграть хакатон — заметки жюри: <a href="https://blog.jetbrains.com/ai/2026/06/how-to-win-a-hackathon-notes-from-the-judging-table">JetBrains</a></div>
+    <div id="src-19"><b>[19]</b> Hackathon winning patterns (demo-first): <a href="https://github.com/bernieweb3/hackathon-ai-devkit/blob/main/skills/hackathon-shared-resources/knowledge/hackathon-winning-patterns.md">GitHub</a></div>
+    <div id="src-20"><b>[20]</b> Two-sided marketplace cold start: <a href="https://jobtechalliance.com/two-sided-marketplace-cold-start-problem">Jobtech Alliance</a></div>
+    <div id="src-21"><b>[21]</b> Recruitment MVP: marketplace challenges: <a href="https://mvphub.tech/blog/recruitment-mvp-development-two-sided-marketplace-challenges">mvphub</a></div>
+    <div id="src-22"><b>[22]</b> Извлечение навыков из вакансий РФ (NER vs LLM): <a href="https://arxiv.org/html/2407.19816v1">arXiv</a></div>
+    <div id="src-23"><b>[23]</b> ruMTEB / ru-en-RoSBERTa: <a href="https://arxiv.org/html/2408.12503v2">arXiv</a></div>
+    <div id="src-24"><b>[24]</b> GigaChat API: <a href="https://developers.sber.ru/docs/ru/gigachat/api/reference/rest/post-chat">Сбер</a></div>
+    <div id="src-25"><b>[25]</b> Прокторинг: гид по выбору: <a href="https://www.startexam.ru/journal/proktoring-polnyy-gid-po-vyboru-sistemy-dlya-onlayn-ekzamenov-v-2025-godu">StartExam</a></div>
+    <div id="src-26"><b>[26]</b> Плагиат в контестах по программированию: <a href="https://habr.com/ru/companies/hsespb/articles/655437">Habr</a></div>
+    <div id="src-27"><b>[27]</b> Призрачные вакансии: <a href="https://friend.work/blog/prizrachnye_vakansii">friend.work</a></div>
+    <div id="src-28"><b>[28]</b> Грейды junior/middle/senior: <a href="https://habr.com/ru/companies/habr_career/articles/846530">Habr Карьера</a></div>
+    <div id="src-29"><b>[29]</b> Федерация спортивного программирования России: <a href="https://fsp-russia.ru">fsp-russia.ru</a></div>
+    <div id="src-30"><b>[30]</b> OAuth blueprint Keycloak + FastAPI: <a href="https://gist.github.com/mkamrani/3c67ee533d7ae0a42e7b18b3e95c24ff">Gist</a></div>
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  IT-Talent Match · сопроводительные документы: <code>docs/00-research.md</code>,
+  <code>docs/01-architecture.md</code>, <code>docs/02-tech-stack.md</code>, <code>docs/03-mvp-plan.md</code>.
+  Страница автономна и работает оффлайн.
+</div></footer>
+
+</body>
+</html>
