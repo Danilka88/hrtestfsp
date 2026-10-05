@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
@@ -11,13 +12,26 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.core.logging import setup_logging
-from app.db.session import dispose_engine
+from app.db.session import dispose_engine, get_session_factory
+from app.services.reference import ensure_reference_data
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
     setup_logging(settings.debug)
+
+    # Идемпотентное заполнение справочников: демо-стенд сразу рабочий.
+    # Ошибка не должна валить сервис — например, если миграции ещё не применены.
+    try:
+        factory = get_session_factory()
+        async with factory() as session:
+            await ensure_reference_data(session)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("справочные данные не инициализированы: %s", exc)
+
     yield
     await dispose_engine()
 

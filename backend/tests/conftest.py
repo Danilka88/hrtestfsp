@@ -17,12 +17,18 @@ import app.models  # noqa: F401  — регистрирует модели в Ba
 from app.db.base import Base
 from app.db.session import get_session
 from app.main import app
+from app.services.reference import ensure_reference_data
 
 TEST_DATABASE_URL = "sqlite+aiosqlite://"
+
+# Фабрика сессий текущего теста — нужна тестам, которым требуется доступ к БД
+# напрямую (например, чтобы узнать правильные ответы банка заданий).
+_current_factory = None
 
 
 @pytest_asyncio.fixture
 async def client() -> AsyncIterator[AsyncClient]:
+    global _current_factory
     engine = create_async_engine(
         TEST_DATABASE_URL,
         connect_args={"check_same_thread": False},
@@ -32,6 +38,11 @@ async def client() -> AsyncIterator[AsyncClient]:
         await conn.run_sync(Base.metadata.create_all)
 
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    _current_factory = session_factory
+
+    # Справочники и банк заданий нужны для тестов тестирования
+    async with session_factory() as seed_session:
+        await ensure_reference_data(seed_session)
 
     async def override_get_session() -> AsyncIterator:
         async with session_factory() as session:
@@ -44,6 +55,12 @@ async def client() -> AsyncIterator[AsyncClient]:
 
     app.dependency_overrides.clear()
     await engine.dispose()
+
+
+@pytest_asyncio.fixture
+async def db_factory(client: AsyncClient):
+    """Фабрика сессий БД (зависит от `client` — движок уже создан и наполнен)."""
+    return _current_factory
 
 
 async def register_and_verify(client: AsyncClient, email: str, password: str = "secret12345",
