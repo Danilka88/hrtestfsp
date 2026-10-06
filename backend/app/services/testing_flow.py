@@ -355,9 +355,9 @@ async def _finalize(
 
     profile = await _ensure_profile(session, test_session.user_id)
     grade_outcome = await _apply_grade_rule(session, profile, test_session, result_grade)
-    specialization = await session.get(Specialization, test_session.specialization_id)
-    if specialization is not None:
-        profile.specialization = specialization.code
+    code = await reference.specialization_code(session, test_session.specialization_id)
+    if code is not None:
+        profile.specialization = code
     test_session.grade_applied = bool(grade_outcome["applied"])
 
     await session.commit()
@@ -372,7 +372,7 @@ async def _finalize(
         "converged": estimate.converged,
         "result_grade": result_grade,
         "category_id": category.id,
-        "specialization": specialization.code if specialization else None,
+        "specialization": code,
         "current_grade": profile.grade,
         "grade_change_applied": grade_outcome["applied"],
         "grade_change_reason": grade_outcome["reason"],

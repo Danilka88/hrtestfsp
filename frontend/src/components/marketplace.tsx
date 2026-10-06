@@ -268,13 +268,16 @@ function EmployerVacancies() {
     setAiBusy(true);
     setAiResult(null);
     try {
-      const result = await apiClient.aiTaskDraft({ need_title: brief || "вакансия", stack: [] });
+      // Описание вакансии собирает черновик потребности: у него свои поля
+      // (title/description/stack), а не текст короткого задания.
+      const result = await apiClient.aiNeedDraft(brief || "вакансия");
       setAiResult(result);
       const payload = aiToastPayload(result, "Черновик описания готов");
       toast.push(payload.kind, payload.text, payload.detail);
-      const statement = String((result.data as { statement?: string }).statement ?? "");
-      if (statement && !description) setDescription(statement);
-      if (brief && !title) setTitle(brief.slice(0, 80));
+      const data = result.data as { title?: string; description?: string; stack?: string[] };
+      if (data.description && !description) setDescription(data.description);
+      if (data.stack?.length && !stack) setStack(data.stack.join(", "));
+      if (data.title && !title) setTitle(data.title.slice(0, 80));
     } catch (err) {
       toast.error("Не удалось собрать черновик", errorMessage(err));
     } finally {
@@ -488,7 +491,7 @@ function EmployerVacancies() {
               </div>
               <div className="flex flex-col items-end gap-2">
                 <StatusBadge status={application.status} />
-                {application.status === "submitted" || application.status === "viewed" ? (
+                {application.status === "sent" || application.status === "viewed" ? (
                   <div className="flex gap-2">
                     <Button onClick={() => void decide(application.id, openVacancy ?? "", "accepted")}>
                       Принять

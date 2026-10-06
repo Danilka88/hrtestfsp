@@ -127,10 +127,6 @@ def _cosine(left: list[float], right: list[float]) -> float:
 class AIEngine:
     """Выполняет ИИ-задачи поверх LLM-провайдера с откатом на демо-данные."""
 
-    def __init__(self) -> None:
-        # Провайдер берётся из реестра: там учтены режимы auto/ollama/mock.
-        pass
-
     async def status(self) -> dict[str, Any]:
         return await get_llm().status()
 
@@ -665,8 +661,6 @@ class AIEngine:
 
 def _compact(data: dict[str, Any], limit: int = 2400) -> str:
     """Сжатое представление метрик для промпта: без форматирующих пробелов."""
-    import json
-
     return json.dumps(data, ensure_ascii=False, default=str, separators=(",", ":"))[:limit]
 
 

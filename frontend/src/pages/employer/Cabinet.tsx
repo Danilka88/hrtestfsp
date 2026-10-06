@@ -858,9 +858,6 @@ function SearchTab() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-  }, []);
-
   const search = useCallback(async () => {
     setBusy(true);
     setError(null);
@@ -900,21 +897,13 @@ function SearchTab() {
             options={specializations.map((item) => ({ value: item.code, label: item.title }))}
             placeholder="Любая"
           />
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-400">Грейд</span>
-            <select
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100"
-              value={grade}
-              onChange={(event) => setGrade(event.target.value)}
-            >
-              <option value="">Любой</option>
-              {grades.map((item) => (
-                <option key={item.code} value={item.code}>
-                  {item.title}
-                </option>
-              ))}
-            </select>
-          </label>
+          <SelectField
+            label="Грейд"
+            value={grade}
+            onChange={setGrade}
+            options={grades.map((item) => ({ value: item.code, label: item.title }))}
+            placeholder="Любой"
+          />
           <Field label="Стек (через запятую)" value={stack} onChange={setStack} />
           <label className="flex items-center gap-2 self-end text-sm text-slate-300">
             <input

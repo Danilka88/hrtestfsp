@@ -10,6 +10,7 @@ from app.db.session import get_session
 from app.models.user import User, UserRole
 from app.schemas.marketplace import SubmissionIn, SubmissionOut, TaskIn, TaskOut
 from app.services import marketplace as market
+from app.services import reference
 
 router_employer = APIRouter(prefix="/employers/me/tasks", tags=["tasks:employer"])
 router_candidate = APIRouter(prefix="/candidates/me/tasks", tags=["tasks:candidate"])
@@ -52,7 +53,7 @@ async def task_submissions(
         SubmissionOut(
             id=submission.id,
             task_id=submission.task_id,
-            candidate_reference=f"cand-{submission.candidate_user_id[:8]}",
+            candidate_reference=reference.candidate_reference(submission.candidate_user_id),
             candidate_name=profile.full_name if profile else None,
             candidate_specialization=profile.specialization if profile else None,
             candidate_grade=profile.grade if profile else None,
@@ -88,7 +89,7 @@ async def submit(
     return SubmissionOut(
         id=submission.id,
         task_id=submission.task_id,
-        candidate_reference=f"cand-{submission.candidate_user_id[:8]}",
+        candidate_reference=reference.candidate_reference(submission.candidate_user_id),
         solution=submission.solution,
         status=submission.status,
         created_at=submission.created_at,

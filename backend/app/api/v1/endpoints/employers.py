@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import NoReturn
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,10 +24,6 @@ from app.services.employers import EmployerError
 router = APIRouter(prefix="/employers/me", tags=["employers"])
 
 employer_only = require_roles(UserRole.EMPLOYER)
-
-
-def _raise(exc: EmployerError) -> NoReturn:
-    raise HTTPException(status_code=exc.status_code, detail=exc.detail)
 
 
 @router.get("/profile", response_model=EmployerProfileOut, summary="Профиль компании")
@@ -63,11 +57,8 @@ async def create_need(
     user: User = Depends(employer_only),
     session: AsyncSession = Depends(get_session),
 ) -> SelectionOut:
-    try:
-        need = await employer_service.create_need(session, user.id, payload)
-        selection, _ = await employer_service.build_selection(session, user.id, need)
-    except EmployerError as exc:
-        _raise(exc)
+    need = await employer_service.create_need(session, user.id, payload)
+    selection, _ = await employer_service.build_selection(session, user.id, need)
     return await _selection_response(session, user.id, selection.id)
 
 
@@ -110,24 +101,19 @@ async def refine_selection(
     stack: list[str] | None = Query(default=None, description="Уточнённый стек"),
     grade: str | None = Query(default=None, description="Уточнённый грейд"),
 ) -> SelectionOut:
-    try:
-        previous, _ = await employer_service.get_selection(session, user.id, selection_id)
-        need = (
-            await session.get(employer_service.EmployerNeed, previous.need_id) if previous.need_id else None
-        )
-        if need is None:
-            raise EmployerError(409, "У прежней подборки нет сохранённой потребности")
-        selection, _ = await employer_service.build_selection(
-            session,
-            user.id,
-            need,
-            parent_selection_id=previous.id,
-            stack_override=stack if stack is not None else None,
-            grade_override=grade,
-            title=f"{previous.title} (уточнение)",
-        )
-    except EmployerError as exc:
-        _raise(exc)
+    previous, _ = await employer_service.get_selection(session, user.id, selection_id)
+    need = await session.get(employer_service.EmployerNeed, previous.need_id) if previous.need_id else None
+    if need is None:
+        raise EmployerError(409, "У прежней подборки нет сохранённой потребности")
+    selection, _ = await employer_service.build_selection(
+        session,
+        user.id,
+        need,
+        parent_selection_id=previous.id,
+        stack_override=stack if stack is not None else None,
+        grade_override=grade,
+        title=f"{previous.title} (уточнение)",
+    )
     return await _selection_response(session, user.id, selection.id)
 
 

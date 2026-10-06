@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import DomainError
 from app.models.candidate import DEFAULT_PRIVACY, CandidateProfile
 from app.models.employer import EmployerNeed, EmployerProfile, Selection, SelectionCandidate
-from app.models.testing import SESSION_COMPLETED, Category, Specialization, TestSession
+from app.models.testing import SESSION_COMPLETED, Category, TestSession
 from app.models.user import User, UserRole
 from app.providers.registry import get_fsp
 from app.schemas.employer import EmployerProfileIn, NeedIn, SearchQuery
@@ -133,9 +133,9 @@ async def _candidate_rows(
         category = await session.get(Category, category_id)
         if category is None:
             return []
-        specialization = await session.get(Specialization, category.specialization_id)
+        code = await reference.specialization_code(session, category.specialization_id)
         query = query.where(
-            CandidateProfile.specialization == (specialization.code if specialization else None),
+            CandidateProfile.specialization == code,
             CandidateProfile.grade == category.grade_code,
         )
 
@@ -287,7 +287,7 @@ def _card(scored: Any, profile: CandidateProfile, user: User, *, rank: int) -> d
     privacy = {**DEFAULT_PRIVACY, **(profile.privacy or {})}
     visible = _mask(profile, privacy)
     return {
-        "reference": f"cand-{user.id[:8]}",
+        "reference": reference.candidate_reference(user.id),
         "full_name": profile.full_name,
         "specialization": profile.specialization,
         "grade": profile.grade,
@@ -363,8 +363,7 @@ async def build_selection(
     """Формирует подборку по потребности и сохраняет её вместе с объяснениями."""
     specialization_code = None
     if need.specialization_id:
-        specialization = await session.get(Specialization, need.specialization_id)
-        specialization_code = specialization.code if specialization else None
+        specialization_code = await reference.specialization_code(session, need.specialization_id)
 
     grade = grade_override or need.grade_code
     required_stack = list(stack_override if stack_override is not None else (need.stack or []))
@@ -505,7 +504,7 @@ def selection_candidate_card(
     privacy = {**DEFAULT_PRIVACY, **(profile.privacy or {})}
     visible = _mask(profile, privacy)
     return {
-        "reference": f"cand-{user.id[:8]}",
+        "reference": reference.candidate_reference(user.id),
         "full_name": profile.full_name,
         "specialization": profile.specialization,
         "grade": profile.grade,

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import NoReturn
-
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,19 +17,13 @@ from app.schemas.candidate import (
 )
 from app.services import candidates as candidate_service
 from app.services import fsp_link
-from app.services.candidates import ProfileError
 from app.services.profile_pdf import build_profile_pdf
-from app.services.resume import ResumeError
 
 router = APIRouter(prefix="/candidates/me", tags=["candidates"])
 
 MAX_RESUME_BYTES = 5 * 1024 * 1024
 
 candidate_only = require_roles(UserRole.CANDIDATE)
-
-
-def _raise(exc: ProfileError | ResumeError) -> NoReturn:
-    raise HTTPException(status_code=getattr(exc, "status_code", 400), detail=exc.detail)
 
 
 @router.get("/profile", response_model=CandidateProfileOut, summary="Профиль кандидата")
@@ -74,12 +66,9 @@ async def upload_resume(
     if len(data) > MAX_RESUME_BYTES:
         raise HTTPException(status_code=413, detail="Файл больше 5 МБ")
 
-    try:
-        profile, parsed, chars = await candidate_service.apply_resume_upload(
-            session, user.id, filename=file.filename or "resume.pdf", data=data
-        )
-    except ResumeError as exc:
-        _raise(exc)
+    profile, parsed, chars = await candidate_service.apply_resume_upload(
+        session, user.id, filename=file.filename or "resume.pdf", data=data
+    )
 
     return ResumeUploadResponse(
         profile=CandidateProfileOut.model_validate(profile),

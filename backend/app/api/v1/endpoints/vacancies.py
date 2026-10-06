@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import require_roles
 from app.db.session import get_session
+from app.models.marketplace import APPLICATION_ACCEPTED, APPLICATION_DECLINED
 from app.models.user import User, UserRole
 from app.schemas.marketplace import (
     ApplicationCandidateOut,
@@ -17,6 +18,7 @@ from app.schemas.marketplace import (
     VacancyOut,
 )
 from app.services import marketplace as market
+from app.services.marketplace import MarketplaceError
 
 router_employer = APIRouter(prefix="/employers/me/vacancies", tags=["vacancies:employer"])
 router_candidate = APIRouter(prefix="/candidates/me", tags=["vacancies:candidate"])
@@ -90,8 +92,8 @@ async def decide_application(
     user: User = Depends(employer_only),
     session: AsyncSession = Depends(get_session),
 ) -> ApplicationEmployerOut:
-    if payload.status not in {"accepted", "declined"}:
-        raise HTTPException(status_code=400, detail="Допустимые значения: accepted или declined")
+    if payload.status not in {APPLICATION_ACCEPTED, APPLICATION_DECLINED}:
+        raise MarketplaceError(400, "Допустимые значения: accepted или declined")
     application = await market.decide_application(
         session, user.id, application_id, accept=payload.status == "accepted"
     )

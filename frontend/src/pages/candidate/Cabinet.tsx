@@ -124,8 +124,9 @@ function OverviewTab() {
   if (error) return <Alert kind="error">{error}</Alert>;
   if (!profile || !category) return <p className="text-sm text-slate-500">Загрузка…</p>;
 
-  // Заполненность профиля: сколько обязательных для подбора полей заполнено
-  const filled = [
+  // Заполненность профиля: знаменатель — длина списка, а не литерал,
+  // иначе правка списка полей молча исказит метрику
+  const profileFields = [
     Boolean(profile.full_name),
     Boolean(profile.specialization),
     Boolean(profile.grade),
@@ -134,8 +135,9 @@ function OverviewTab() {
     profile.soft_skills.length > 0,
     profile.experience_years !== null,
     Boolean(profile.summary),
-  ].filter(Boolean).length;
-  const completeness = Math.round((filled / 8) * 100);
+  ];
+  const filled = profileFields.filter(Boolean).length;
+  const completeness = Math.round((filled / profileFields.length) * 100);
 
   const completed = category.sessions.filter((session) => session.status === "completed");
   const theta = completed.length ? completed[completed.length - 1].theta : null;
@@ -159,7 +161,11 @@ function OverviewTab() {
           <Kpi
             label="Профиль заполнен"
             value={`${completeness}%`}
-            hint={completeness === 100 ? "все поля заполнены" : `заполнено ${filled} из 8 полей`}
+            hint={
+              completeness === 100
+                ? "все поля заполнены"
+                : `заполнено ${filled} из ${profileFields.length} полей`
+            }
             tone={completeness === 100 ? "ok" : "warn"}
           />
           <Kpi

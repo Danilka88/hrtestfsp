@@ -26,25 +26,23 @@ from app.models.invitation import (
 )
 from app.models.user import User, UserRole
 from app.schemas.invitation import InvitationCreate
-from app.services.reference import SPECIALIZATIONS  # noqa: F401  (единый справочник)
+from app.services.reference import (
+    CANDIDATE_REFERENCE_PREFIX,
+    SPECIALIZATIONS,  # noqa: F401  (единый справочник)
+    candidate_reference,
+)
 
 logger = logging.getLogger(__name__)
-
-REFERENCE_PREFIX = "cand-"
 
 
 class InvitationError(DomainError):
     """Ошибка приглашения: статус, доступ, повторная отправка."""
 
 
-def reference_for(user_id: str) -> str:
-    return f"{REFERENCE_PREFIX}{user_id[:8]}"
-
-
 async def resolve_candidate_reference(session: AsyncSession, reference: str) -> User:
     """Находит кандидата по ссылке из подборки/поиска (например cand-8049f321)."""
     raw = (reference or "").strip()
-    prefix = raw[len(REFERENCE_PREFIX) :] if raw.startswith(REFERENCE_PREFIX) else raw
+    prefix = raw[len(CANDIDATE_REFERENCE_PREFIX) :] if raw.startswith(CANDIDATE_REFERENCE_PREFIX) else raw
     if len(prefix) < 6:
         raise InvitationError(400, "Некорректная ссылка кандидата")
 
@@ -123,7 +121,7 @@ async def employer_view(session: AsyncSession, invitation: Invitation) -> dict[s
 
     return {
         "id": invitation.id,
-        "candidate_reference": reference_for(invitation.candidate_user_id),
+        "candidate_reference": candidate_reference(invitation.candidate_user_id),
         "candidate_name": profile.full_name if profile is not None else None,
         "candidate_specialization": profile.specialization if profile is not None else None,
         "candidate_grade": profile.grade if profile is not None else None,

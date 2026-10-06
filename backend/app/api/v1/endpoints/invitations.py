@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import require_roles
 from app.db.session import get_session
+from app.models.invitation import STATUS_ACCEPTED, STATUS_DECLINED
 from app.models.user import User, UserRole
 from app.schemas.invitation import (
     InvitationCandidateView,
@@ -15,6 +16,7 @@ from app.schemas.invitation import (
     InvitationEmployerView,
 )
 from app.services import invitations as invitation_service
+from app.services.invitations import InvitationError
 
 router_employer = APIRouter(prefix="/employers/me/invitations", tags=["invitations:employer"])
 router_candidate = APIRouter(prefix="/candidates/me/invitations", tags=["invitations:candidate"])
@@ -99,9 +101,7 @@ async def decide_invitation(
     user: User = Depends(candidate_only),
     session: AsyncSession = Depends(get_session),
 ) -> InvitationCandidateView:
-    if payload.status not in {"accepted", "declined"}:
-        from app.services.invitations import InvitationError
-
+    if payload.status not in {STATUS_ACCEPTED, STATUS_DECLINED}:
         raise InvitationError(400, "Допустимые значения: accepted или declined")
     invitation = await invitation_service.decide(
         session, user.id, invitation_id, accept=payload.status == "accepted"

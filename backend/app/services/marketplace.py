@@ -232,7 +232,7 @@ async def application_employer_view(session: AsyncSession, application: Applicat
     return {
         "id": application.id,
         "vacancy_id": application.vacancy_id,
-        "candidate_reference": f"cand-{application.candidate_user_id[:8]}",
+        "candidate_reference": reference.candidate_reference(application.candidate_user_id),
         "candidate_name": profile.full_name if profile else None,
         "candidate_specialization": profile.specialization if profile else None,
         "candidate_grade": profile.grade if profile else None,

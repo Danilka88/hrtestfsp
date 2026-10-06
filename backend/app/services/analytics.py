@@ -30,7 +30,7 @@ from app.models.invitation import (
     STATUS_VIEWED,
     Invitation,
 )
-from app.models.marketplace import Application, RegularTask, Vacancy
+from app.models.marketplace import VACANCY_PUBLISHED, Application, RegularTask, Vacancy
 from app.models.testing import SESSION_COMPLETED, Specialization, TestSession
 from app.models.user import User, UserRole
 
@@ -135,7 +135,7 @@ async def overview(session: AsyncSession) -> dict[str, Any]:
     )
     with_fsp = await _count(session, User, User.role == UserRole.CANDIDATE, User.fsp_id.isnot(None))
 
-    vacancies_open = await _count(session, Vacancy, Vacancy.status == "published")
+    vacancies_open = await _count(session, Vacancy, Vacancy.status == VACANCY_PUBLISHED)
     applications_total = await _count(session, Application)
     tasks_total = await _count(session, RegularTask)
 

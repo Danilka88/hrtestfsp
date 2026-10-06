@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-from typing import NoReturn
-
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,15 +24,10 @@ from app.schemas.testing import (
     SurveyResponseOut,
 )
 from app.services import testing_flow
-from app.services.testing_flow import TestingError
 
 router = APIRouter(prefix="/testing", tags=["testing"])
 
 candidate_only = require_roles(UserRole.CANDIDATE)
-
-
-def _raise(exc: TestingError) -> NoReturn:
-    raise HTTPException(status_code=exc.status_code, detail=exc.detail)
 
 
 @router.get("/specializations", response_model=list[SpecializationOut], summary="Справочник специализаций")
@@ -57,16 +50,13 @@ async def submit_survey(
     user: User = Depends(candidate_only),
     session: AsyncSession = Depends(get_session),
 ) -> SurveyResponseOut:
-    try:
-        record, options = await testing_flow.save_survey(
-            session,
-            user.id,
-            industry=payload.industry,
-            specialization_code=payload.specialization_code,
-            answers=payload.answers,
-        )
-    except TestingError as exc:
-        _raise(exc)
+    record, options = await testing_flow.save_survey(
+        session,
+        user.id,
+        industry=payload.industry,
+        specialization_code=payload.specialization_code,
+        answers=payload.answers,
+    )
     return SurveyResponseOut(
         id=record.id,
         industry=record.industry,
@@ -82,15 +72,12 @@ async def start_session(
     user: User = Depends(candidate_only),
     session: AsyncSession = Depends(get_session),
 ) -> StartSessionResponse:
-    try:
-        test_session, item = await testing_flow.start_session(
-            session,
-            user.id,
-            specialization_code=payload.specialization_code,
-            target_grade=payload.target_grade,
-        )
-    except TestingError as exc:
-        _raise(exc)
+    test_session, item = await testing_flow.start_session(
+        session,
+        user.id,
+        specialization_code=payload.specialization_code,
+        target_grade=payload.target_grade,
+    )
     return StartSessionResponse(
         session_id=test_session.id,
         target_grade=test_session.target_grade,
@@ -110,17 +97,14 @@ async def answer(
     user: User = Depends(candidate_only),
     session: AsyncSession = Depends(get_session),
 ) -> AnswerResponse:
-    try:
-        outcome = await testing_flow.submit_answer(
-            session,
-            user.id,
-            session_id=session_id,
-            item_id=payload.item_id,
-            answer_index=payload.answer_index,
-            response_time_ms=payload.response_time_ms,
-        )
-    except TestingError as exc:
-        _raise(exc)
+    outcome = await testing_flow.submit_answer(
+        session,
+        user.id,
+        session_id=session_id,
+        item_id=payload.item_id,
+        answer_index=payload.answer_index,
+        response_time_ms=payload.response_time_ms,
+    )
 
     return AnswerResponse(
         correct=outcome.correct,

@@ -22,7 +22,7 @@ from app.core.security import utcnow
 from app.models.candidate import CandidateProfile
 from app.models.employer import EmployerNeed, EmployerProfile
 from app.models.invitation import STATUS_ACCEPTED, STATUS_SENT, STATUS_VIEWED, Invitation
-from app.models.marketplace import Application, Vacancy
+from app.models.marketplace import VACANCY_PUBLISHED, Application, Vacancy
 from app.models.user import User, UserRole
 from app.services import reference
 from app.services.testing import GRADE_ORDER
@@ -90,7 +90,9 @@ async def vacancy_hints(session: AsyncSession, candidate_user_id: str, limit: in
     )
     applied_ids = {item.vacancy_id for item in applications}
 
-    vacancies = (await session.execute(select(Vacancy).where(Vacancy.status == "published"))).scalars().all()
+    vacancies = (
+        (await session.execute(select(Vacancy).where(Vacancy.status == VACANCY_PUBLISHED))).scalars().all()
+    )
     vacancies = [item for item in vacancies if item.id not in applied_ids]
     if not vacancies:
         return {
@@ -231,7 +233,6 @@ async def candidate_hints(session: AsyncSession, employer_id: str, limit: int = 
     )
     invited_ids = {item.candidate_user_id for item in invitations}
     active_ids = {item.candidate_user_id for item in invitations if item.status in ACTIVE_INVITATION_STATUSES}
-    historically_invited = {item.candidate_user_id for item in invitations}
 
     if not needs and not invitations:
         return {
@@ -270,8 +271,8 @@ async def candidate_hints(session: AsyncSession, employer_id: str, limit: int = 
     # Опорный текст: профили тех, кого компания уже приглашала (её собственный вкус).
     anchor_kind = "needs"
     anchor_text = " ".join(filter(None, [" ".join(wanted_stacks), " ".join(str(w) for w in wanted if w[0])]))
-    if historically_invited:
-        anchor_profiles = [item for item in profiles if item.user_id in historically_invited]
+    if invited_ids:
+        anchor_profiles = [item for item in profiles if item.user_id in invited_ids]
         if anchor_profiles:
             anchor_kind = "invitations"
             anchor_text = " ".join(
@@ -330,7 +331,7 @@ async def candidate_hints(session: AsyncSession, employer_id: str, limit: int = 
 
         scored.append(
             {
-                "reference": f"cand-{candidate.user_id[:8]}",
+                "reference": reference.candidate_reference(candidate.user_id),
                 "full_name": candidate.full_name,
                 "specialization": candidate.specialization,
                 "grade": candidate.grade,

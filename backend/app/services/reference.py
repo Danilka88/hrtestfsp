@@ -17,6 +17,17 @@ from app.services.testing import GRADE_ORDER
 
 logger = logging.getLogger(__name__)
 
+# Короткая ссылка на кандидата. Формат используется в подборках, откликах,
+# заданиях и приглашениях, поэтому живёт в одном месте: сторона, которая
+# строит ссылку, и сторона, которая её разбирает, обязаны совпадать.
+CANDIDATE_REFERENCE_PREFIX = "cand-"
+
+
+def candidate_reference(user_id: str) -> str:
+    """Ссылка на кандидата вида cand-8049f321."""
+    return f"{CANDIDATE_REFERENCE_PREFIX}{user_id[:8]}"
+
+
 SPECIALIZATIONS: list[tuple[str, str]] = [
     ("backend", "Backend-разработчик"),
     ("frontend", "Frontend-разработчик"),

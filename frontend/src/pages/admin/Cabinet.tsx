@@ -25,6 +25,14 @@ import { useToast } from "../../components/toast";
 
 type Tab = "overview" | "graph" | "categories" | "companies" | "signals" | "ai";
 
+/** Цвет состояния рынка по категории: таблица вместо цепочки тернарников. */
+const BALANCE_CLASS: Record<string, string> = {
+  дефицит: "text-amber-300",
+  переизбыток: "text-sky-300",
+  "нет спроса": "text-slate-500",
+  сбалансировано: "text-emerald-300",
+};
+
 const TABS: [Tab, string][] = [
   ["overview", "Обзор"],
   ["graph", "Схема взаимодействия"],
@@ -483,15 +491,7 @@ function CategoriesTab() {
                 <td className="py-2 pr-3">{row.invitations}</td>
                 <td className="py-2 pr-3">
                   <span
-                    className={
-                      row.balance === "дефицит"
-                        ? "text-amber-300"
-                        : row.balance === "переизбыток"
-                          ? "text-sky-300"
-                          : row.balance === "нет спроса"
-                            ? "text-slate-500"
-                            : "text-emerald-300"
-                    }
+                    className={BALANCE_CLASS[row.balance] ?? "text-emerald-300"}
                   >
                     {row.balance}
                   </span>
