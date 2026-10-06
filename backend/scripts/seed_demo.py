@@ -148,6 +148,7 @@ async def _seed_interactions(session: AsyncSession, specializations: dict[str, i
     from app.schemas.invitation import InvitationCreate
     from app.services import employers as employer_service
     from app.services import invitations as invitation_service
+    from app.services import reference
 
     plans = [
         {
@@ -231,7 +232,7 @@ async def _seed_interactions(session: AsyncSession, specializations: dict[str, i
                 session,
                 employer.id,
                 InvitationCreate(
-                    candidate_reference=invitation_service.reference_for(user.id),
+                    candidate_reference=reference.candidate_reference(user.id),
                     message="Демонстрационное приглашение: расскажем о команде и задачах.",
                     salary_from=plan["salary"][0],
                     salary_to=plan["salary"][1],
