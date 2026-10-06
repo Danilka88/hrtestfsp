@@ -140,6 +140,57 @@ async def test_engine_falls_back_when_answer_is_unparseable(monkeypatch) -> None
     assert result.data == {"draft": "демо"}
 
 
+class _FlakyProvider:
+    """Модель, у которой первый ответ обрывается, а повторный приходит целиком."""
+
+    last_degraded = False
+    last_source = "ollama:gemma4:26b"
+
+    def __init__(self, *answers: str) -> None:
+        self.answers = list(answers)
+        self.calls = 0
+        self.budgets: list[int] = []
+
+    async def complete(self, prompt, **kwargs):
+        self.calls += 1
+        self.budgets.append(int(kwargs.get("max_tokens", 0)))
+        return self.answers.pop(0) if self.answers else ""
+
+
+async def test_engine_retries_with_bigger_budget_before_demo(monkeypatch, caplog) -> None:
+    """Обрыв ответа по лимиту вывода не равен недоступности: сначала повтор."""
+    provider = _FlakyProvider('{"actions": [{"title": "обрезано', '{"actions": [{"title": "готово"}]}')
+    monkeypatch.setattr(ai_service, "get_llm", lambda: provider)
+
+    with caplog.at_level(logging.WARNING, logger="app.services.ai"):
+        result = await ai_service.get_ai()._json(
+            "запрос",
+            system="система",
+            schema={"type": "object"},
+            demo=lambda: {"actions": []},
+            max_tokens=100,
+        )
+
+    assert provider.calls == 2, "повтор обязателен: иначе демо-данные подменяют рабочий ответ"
+    assert provider.budgets == [100, 200], "повтор идёт с удвоенным лимитом вывода"
+    assert result.degraded is False
+    assert result.data == {"actions": [{"title": "готово"}]}
+    assert "повтор" in caplog.text
+
+
+async def test_engine_does_not_retry_broken_provider(monkeypatch) -> None:
+    """Упавшая модель не опрашивается дважды: отказ уже очевиден."""
+    provider = _BrokenProvider()
+    monkeypatch.setattr(ai_service, "get_llm", lambda: provider)
+
+    result = await ai_service.get_ai()._json(
+        "запрос", system="система", schema={"type": "object"}, demo=lambda: {"draft": "демо"}
+    )
+
+    assert result.degraded is True
+    assert result.data == {"draft": "демо"}
+
+
 # --- состояние ИИ в интерфейсе -----------------------------------------------
 
 

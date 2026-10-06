@@ -124,12 +124,19 @@ function OverviewTab() {
         <>
           <Kpi
             label="Потребности и подборки"
+            tip="Описанные потребности и построенные по ним подборки. Уточнение создаёт новую версию и не затирает прежнюю — историю видно целиком."
             value={selections.length}
             hint={`кандидатов в подборках: ${candidatesInSelections}`}
           />
-          <Kpi label="Приглашения" value={invitations.length} hint={`ждут ответа: ${waiting}`} />
+          <Kpi
+            label="Приглашения"
+            tip="Приглашения кандидатам. «Ждут ответа» — отправленные и просмотренные без решения; такое приглашение можно отозвать, пока кандидат не решил."
+            value={invitations.length}
+            hint={`ждут ответа: ${waiting}`}
+          />
           <Kpi
             label="Доля ответов"
+            tip="Сколько приглашений закончились решением кандидата («ответили N из M»). Показывает, доходят ли ваши предложения до людей или остаются без ответа."
             value={responseRate === null ? "нет данных" : `${responseRate}%`}
             hint={
               responseRate === null
@@ -138,7 +145,12 @@ function OverviewTab() {
             }
             tone={responseRate !== null && responseRate >= 50 ? "ok" : "default"}
           />
-          <Kpi label="Открытые вакансии" value={openVacancies} hint={`всего вакансий: ${vacancies.length}`} />
+          <Kpi
+            label="Открытые вакансии"
+            tip="Опубликованные вакансии: кандидат откликается сам, и его контакты раскрываются сразу — отклик означает согласие на контакт."
+            value={openVacancies}
+            hint={`всего вакансий: ${vacancies.length}`}
+          />
         </>
       }
       ai={<CandidateHints />}

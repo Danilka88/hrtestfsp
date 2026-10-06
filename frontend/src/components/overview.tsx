@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { Card, INVITATION_STATUS, SectionNote } from "./ui";
+import { Card, InfoTip, INVITATION_STATUS, SectionNote } from "./ui";
 
 /** Тон полосы для каждого статуса приглашения — в одном месте. */
 const INVITATION_TONES: Record<string, "sky" | "amber" | "emerald" | "rose" | "slate"> = {
@@ -48,17 +48,22 @@ export function Kpi({
   value,
   hint,
   tone = "default",
+  tip,
 }: {
   label: ReactNode;
   value: ReactNode;
   hint?: ReactNode;
   tone?: "default" | "ok" | "warn";
+  tip?: string;
 }) {
   const valueClass =
     tone === "ok" ? "text-emerald-300" : tone === "warn" ? "text-amber-300" : "text-slate-100";
   return (
     <Card>
-      <p className="text-xs text-slate-400">{label}</p>
+      <p className="text-xs text-slate-400">
+        {label}
+        {tip ? <InfoTip text={tip} /> : null}
+      </p>
       <p className={`mt-1 text-2xl font-semibold ${valueClass}`}>{value}</p>
       {hint ? <p className="mt-1 text-xs text-slate-500">{hint}</p> : null}
     </Card>

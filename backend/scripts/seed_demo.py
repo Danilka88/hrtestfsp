@@ -23,6 +23,7 @@ from app.core.security import hash_password, utcnow
 from app.db.session import dispose_engine, get_session_factory
 from app.models.candidate import CandidateProfile
 from app.models.employer import EmployerNeed, EmployerProfile, SelectionCandidate
+from app.models.marketplace import Vacancy
 from app.models.testing import SESSION_COMPLETED, Specialization, TestSession
 from app.models.user import User, UserRole
 from app.services.reference import ensure_reference_data
@@ -253,6 +254,87 @@ async def _seed_interactions(session: AsyncSession, specializations: dict[str, i
     return created
 
 
+async def _seed_vacancies(session: AsyncSession, specializations: dict[str, int]) -> int:
+    """Публикует вакансии компаний.
+
+    Нужны для демонстрации: у вакансий вторая механика — кандидат откликается сам,
+    и тогда контакты раскрываются сразу. По опубликованным вакансиям строятся и
+    подсказки соискателю: без них раздел выглядел бы пустым.
+    """
+    from app.services import marketplace
+
+    plans = [
+        {
+            "employer": "hr@fintech-demo.ru",
+            "title": "Python-разработчик в платёжный сервис",
+            "specialization": "backend",
+            "grade": "middle",
+            "stack": ["Python", "FastAPI", "PostgreSQL", "Docker"],
+            "salary": (220000, 300000),
+            "description": (
+                "Развиваем платёжный сервис: обработка платежей, интеграции с банками, "
+                "надёжность под нагрузкой. Ищем разработчика в команду из шести человек."
+            ),
+        },
+        {
+            "employer": "hr@digital-demo.ru",
+            "title": "Frontend-разработчик (React)",
+            "specialization": "frontend",
+            "grade": "senior",
+            "stack": ["React", "TypeScript", "Vite"],
+            "salary": (280000, 360000),
+            "description": (
+                "Продуктовая команда делает интерфейсы личного кабинета для крупного "
+                "клиента. Нужен человек, который отвечает за качество интерфейса целиком."
+            ),
+        },
+        {
+            "employer": "hr@fintech-demo.ru",
+            "title": "DevOps-инженер",
+            "specialization": "devops",
+            "grade": "middle",
+            "stack": ["Docker", "Kubernetes", "CI/CD"],
+            "salary": (240000, 320000),
+            "description": (
+                "Поддерживаем и развиваем инфраструктуру сервисов: сборки, окружения, "
+                "наблюдаемость. Работа рядом с командами разработки."
+            ),
+        },
+    ]
+
+    created = 0
+    for plan in plans:
+        if plan["specialization"] not in specializations:
+            continue
+        employer = (
+            await session.execute(select(User).where(User.email == plan["employer"]))
+        ).scalar_one_or_none()
+        if employer is None:
+            continue
+        existing = (
+            await session.execute(
+                select(Vacancy).where(Vacancy.employer_id == employer.id, Vacancy.title == plan["title"])
+            )
+        ).scalar_one_or_none()
+        if existing is not None:
+            continue
+        await marketplace.create_vacancy(
+            session,
+            employer.id,
+            {
+                "title": plan["title"],
+                "description": plan["description"],
+                "specialization_code": plan["specialization"],
+                "grade": plan["grade"],
+                "stack": plan["stack"],
+                "salary_from": plan["salary"][0],
+                "salary_to": plan["salary"][1],
+            },
+        )
+        created += 1
+    return created
+
+
 async def seed() -> dict[str, int]:
     factory = get_session_factory()
     created = {"candidates": 0, "employers": 0, "sessions": 0}
@@ -367,6 +449,9 @@ async def seed() -> dict[str, int]:
         # Демонстрационные взаимодействия: без них кабинет администратора показывал бы
         # пустые графики, а жюри не увидело бы основную механику — приглашение.
         created["invitations"] = await _seed_interactions(session, specializations)
+        # Опубликованные вакансии: вторая механика (кандидат откликается сам) и вход
+        # для подсказок вакансий — без них у соискателя нечего было бы подсказывать.
+        created["vacancies"] = await _seed_vacancies(session, specializations)
 
         await session.commit()
 

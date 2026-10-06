@@ -34,6 +34,16 @@ const BALANCE_CLASS: Record<string, string> = {
   сбалансировано: "text-emerald-300",
 };
 
+/** Как читается состояние категории: правила совпадают с расчётом на сервере. */
+const BALANCE_EXPLAINED =
+  "Состояние связки «специализация × грейд». Дефицит — потребности есть, кандидатов нет. " +
+  "Переизбыток — кандидатов втрое больше, чем потребностей. Нет спроса — кандидаты есть, " +
+  "потребностей нет. Сбалансировано — спрос и предложение есть, но перекоса нет.";
+
+const SUPPLY_PER_NEED_EXPLAINED =
+  "Сколько кандидатов приходится на одну потребность работодателя. Около 1 значит стороны " +
+  "находят друг друга без очереди; заметно меньше 1 — на запросы некому отвечать.";
+
 const TABS: [Tab, string][] = [
   ["overview", "Обзор"],
   ["graph", "Схема взаимодействия"],
@@ -90,14 +100,20 @@ function OverviewTab() {
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <p className="text-xs text-slate-400">Соискатели</p>
+          <p className="text-xs text-slate-400">
+            Соискатели{" "}
+            <InfoTip text="Все зарегистрированные соискатели. «Активны за 30 дней» — у кого была активность в профиле или заданиях: живой рынок важнее числа регистраций." />
+          </p>
           <p className="mt-1 text-2xl font-semibold">{data.people.candidates}</p>
           <p className="text-xs text-slate-500">
             активны за 30 дней: {data.people.active_candidates}
           </p>
         </Card>
         <Card>
-          <p className="text-xs text-slate-400">Компании</p>
+          <p className="text-xs text-slate-400">
+            Компании{" "}
+            <InfoTip text="Компании с аккаунтом. «Выходили на контакт» — те, кто отправил хотя бы одно приглашение: остальные зарегистрированы, но механикой не пользуются." />
+          </p>
           <p className="mt-1 text-2xl font-semibold">{data.people.employers}</p>
           <p className="text-xs text-slate-500">
             выходили на контакт: {data.people.active_employers}
@@ -113,7 +129,10 @@ function OverviewTab() {
           </p>
         </Card>
         <Card>
-          <p className="text-xs text-slate-400">С достижениями ФСП</p>
+          <p className="text-xs text-slate-400">
+            С достижениями ФСП{" "}
+            <InfoTip text="Соискатели, подтвердившие достижения через внешний реестр. Это усиление профиля, а не условие: без истории ФСП кандидат участвует в подборе так же." />
+          </p>
           <p className="mt-1 text-2xl font-semibold">{data.coverage.with_fsp}</p>
           <p className="text-xs text-slate-500">
             <Percent value={data.coverage.fsp_share} /> от соискателей
@@ -121,7 +140,14 @@ function OverviewTab() {
         </Card>
       </div>
 
-      <Card title="Путь кандидата: где отваливаются">
+      <Card
+        title={
+          <>
+            Путь кандидата: где отваливаются{" "}
+            <InfoTip text="Обязательный путь: регистрация → профиль → тест → категория → приглашение → ответ → принятие. Доля считается от числа зарегистрированных, «шаг» — сколько дошло с предыдущей ступени. Самая крупная потеря показывает, что мешает людям дойти до контакта." />
+          </>
+        }
+      >
         <SectionNote>
           Обязательный путь продукта: регистрация → профиль → тест → категория → приглашение →
           ответ. Ступень с самым большим провалом показывает, что мешает людям дойти до контакта.
@@ -179,7 +205,10 @@ function OverviewTab() {
             </p>
           </div>
           <div>
-            <p className="text-xs text-slate-400">Приглашений с решением кандидата</p>
+            <p className="text-xs text-slate-400">
+              Приглашений с решением кандидата{" "}
+              <InfoTip text="Доля приглашений, на которые кандидат ответил — принял или отклонил. Молчание чаще говорит о потере интереса, чем об отказе." />
+            </p>
             <p className="text-lg font-semibold">
               <Percent value={data.liquidity.response_rate} />{" "}
               <span className="text-xs text-slate-500">
@@ -188,7 +217,10 @@ function OverviewTab() {
             </p>
           </div>
           <div>
-            <p className="text-xs text-slate-400">Приглашения приняты</p>
+            <p className="text-xs text-slate-400">
+              Приглашения приняты{" "}
+              <InfoTip text="Доля приглашений, которые кандидат принял. Показывает, попадают ли предложения в ожидания по условиям, а не только по категории." />
+            </p>
             <p className="text-lg font-semibold">
               <Percent value={data.liquidity.accept_rate} />{" "}
               <span className="text-xs text-slate-500">({data.liquidity.invitations_accepted})</span>
@@ -208,7 +240,10 @@ function OverviewTab() {
             </p>
           </div>
           <div>
-            <p className="text-xs text-slate-400">Приглашения без ответа дольше недели</p>
+            <p className="text-xs text-slate-400">
+              Приглашения без ответа дольше недели{" "}
+              <InfoTip text="Отправленные или просмотренные приглашения без решения кандидата дольше 7 дней. Их стоит напомнить или отозвать, чтобы работодатель мог направить новое." />
+            </p>
             <p className="text-lg font-semibold">{data.liquidity.invitations_stale}</p>
           </div>
         </div>
@@ -217,15 +252,24 @@ function OverviewTab() {
       <Card title="Дополнительный функционал">
         <div className="grid gap-3 sm:grid-cols-3">
           <div>
-            <p className="text-xs text-slate-400">Открытых вакансий</p>
+            <p className="text-xs text-slate-400">
+              Открытых вакансий{" "}
+              <InfoTip text="Вакансии в статусе «опубликована»: по ним кандидат откликается сам, и тогда контакты раскрываются сразу — отклик означает согласие на контакт." />
+            </p>
             <p className="text-lg font-semibold">{data.coverage.vacancies_open}</p>
           </div>
           <div>
-            <p className="text-xs text-slate-400">Откликов на вакансии</p>
+            <p className="text-xs text-slate-400">
+              Откликов на вакансии{" "}
+              <InfoTip text="Самостоятельные отклики кандидатов. Это вторая механика к обратному подбору: работодатель не только приглашает, но и получает отклики." />
+            </p>
             <p className="text-lg font-semibold">{data.coverage.applications_total}</p>
           </div>
           <div>
-            <p className="text-xs text-slate-400">Регулярных заданий</p>
+            <p className="text-xs text-slate-400">
+              Регулярных заданий{" "}
+              <InfoTip text="Короткие задания от компаний: подтверждают активность кандидата между тестами. Отметки активности учитываются в объяснении подборки." />
+            </p>
             <p className="text-lg font-semibold">{data.coverage.tasks_total}</p>
           </div>
         </div>
@@ -280,16 +324,19 @@ function GraphTab() {
     );
   }
 
+  // Полоса подписей колонок: без неё заголовки «КОМПАНИИ» и «СОИСКАТЕЛИ»
+  // попадали под первые блоки схемы.
+  const headerHeight = 30;
   const rowHeight = 52;
   const leftX = 8;
   const rightX = 660;
   const width = 900;
-  const height = Math.max(activeEmployers.length, activeCandidates.length) * rowHeight + 40;
+  const height =
+    headerHeight + Math.max(activeEmployers.length, activeCandidates.length) * rowHeight + 10;
 
-  const employerY = new Map(activeEmployers.map((item, index) => [item.id, 30 + index * rowHeight]));
-  const candidateY = new Map(
-    activeCandidates.map((item, index) => [item.id, 30 + index * rowHeight]),
-  );
+  const nodeY = (index: number) => headerHeight + 18 + index * rowHeight;
+  const employerY = new Map(activeEmployers.map((item, index) => [item.id, nodeY(index)]));
+  const candidateY = new Map(activeCandidates.map((item, index) => [item.id, nodeY(index)]));
 
   return (
     <div className="space-y-4">
@@ -445,10 +492,18 @@ function CategoriesTab() {
             <tr className="text-left text-xs text-slate-400">
               <th className="py-2 pr-3">Категория</th>
               <th className="py-2 pr-3">Грейд</th>
-              <th className="py-2 pr-3">Кандидаты</th>
-              <th className="py-2 pr-3">Потребности</th>
+              <th className="py-2 pr-3">
+                Кандидаты{" "}
+                <InfoTip text="Сколько соискателей имеют эту категорию. Полоса показывает число относительно самой наполненной категории." />
+              </th>
+              <th className="py-2 pr-3">
+                Потребности{" "}
+                <InfoTip text="Запросы работодателей той же связки «специализация × грейд». Спрос — это потребности и направленные приглашения." />
+              </th>
               <th className="py-2 pr-3">Приглашения</th>
-              <th className="py-2 pr-3">Состояние</th>
+              <th className="py-2 pr-3">
+                Состояние <InfoTip text={BALANCE_EXPLAINED} />
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -477,7 +532,8 @@ function CategoriesTab() {
                   </span>
                   {row.supply_per_need !== null ? (
                     <span className="ml-2 text-xs text-slate-500">
-                      {score(row.supply_per_need, 2)} на запрос
+                      {score(row.supply_per_need, 2)} кандидатов на запрос{" "}
+                      <InfoTip text={SUPPLY_PER_NEED_EXPLAINED} />
                     </span>
                   ) : null}
                 </td>
@@ -523,10 +579,16 @@ function CompaniesTab() {
               <th className="py-2 pr-3">Компания</th>
               <th className="py-2 pr-3">Потребности</th>
               <th className="py-2 pr-3">Приглашения</th>
-              <th className="py-2 pr-3">Ждут ответа</th>
+              <th className="py-2 pr-3">
+                Ждут ответа{" "}
+                <InfoTip text="Приглашения без решения кандидата: отправленные или просмотренные. Пока решения нет, работодатель может отозвать приглашение." />
+              </th>
               <th className="py-2 pr-3">Принято</th>
               <th className="py-2 pr-3">Отклонено</th>
-              <th className="py-2 pr-3">Доля ответов</th>
+              <th className="py-2 pr-3">
+                Доля ответов{" "}
+                <InfoTip text="Сколько приглашений закончились решением кандидата. Низкая доля у компании с приглашениями означает, что предложения не доходят до людей." />
+              </th>
               <th className="py-2 pr-3">Вакансии</th>
             </tr>
           </thead>
@@ -609,10 +671,12 @@ function AiTab() {
   const toast = useToast();
   const [summary, setSummary] = useState<apiClient.AIResult | null>(null);
   const [actions, setActions] = useState<apiClient.AIResult | null>(null);
-  const [busy, setBusy] = useState(false);
+  // Что именно сейчас выполняет модель. Общий флаг подсвечивал бы обе кнопки
+  // сразу, и нажатие одной выглядело как запуск обеих.
+  const [running, setRunning] = useState<"summary" | "actions" | null>(null);
 
   async function run(kind: "summary" | "actions") {
-    setBusy(true);
+    setRunning(kind);
     try {
       if (kind === "summary") {
         setSummary(await apiClient.adminAiSummary());
@@ -622,7 +686,7 @@ function AiTab() {
     } catch (err) {
       toast.error("Не удалось получить ответ модели", errorMessage(err));
     } finally {
-      setBusy(false);
+      setRunning(null);
     }
   }
 
@@ -638,10 +702,10 @@ function AiTab() {
       </SectionNote>
 
       <div className="flex flex-wrap gap-2">
-        <AIButton busy={busy} onClick={() => void run("summary")}>
+        <AIButton busy={running === "summary"} onClick={() => void run("summary")}>
           Сводка состояния платформы
         </AIButton>
-        <AIButton busy={busy} onClick={() => void run("actions")}>
+        <AIButton busy={running === "actions"} onClick={() => void run("actions")}>
           Что делать по показателям
         </AIButton>
       </div>

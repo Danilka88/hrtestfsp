@@ -143,16 +143,34 @@ class AIEngine:
         """Пробует модель; при недоступности или неразборчивом ответе — демо-данные."""
         provider = get_llm()
         started = time.perf_counter()
-        try:
-            raw = await provider.complete(prompt, system=system, json_schema=schema, max_tokens=max_tokens)
-        except Exception as exc:  # noqa: BLE001 — любая ошибка модели не должна ломать сценарий
-            logger.warning("ИИ недоступен (%s), используются демо-данные", exc)
-            raw = ""
 
+        async def ask(budget: int) -> str:
+            try:
+                return await provider.complete(prompt, system=system, json_schema=schema, max_tokens=budget)
+            except Exception as exc:  # noqa: BLE001 — любая ошибка модели не должна ломать сценарий
+                logger.warning("ИИ недоступен (%s), используются демо-данные", exc)
+                return ""
+
+        raw = await ask(max_tokens)
         parsed = None if provider.last_degraded else _parse_json(raw)
+
+        if parsed is None and not provider.last_degraded and raw:
+            # Ответ пришёл, но не разобрался. На практике это обрыв JSON по лимиту
+            # вывода. Один повтор с удвоенным запасом дешевле, чем показать демо-данные.
+            logger.warning(
+                "ответ модели не разобрался (%d символов), повтор с удвоенным лимитом вывода",
+                len(raw),
+            )
+            raw = await ask(max_tokens * 2)
+            parsed = None if provider.last_degraded else _parse_json(raw)
+
         elapsed = int((time.perf_counter() - started) * 1000)
 
         if parsed is None:
+            logger.warning(
+                "используются демо-данные: %s",
+                "модель недоступна" if provider.last_degraded or not raw else "ответ не разобран",
+            )
             return AIResult(
                 data=demo(),
                 provider="demo",
@@ -631,7 +649,7 @@ class AIEngine:
             system=system,
             schema=schema,
             demo=lambda: self._demo_recommendations(metrics),
-            max_tokens=800,
+            max_tokens=1200,
         )
 
     def _demo_recommendations(self, metrics: dict[str, Any]) -> dict[str, Any]:
