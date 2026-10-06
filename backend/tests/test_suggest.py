@@ -235,3 +235,27 @@ async def test_candidate_hints_skip_already_invited(client: AsyncClient, db_fact
     body = (await client.get("/api/v1/ai/employer/candidate-hints", headers=_auth(token))).json()
     references = [item["reference"] for item in body["items"]]
     assert reference not in references
+
+
+async def test_semantic_switch_really_disables_the_model(monkeypatch) -> None:
+    """SEMANTIC_MATCH_ENABLED = false выключает обращения к модели, а не просто лежит в конфиге."""
+    from types import SimpleNamespace
+
+    from app.services import ai as ai_service
+    from app.services import suggest
+
+    calls: list[int] = []
+
+    class _Engine:
+        async def semantic_scores(self, *args, **kwargs):  # pragma: no cover - не должен вызываться
+            calls.append(1)
+            raise AssertionError("при выключенной настройке модель вызываться не должна")
+
+    monkeypatch.setattr(suggest, "get_settings", lambda: SimpleNamespace(semantic_match_enabled=False))
+    monkeypatch.setattr(ai_service, "get_ai", lambda: _Engine())
+
+    scores, method = await suggest._semantic("нужен backend на Python", ["python, fastapi, postgresql"])
+
+    assert scores == [0.0]
+    assert method == "выключена настройкой"
+    assert not calls, "модель не должна вызываться при выключенном семантическом сопоставлении"

@@ -23,7 +23,7 @@ from app.core.security import hash_password, utcnow
 from app.db.session import dispose_engine, get_session_factory
 from app.models.candidate import CandidateProfile
 from app.models.employer import EmployerNeed, EmployerProfile, SelectionCandidate
-from app.models.marketplace import Vacancy
+from app.models.marketplace import Application, Vacancy
 from app.models.testing import SESSION_COMPLETED, Specialization, TestSession
 from app.models.user import User, UserRole
 from app.services.reference import ensure_reference_data
@@ -335,6 +335,43 @@ async def _seed_vacancies(session: AsyncSession, specializations: dict[str, int]
     return created
 
 
+async def _seed_applications(session: AsyncSession) -> int:
+    """Отклики кандидатов на опубликованные вакансии.
+
+    Нужны для демонстрации: у вакансий вторая механика — кандидат откликается сам,
+    и работодатель решает по отклику. Без них раздел откликов пуст, а обещанный
+    сценарий «принять / отклонить отклик» показать не на чем.
+    """
+    from app.services import marketplace
+
+    plans = [
+        ("anna.kovaleva@demo.ru", "Python-разработчик в платёжный сервис", "Готова обсудить задачи команды."),
+        ("dmitry.sokolov@demo.ru", "DevOps-инженер", "Есть опыт сборок и окружений под Kubernetes."),
+    ]
+
+    created = 0
+    for email, vacancy_title, message in plans:
+        candidate = (await session.execute(select(User).where(User.email == email))).scalar_one_or_none()
+        vacancy = (
+            await session.execute(select(Vacancy).where(Vacancy.title == vacancy_title))
+        ).scalar_one_or_none()
+        if candidate is None or vacancy is None:
+            continue
+        existing = (
+            await session.execute(
+                select(Application).where(
+                    Application.candidate_user_id == candidate.id,
+                    Application.vacancy_id == vacancy.id,
+                )
+            )
+        ).scalar_one_or_none()
+        if existing is not None:
+            continue
+        await marketplace.apply_to_vacancy(session, candidate.id, vacancy_id=vacancy.id, message=message)
+        created += 1
+    return created
+
+
 async def seed() -> dict[str, int]:
     factory = get_session_factory()
     created = {"candidates": 0, "employers": 0, "sessions": 0}
@@ -452,6 +489,9 @@ async def seed() -> dict[str, int]:
         # Опубликованные вакансии: вторая механика (кандидат откликается сам) и вход
         # для подсказок вакансий — без них у соискателя нечего было бы подсказывать.
         created["vacancies"] = await _seed_vacancies(session, specializations)
+        # Отклики: вторая механика должна быть видна сразу — у работодателя есть
+        # отклики с решением, у кандидата — свои отклики в дашборде.
+        created["applications"] = await _seed_applications(session)
 
         await session.commit()
 

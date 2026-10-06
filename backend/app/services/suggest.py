@@ -18,6 +18,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.security import utcnow
 from app.models.candidate import CandidateProfile
 from app.models.employer import EmployerNeed, EmployerProfile
@@ -65,6 +66,10 @@ async def _semantic(anchor_text: str, texts: list[str]) -> tuple[list[float], st
     """Семантическая близость через эмбеддинги; при недоступности — нули."""
     if not texts or not anchor_text.strip():
         return [0.0] * len(texts), "не применялась"
+    if not get_settings().semantic_match_enabled:
+        # Переключатель SEMANTIC_MATCH_ENABLED выключает обращения к модели:
+        # подсказки остаются на сигналах платформы и честно об этом сообщают.
+        return [0.0] * len(texts), "выключена настройкой"
     from app.services.ai import get_ai
 
     result = await get_ai().semantic_scores(anchor_text, texts)
