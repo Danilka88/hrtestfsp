@@ -67,7 +67,7 @@ project/
     scripts/
       seed_demo.py             # демонстрационные данные
       validate_solution.py     # процедура валидации решения
-    tests/                     # pytest — 282 теста, покрытие 97%
+    tests/                     # pytest — 283 теста, покрытие 95%
   frontend/                    # React 19 + TypeScript + Vite SPA
     src/{api,auth,components,pages,styles}/
   seed/                        # пояснения к генерации демонстрационных данных
@@ -139,7 +139,7 @@ npm run dev        # http://localhost:5173 (проксирует /api на :8000
 Проверки:
 
 ```bash
-cd backend && env -u PYTHONPATH .venv/bin/python -m pytest -q   # 282 теста
+cd backend && env -u PYTHONPATH .venv/bin/python -m pytest -q   # 283 теста
 bash ../scripts/reset-demo.sh                                   # чистое состояние для демонстрации
 bash ../scripts/smoke-api.sh                                    # smoke-проверка API
 cd frontend && npm run build                                    # сборка SPA + строгая типизация
@@ -215,7 +215,7 @@ PDF), **настройки приватности профиля** (что им�
 уведомления в интерфейсе (toast), демо-данные, docker-compose и smoke-скрипты
 (`smoke-api.sh`, `smoke-auth.sh`, `smoke-candidate.sh`, `smoke-testing.sh`,
 `smoke-employer.sh`, `smoke-invitations.sh`, `smoke-marketplace.sh`,
-`smoke-ai.sh`, `verify-stack.sh`). Тестов — 253, покрытие кода — 97% (`make test-cov`).
+`smoke-ai.sh`, `verify-stack.sh`). Тестов — 283, покрытие кода — 95% (`make test-cov`).
 
 Валидация решения:
 
@@ -232,8 +232,8 @@ cd backend
 env -u PYTHONPATH .venv/bin/ruff check .      # линтер: без замечаний
 env -u PYTHONPATH .venv/bin/ruff format --check .
 env -u PYTHONPATH .venv/bin/vulture app --min-confidence 80   # мёртвый код: чисто
-env -u PYTHONPATH .venv/bin/python -m pytest -q               # 253 теста
-env -u PYTHONPATH .venv/bin/python -m pytest -q --cov=app --cov-report=term-missing  # покрытие 97%
+env -u PYTHONPATH .venv/bin/python -m pytest -q               # 283 теста
+env -u PYTHONPATH .venv/bin/python -m pytest -q --cov=app --cov-report=term-missing  # покрытие 95%
 cd ../frontend && npm run build               # включает строгую проверку типов tsc
 cd .. && bash scripts/smoke-ai.sh             # ИИ: источник ответа и деградация
 ```
@@ -247,7 +247,7 @@ cd .. && bash scripts/smoke-ai.sh             # ИИ: источник отве�
 - **Нет мёртвого кода.** Общие части интерфейса вынесены в переиспользуемые
   компоненты (`CandidateRow`, `InvitePanel`), неиспользуемые методы API-клиента
   подключены к интерфейсу (поиск по банку, история подборок, ИИ-функции), справочник
-  грейдов берётся из API, а не дублируется в разметке. Все 51 функция API-клиента
+  грейдов берётся из API, а не дублируется в разметке. Все 62 функции API-клиента
   вызываются из интерфейса.
 - **Действие соответствует подписи.** Уточнение подборки действительно создаёт новую
   версию (`POST /selections/{id}/refine`) с сохранением прежней, а не перезагружает

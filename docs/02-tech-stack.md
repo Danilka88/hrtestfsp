@@ -40,7 +40,7 @@ env -u PYTHONPATH .venv/bin/ruff check . && env -u PYTHONPATH .venv/bin/vulture 
 |---|---|---|
 | pytest | 9.1.1 | Тесты (253 проверки) |
 | pytest-asyncio | 1.3.0 | Асинхронные тесты |
-| pytest-cov | 7.1.0 | Покрытие кода (97%) |
+| pytest-cov | 7.1.0 | Покрытие кода (95%) |
 | aiosqlite | 0.21.0 | SQLite in-memory для тестов |
 | httpx | 0.28.1 | HTTP-клиент: в рантайме — вызовы локальной модели (Ollama) и проверка OIDC-токенов Keycloak; в тестах — подмена транспорта |
 | ruff | 0.16.10 | Линтер (E, F, I, UP, B, C4, ERA, RET, SIM, PTH) — проверка проходит чисто |
