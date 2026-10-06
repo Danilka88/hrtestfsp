@@ -110,6 +110,13 @@
 
   /* TABLE */
   table{width:100%;border-collapse:collapse;font-size:14px}
+  /* На узких экранах таблица шире окна: прокручиваем её внутри блока,
+     иначе документ растягивается и на телефоне появляется горизонтальный сдвиг. */
+  .table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  /* Длинный неразрывный токен (адрес, идентификатор) в заголовке или абзаце
+     растягивал документ на телефоне: разрешаем перенос. */
+  h1,h2,h3,h4,p,li,code{overflow-wrap:anywhere}
+  @media(max-width:640px){.table-scroll table{min-width:520px}}
   th,td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top}
   th{color:var(--acc2);font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:700}
   tbody tr:hover{background:rgba(56,189,248,.045)}
@@ -356,7 +363,8 @@
   <p class="sub">Референсные механики «работа находит человека» — уже работающие модели, на которые мы опираемся.</p>
 
   <div class="tw" style="margin-bottom:18px">
-    <table>
+    <div class="table-scroll">
+      <table>
       <thead><tr><th>Референс</th><th>Механика</th><th>Что берём</th></tr></thead>
       <tbody>
         <tr><td><b>LHH</b> (Lee Hecht Harrison)<sup><a href="#src-1">1</a><a href="#src-2">2</a></sup></td>
@@ -373,6 +381,8 @@
             <td>Идея верификации и «качества» базы (у нас — тест + достижения)</td></tr>
       </tbody>
     </table>
+    </div>
+
   </div>
 
   <div class="grid g3">
@@ -530,7 +540,8 @@
   </div>
 
   <div class="tw" style="margin-top:22px">
-    <table>
+    <div class="table-scroll">
+      <table>
       <thead><tr><th style="width:30%">Сквозное правило</th><th>Как обеспечивается</th></tr></thead>
       <tbody>
         <tr><td><b>Контакты скрыты</b> до принятия приглашения или отклика</td>
@@ -547,6 +558,8 @@
             <td>Недоступная модель → демо-данные с пометкой <code>degraded</code>; грейд присваивает тест, не модель</td></tr>
       </tbody>
     </table>
+    </div>
+
   </div>
 
   <div class="note" style="margin-top:18px">
@@ -647,7 +660,8 @@
 
   <h3>Какие задачи закрывает</h3>
   <div class="tw" style="margin:10px 0 24px">
-    <table>
+    <div class="table-scroll">
+      <table>
       <thead><tr><th style="width:22%">Функция</th><th style="width:22%">Где в интерфейсе</th><th>Что делает модель</th></tr></thead>
       <tbody>
         <tr><td><b>Разбор профиля</b></td><td>Кандидат · «Профиль и ФСП»</td>
@@ -668,6 +682,8 @@
             <td>Получает уже посчитанные метрики и объясняет их словами. Придумать показатель модель не может</td></tr>
       </tbody>
     </table>
+    </div>
+
   </div>
 
   <h3>Модель и почему именно такая</h3>
@@ -834,7 +850,8 @@
 
   <h3>Кабинет «Кандидат»</h3>
   <div class="tw" style="margin-bottom:22px">
-    <table>
+    <div class="table-scroll">
+      <table>
       <thead><tr><th style="width:33%">Требование ТЗ</th><th style="width:17%">Статус</th><th>Чем подтверждается</th></tr></thead>
       <tbody>
         <tr><td>Профиль вручную либо загрузка PDF с автораспознаванием (ФИО, контакты, стек, грейд, роли, стаж)</td>
@@ -869,11 +886,14 @@
             <td>Автотесты проверяют отказ <code>403</code> при обращении к чужим записям</td></tr>
       </tbody>
     </table>
+    </div>
+
   </div>
 
   <h3>Кабинет «Работодатель»</h3>
   <div class="tw" style="margin-bottom:22px">
-    <table>
+    <div class="table-scroll">
+      <table>
       <thead><tr><th style="width:33%">Требование ТЗ</th><th style="width:17%">Статус</th><th>Чем подтверждается</th></tr></thead>
       <tbody>
         <tr><td>Профиль компании: описание организации, направление деятельности, контакты</td>
@@ -899,11 +919,14 @@
             <td>Контактов нет в ответе <b>по построению</b>, а не фильтрацией — утечка через новый сценарий невозможна</td></tr>
       </tbody>
     </table>
+    </div>
+
   </div>
 
   <h3>Поиск, подбор, данные и нефункциональные требования</h3>
   <div class="tw" style="margin-bottom:18px">
-    <table>
+    <div class="table-scroll">
+      <table>
       <thead><tr><th style="width:33%">Требование ТЗ</th><th style="width:17%">Статус</th><th>Чем подтверждается</th></tr></thead>
       <tbody>
         <tr><td>Выдача формируется на основании категорий, а не самоописанного резюме</td>
@@ -956,6 +979,8 @@
             <td>287 автотестов (покрытие 95%), линтер с расширенным набором правил без замечаний, мёртвого кода нет, зависимости сверены с фактическими импортами</td></tr>
       </tbody>
     </table>
+    </div>
+
   </div>
 
   <div class="note">
@@ -999,7 +1024,8 @@
   <h2><span class="n">15</span>Валидация: процедура и измеренные результаты</h2>
   <p class="sub">Эталонной разметки нет — процедуру предложила команда и выполнила детерминированным скриптом. Ниже измеренные значения, а не план.</p>
   <div class="tw">
-    <table>
+    <div class="table-scroll">
+      <table>
       <thead><tr><th>Что проверяем</th><th>Метрика</th><th>Результат</th></tr></thead>
       <tbody>
         <tr><td>Релевантность подбора</td><td>Precision@5 / Recall@5</td><td><b>0.68 / 0.80</b> — синтетические пары «потребность – кандидат», независимая разметка</td></tr>
@@ -1010,6 +1036,8 @@
         <tr><td>Воспроизводимость</td><td>Детерминированность ранжирования</td><td><b>да</b> — повторный расчёт даёт тот же порядок выдачи</td></tr>
       </tbody>
     </table>
+    </div>
+
   </div>
   <div class="card" style="margin-top:16px;border-color:rgba(251,191,36,.45)">
     <h3>Валидация нашла дефекты — и они исправлены</h3>
@@ -1074,7 +1102,8 @@
 
   <h3>Шаг 1. Установить и запустить Docker Desktop</h3>
   <div class="tw" style="margin-bottom:14px">
-    <table>
+    <div class="table-scroll">
+      <table>
       <thead><tr><th>Действие</th><th>Как именно</th><th>Признак, что получилось</th></tr></thead>
       <tbody>
         <tr><td><b>Скачать</b></td>
@@ -1091,6 +1120,8 @@
             <td>В строке меню (macOS) или в трее (Windows) виден значок кита</td></tr>
       </tbody>
     </table>
+    </div>
+
   </div>
   <div class="note" style="margin-bottom:20px">
     <b class="hl">Важно:</b> Docker Desktop должен быть запущен <b>всё время</b>, пока вы работаете с платформой.
@@ -1133,7 +1164,8 @@ cd путь\к\папке\moscow_it_pratform_test\project      # Windows</pre>
 
   <h3>Шаг 4. Открыть платформу в браузере</h3>
   <div class="tw" style="margin-bottom:14px">
-    <table>
+    <div class="table-scroll">
+      <table>
       <thead><tr><th>Что открыть</th><th>Адрес</th><th>Зачем это нужно</th></tr></thead>
       <tbody>
         <tr><td><b>Платформа</b> — то, что оценивают</td><td><code>http://localhost:8080</code></td>
@@ -1145,6 +1177,8 @@ cd путь\к\папке\moscow_it_pratform_test\project      # Windows</pre>
             <td>Должен вернуть <code>{"status":"ok","database":"ok"}</code> — значит, сервер и база данных живы</td></tr>
       </tbody>
     </table>
+    </div>
+
   </div>
 
   <h3>Шаг 5. Войти под демонстрационным аккаунтом</h3>
@@ -1270,7 +1304,8 @@ docker compose down -v     # остановить и удалить данные
 
   <h3>Если что-то не работает</h3>
   <div class="tw" style="margin-bottom:20px">
-    <table>
+    <div class="table-scroll">
+      <table>
       <thead><tr><th>Что видно на экране</th><th>В чём причина</th><th>Что сделать</th></tr></thead>
       <tbody>
         <tr><td><code>docker: command not found</code></td>
@@ -1298,6 +1333,8 @@ docker compose down -v     # остановить и удалить данные
             <td><code>docker compose down -v</code>, затем запуск заново и загрузка demo-данных</td></tr>
       </tbody>
     </table>
+    </div>
+
   </div>
 
   <h3>Проверки для технических судей</h3>
