@@ -72,8 +72,13 @@ function HintList({
   );
 }
 
-/** Кандидату: вакансии, близкие к его интересам и категории. */
-export function VacancyHints({ onApply }: { onApply: (vacancy: Vacancy) => void }) {
+/**
+ * Кандидату: вакансии, близкие к его интересам и категории.
+ *
+ * На дашборде действие может отсутствовать: тогда панель подсказывает, где откликнуться,
+ * а сам отклик остаётся в рабочем разделе «Вакансии».
+ */
+export function VacancyHints({ onApply }: { onApply?: (vacancy: Vacancy) => void }) {
   const toast = useToast();
   const [items, setItems] = useState<HintItem[] | null>(null);
   const [note, setNote] = useState("");
@@ -123,12 +128,19 @@ export function VacancyHints({ onApply }: { onApply: (vacancy: Vacancy) => void 
         items.length ? (
           <div className="mt-3">
             {note ? <p className="mb-2 text-xs text-slate-500">{note}</p> : null}
+            {onApply ? null : (
+              <p className="mb-2 text-xs text-slate-500">
+                Откликнуться можно в разделе «Вакансии» — список откроется с теми же вакансиями.
+              </p>
+            )}
             <HintList
               kind="vacancy"
               items={items}
-              renderAction={(item) => (
-                <Button onClick={() => onApply(asVacancy(item))}>Откликнуться</Button>
-              )}
+              renderAction={
+                onApply
+                  ? (item) => <Button onClick={() => onApply(asVacancy(item))}>Откликнуться</Button>
+                  : undefined
+              }
             />
           </div>
         ) : (
@@ -140,7 +152,7 @@ export function VacancyHints({ onApply }: { onApply: (vacancy: Vacancy) => void 
 }
 
 /** Работодателю: кандидаты, близкие к его собственным действиям. */
-export function CandidateHints({ onInvite }: { onInvite: (candidate: CandidateCard) => void }) {
+export function CandidateHints({ onInvite }: { onInvite?: (candidate: CandidateCard) => void }) {
   const toast = useToast();
   const [items, setItems] = useState<HintItem[] | null>(null);
   const [note, setNote] = useState("");
@@ -192,12 +204,19 @@ export function CandidateHints({ onInvite }: { onInvite: (candidate: CandidateCa
         items.length ? (
           <div className="mt-3">
             {note ? <p className="mb-2 text-xs text-slate-500">{note}</p> : null}
+            {onInvite ? null : (
+              <p className="mb-2 text-xs text-slate-500">
+                Пригласить можно в разделе «Подбор кандидатов» — подсказки остаются теми же.
+              </p>
+            )}
             <HintList
               kind="candidate"
               items={items}
-              renderAction={(item) => (
-                <Button onClick={() => onInvite(asCard(item))}>Пригласить</Button>
-              )}
+              renderAction={
+                onInvite
+                  ? (item) => <Button onClick={() => onInvite(asCard(item))}>Пригласить</Button>
+                  : undefined
+              }
             />
           </div>
         ) : (

@@ -14,12 +14,14 @@ import { AIButton, AISourceNote, AIStatusBadge, aiToastPayload } from "../../com
 import { TasksPanel, VacanciesPanel } from "../../components/marketplace";
 import { useToast } from "../../components/toast";
 import { Alert, Button, Card, EmptyState, Field, InfoTip, Modal, SectionNote, StatusBadge, TextArea, gradesLabel, money, score } from "../../components/ui";
+import { VacancyHints } from "../../components/hints";
+import { Bar, Dashboard, Kpi } from "../../components/overview";
 
-type Tab = "category" | "test" | "invitations" | "vacancies" | "tasks" | "profile";
+type Tab = "overview" | "category" | "test" | "invitations" | "vacancies" | "tasks" | "profile";
 
 export function CandidateCabinet() {
   const { user, logout } = useAuth();
-  const [tab, setTab] = useState<Tab>("category");
+  const [tab, setTab] = useState<Tab>("overview");
   // Возврат в незавершённый тест: переносим кандидата в тест на том же задании
   const [resume, setResume] = useState<{ specialization: string; targetGrade: string } | null>(null);
 
@@ -46,6 +48,7 @@ export function CandidateCabinet() {
       <nav className="flex flex-wrap gap-2">
         {(
           [
+            ["overview", "Обзор"],
             ["category", "Категория и грейд"],
             ["test", "Тестирование"],
             ["invitations", "Приглашения"],
@@ -60,6 +63,7 @@ export function CandidateCabinet() {
         ))}
       </nav>
 
+      {tab === "overview" ? <OverviewTab /> : null}
       {tab === "category" ? <CategoryTab onContinueTest={continueTest} /> : null}
       {tab === "test" ? <TestTab resume={resume} onResumeConsumed={() => setResume(null)} /> : null}
       {tab === "invitations" ? <InvitationsTab /> : null}
@@ -67,6 +71,137 @@ export function CandidateCabinet() {
       {tab === "tasks" ? <TasksPanel role="candidate" /> : null}
       {tab === "profile" ? <ProfileTab /> : null}
     </div>
+  );
+}
+
+/**
+ * Дашборд соискателя: где он находится и что требует внимания.
+ *
+ * Показатели считаются по уже загруженным данным, ничего не «довыводится»: если
+ * чего-то нет, показывается «нет данных», а не ноль.
+ */
+function OverviewTab() {
+  const [profile, setProfile] = useState<apiClient.CandidateProfile | null>(null);
+  const [category, setCategory] = useState<CategoryStatus | null>(null);
+  const [invitations, setInvitations] = useState<apiClient.CandidateInvitation[]>([]);
+  const [applications, setApplications] = useState<apiClient.ApplicationCandidate[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const [profileData, categoryData, invitationsData, applicationsData] = await Promise.all([
+          apiClient.getCandidateProfile(),
+          apiClient.myCategory(),
+          apiClient.myInvitations(),
+          apiClient.myApplications(),
+        ]);
+        setProfile(profileData);
+        setCategory(categoryData);
+        setInvitations(invitationsData);
+        setApplications(applicationsData);
+      } catch (err) {
+        setError(errorMessage(err));
+      }
+    })();
+  }, []);
+
+  if (error) return <Alert kind="error">{error}</Alert>;
+  if (!profile || !category) return <p className="text-sm text-slate-500">Загрузка…</p>;
+
+  // Заполненность профиля: сколько обязательных для подбора полей заполнено
+  const filled = [
+    Boolean(profile.full_name),
+    Boolean(profile.specialization),
+    Boolean(profile.grade),
+    profile.stack.length > 0,
+    profile.roles.length > 0,
+    profile.soft_skills.length > 0,
+    profile.experience_years !== null,
+    Boolean(profile.summary),
+  ].filter(Boolean).length;
+  const completeness = Math.round((filled / 8) * 100);
+
+  const completed = category.sessions.filter((session) => session.status === "completed");
+  const theta = completed.length ? completed[completed.length - 1].theta : null;
+  const waiting = invitations.filter(
+    (item) => item.status === "sent" || item.status === "viewed",
+  ).length;
+  const accepted = invitations.filter((item) => item.status === "accepted").length;
+  const acceptedApplications = applications.filter((item) => item.status === "accepted").length;
+
+  return (
+    <Dashboard
+      lead={
+        <>
+          Коротко о вашем положении: заполненность профиля, присвоенная категория, входящие
+          приглашения и собственные отклики. Отсюда видно, чего не хватает, чтобы работодатель
+          выходил на контакт.
+        </>
+      }
+      kpis={
+        <>
+          <Kpi
+            label="Профиль заполнен"
+            value={`${completeness}%`}
+            hint={completeness === 100 ? "все поля заполнены" : `заполнено ${filled} из 8 полей`}
+            tone={completeness === 100 ? "ok" : "warn"}
+          />
+          <Kpi
+            label="Категория"
+            value={
+              category.specialization
+                ? `${category.specialization} / ${gradesLabel(category.grade)}`
+                : "не присвоена"
+            }
+            hint={
+              category.specialization
+                ? "видна работодателям в подборке"
+                : "пройдите тестирование — без категории вас не видно"
+            }
+            tone={category.specialization ? "ok" : "warn"}
+          />
+          <Kpi
+            label="Оценка теста θ"
+            value={theta === null ? "нет данных" : score(theta, 2)}
+            hint={theta === null ? "тест ещё не завершён" : "из неё выведен грейд"}
+          />
+          <Kpi
+            label="Приглашения"
+            value={invitations.length}
+            hint={`ждут решения: ${waiting} · принято: ${accepted}`}
+          />
+        </>
+      }
+      ai={<VacancyHints />}
+    >
+      <Card title="Входящие приглашения по статусам">
+        {invitations.length === 0 ? (
+          <p className="text-sm text-slate-400">
+            Пока приглашений нет. Они появляются, когда работодатель сам выходит на контакт — это
+            основная механика платформы.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            <Bar label="отправлено" value={invitations.filter((i) => i.status === "sent").length} total={invitations.length} />
+            <Bar label="просмотрено" value={invitations.filter((i) => i.status === "viewed").length} total={invitations.length} tone="amber" />
+            <Bar label="принято" value={accepted} total={invitations.length} tone="emerald" />
+            <Bar label="отклонено" value={invitations.filter((i) => i.status === "declined").length} total={invitations.length} tone="rose" />
+            <Bar label="отозвано работодателем" value={invitations.filter((i) => i.status === "revoked").length} total={invitations.length} tone="slate" />
+          </div>
+        )}
+      </Card>
+
+      <Card title="Свои отклики">
+        <p className="text-sm text-slate-300">
+          Всего откликов: {applications.length}
+          {applications.length ? ` · принято работодателем: ${acceptedApplications}` : ""}
+        </p>
+        <p className="mt-1 text-xs text-slate-500">
+          Отклик — дополнительный сценарий: он раскрывает ваши контакты работодателю.
+        </p>
+      </Card>
+    </Dashboard>
   );
 }
 

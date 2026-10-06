@@ -14,6 +14,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { AIButton, AISourceNote, AIStatusBadge, aiToastPayload } from "../../components/ai";
 import { TasksPanel, VacanciesPanel } from "../../components/marketplace";
 import { CandidateHints } from "../../components/hints";
+import { Bar, Dashboard, Kpi } from "../../components/overview";
 import { useToast } from "../../components/toast";
 import {
   Alert,
@@ -32,11 +33,11 @@ import {
   score,
 } from "../../components/ui";
 
-type Tab = "selection" | "search" | "invitations" | "vacancies" | "tasks" | "profile";
+type Tab = "overview" | "selection" | "search" | "invitations" | "vacancies" | "tasks" | "profile";
 
 export function EmployerCabinet() {
   const { user, logout } = useAuth();
-  const [tab, setTab] = useState<Tab>("selection");
+  const [tab, setTab] = useState<Tab>("overview");
 
   return (
     <div className="space-y-5">
@@ -56,6 +57,7 @@ export function EmployerCabinet() {
       <nav className="flex flex-wrap gap-2">
         {(
           [
+            ["overview", "Обзор"],
             ["selection", "Подбор кандидатов"],
             ["search", "Поиск по банку"],
             ["invitations", "Приглашения"],
@@ -70,6 +72,7 @@ export function EmployerCabinet() {
         ))}
       </nav>
 
+      {tab === "overview" ? <OverviewTab /> : null}
       {tab === "selection" ? <SelectionTab /> : null}
       {tab === "search" ? <SearchTab /> : null}
       {tab === "invitations" ? <InvitationsTab /> : null}
@@ -77,6 +80,102 @@ export function EmployerCabinet() {
       {tab === "tasks" ? <TasksPanel role="employer" /> : null}
       {tab === "profile" ? <CompanyTab /> : null}
     </div>
+  );
+}
+
+/**
+ * Дашборд компании: что происходит с её запросами и приглашениями.
+ *
+ * Полезен как сводка перед работой с подборкой: видно, сколько запросов, где ждут
+ * ответа и какова доля ответов кандидатов.
+ */
+function OverviewTab() {
+  const [selections, setSelections] = useState<apiClient.SelectionSummary[]>([]);
+  const [invitations, setInvitations] = useState<EmployerInvitation[]>([]);
+  const [vacancies, setVacancies] = useState<apiClient.Vacancy[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const [selectionsData, invitationsData, vacanciesData] = await Promise.all([
+          apiClient.listSelections(),
+          apiClient.employerInvitations(),
+          apiClient.listMyVacancies(),
+        ]);
+        setSelections(selectionsData);
+        setInvitations(invitationsData);
+        setVacancies(vacanciesData);
+      } catch (err) {
+        setError(errorMessage(err));
+      }
+    })();
+  }, []);
+
+  if (error) return <Alert kind="error">{error}</Alert>;
+
+  const candidatesInSelections = selections.reduce((sum, item) => sum + item.candidates_count, 0);
+  const answered = invitations.filter(
+    (item) => item.status === "accepted" || item.status === "declined",
+  ).length;
+  const waiting = invitations.filter(
+    (item) => item.status === "sent" || item.status === "viewed",
+  ).length;
+  const accepted = invitations.filter((item) => item.status === "accepted").length;
+  const responseRate = invitations.length
+    ? Math.round((answered / invitations.length) * 100)
+    : null;
+  const openVacancies = vacancies.filter((item) => item.status === "published").length;
+
+  return (
+    <Dashboard
+      lead={
+        <>
+          Сводка по вашим запросам: сколько потребностей описано, сколько кандидатов в подборках,
+          как отвечают на приглашения. Основная механика — приглашение конкретному человеку, а не
+          ожидание отклика.
+        </>
+      }
+      kpis={
+        <>
+          <Kpi
+            label="Потребности и подборки"
+            value={selections.length}
+            hint={`кандидатов в подборках: ${candidatesInSelections}`}
+          />
+          <Kpi label="Приглашения" value={invitations.length} hint={`ждут ответа: ${waiting}`} />
+          <Kpi
+            label="Доля ответов"
+            value={responseRate === null ? "нет данных" : `${responseRate}%`}
+            hint={
+              responseRate === null
+                ? "приглашений ещё не было"
+                : `ответили: ${answered} из ${invitations.length}`
+            }
+            tone={responseRate !== null && responseRate >= 50 ? "ok" : "default"}
+          />
+          <Kpi label="Открытые вакансии" value={openVacancies} hint={`всего вакансий: ${vacancies.length}`} />
+        </>
+      }
+      ai={<CandidateHints />}
+    >
+      <Card title="Приглашения по статусам">
+        {invitations.length === 0 ? (
+          <p className="text-sm text-slate-400">
+            Приглашений пока нет. Отправьте первое из подборки — кандидат увидит компанию и зарплату
+            до начала общения.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            <Bar label="отправлено" value={invitations.filter((i) => i.status === "sent").length} total={invitations.length} />
+            <Bar label="просмотрено" value={invitations.filter((i) => i.status === "viewed").length} total={invitations.length} tone="amber" />
+            <Bar label="принято" value={accepted} total={invitations.length} tone="emerald" />
+            <Bar label="отклонено" value={invitations.filter((i) => i.status === "declined").length} total={invitations.length} tone="rose" />
+            <Bar label="отозвано" value={invitations.filter((i) => i.status === "revoked").length} total={invitations.length} tone="slate" />
+          </div>
+        )}
+      </Card>
+    </Dashboard>
   );
 }
 
