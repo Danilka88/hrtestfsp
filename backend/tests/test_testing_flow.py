@@ -176,18 +176,21 @@ async def test_all_wrong_assigns_low_grade(client: AsyncClient, db_factory) -> N
 
 
 async def test_grade_is_not_lowered_automatically(client: AsyncClient, db_factory) -> None:
-    """Неуспех на высоком уровне не отнимает текущий грейд."""
-    token = await _login(client, "no-downgrade@example.com")
-    await client.put(
-        "/api/v1/candidates/me/profile",
-        json={"full_name": "Опытный Кандидат", "specialization": "backend", "grade": "senior"},
-        headers=_auth(token),
-    )
-    result = await _run_test(client, token, db_factory, correct=False, target_grade="senior")
+    """Неуспех на высоком уровне не отнимает уже подтверждённый грейд.
 
-    assert result["result_grade"] != "senior"  # тест провален
+    Грейд подтверждается тестом: форма его не подставляет, поэтому сначала успешное
+    прохождение, а затем неуспех на том же уровне.
+    """
+    token = await _login(client, "no-downgrade@example.com")
+    confirmed = await _run_test(client, token, db_factory, correct=True, target_grade="senior")
+    grade = confirmed["current_grade"]
+    assert grade in GRADE_ORDER, "успешный тест подтверждает грейд"
+
+    result = await _run_test(client, token, db_factory, correct=False, target_grade=grade)
+
+    assert result["result_grade"] != grade  # тест провален
     assert result["grade_change_applied"] is False  # но грейд не понижен
-    assert result["current_grade"] == "senior"
+    assert result["current_grade"] == grade
     assert "понижение" in result["grade_change_reason"].lower()
 
 

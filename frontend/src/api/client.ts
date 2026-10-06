@@ -156,7 +156,10 @@ export interface CandidateProfile {
   id: string;
   full_name: string | null;
   specialization: string | null;
+  /** Подтверждённый тестом грейд: присваивает только тестирование. */
   grade: string | null;
+  /** Заявленный грейд из формы или резюме: на банк работодателя не влияет. */
+  declared_grade: string | null;
   experience_years: number | null;
   stack: string[];
   roles: string[];

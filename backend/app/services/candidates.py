@@ -46,7 +46,9 @@ async def upsert_profile(session: AsyncSession, user_id: str, data: CandidatePro
     profile.full_name = data.full_name
     profile.contacts = data.contacts.model_dump(mode="json", exclude_none=True)
     profile.specialization = data.specialization
-    profile.grade = data.grade
+    # Форма даёт заявленный грейд, а не подтверждённый: подтверждённый присваивает
+    # только тестирование, иначе самоописание попадало бы в банк работодателя.
+    profile.declared_grade = data.declared_grade
     profile.experience_years = data.experience_years
     profile.stack = list(data.stack)
     profile.roles = list(data.roles)
@@ -85,7 +87,9 @@ async def apply_resume_upload(
     if parsed.get("soft_skills"):
         profile.soft_skills = list(parsed["soft_skills"])
     if parsed.get("grade"):
-        profile.grade = parsed["grade"]
+        # Разобранный из резюме грейд — тоже самоописание: пишем в заявленный,
+        # подтверждённый остаётся за тестом.
+        profile.declared_grade = parsed["grade"]
     if parsed.get("experience_years") is not None:
         profile.experience_years = parsed["experience_years"]
 

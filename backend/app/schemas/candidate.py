@@ -24,7 +24,14 @@ class CandidateProfileIn(BaseModel):
     full_name: str | None = Field(default=None, max_length=200)
     contacts: Contacts = Field(default_factory=Contacts)
     specialization: str | None = Field(default=None, max_length=120)
-    grade: str | None = Field(default=None, max_length=20)
+    declared_grade: str | None = Field(
+        default=None,
+        max_length=20,
+        description=(
+            "Заявленный грейд из формы или резюме. Подтверждённый грейд присваивает тест — "
+            "самоописание в банк работодателя не попадает."
+        ),
+    )
     experience_years: int | None = Field(default=None, ge=0, le=60)
     stack: list[str] = Field(default_factory=list)
     roles: list[str] = Field(default_factory=list)
@@ -37,6 +44,8 @@ class CandidateProfileOut(CandidateProfileIn):
 
     id: str
     user_id: str
+    # Подтверждённый тестом грейд: только чтение, присваивается тестированием.
+    grade: str | None = None
     resume_source: str
     resume_filename: str | None = None
     privacy: PrivacySettings

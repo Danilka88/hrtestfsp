@@ -729,7 +729,7 @@ function ProfileTab() {
       const profile = await apiClient.getCandidateProfile();
       setFullName(profile.full_name ?? "");
       setSpecialization(profile.specialization ?? "");
-      setGrade(profile.grade ?? "");
+      setGrade(profile.declared_grade ?? "");
       setStack(profile.stack.join(", "));
       setSummary(profile.summary ?? "");
       setPrivacy(profile.privacy ?? {});
@@ -760,7 +760,7 @@ function ProfileTab() {
       await apiClient.putCandidateProfile({
         full_name: fullName || null,
         specialization: specialization || null,
-        grade: grade || null,
+        declared_grade: grade || null,
         experience_years: null,
         stack: stack.split(",").map((s) => s.trim()).filter(Boolean),
         roles: [],

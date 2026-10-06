@@ -246,6 +246,43 @@ async def test_employer_profile_roundtrip(client: AsyncClient) -> None:
     assert fetched.json()["contact_email"] == "hr@romashka.ru"
 
 
+async def test_declared_grade_does_not_enter_the_bank(client: AsyncClient) -> None:
+    """Самоописание грейда в профиле не делает кандидата подтверждённым.
+
+    Банк отбирает по подтверждённому грейду, который присваивает только тест. Пока
+    форма писала в ту же колонку, кандидат без теста появлялся в выдаче как
+    «прошедший тест» — это ломало главное правило платформы.
+    """
+    from app.services.reference import candidate_reference
+
+    await register_and_verify(client, "declared-only@example.com")
+    login = await client.post(
+        "/api/v1/auth/login", json={"email": "declared-only@example.com", "password": "secret12345"}
+    )
+    token = login.json()["access_token"]
+
+    saved = await client.put(
+        "/api/v1/candidates/me/profile",
+        json={
+            "full_name": "Только заявление",
+            "specialization": "backend",
+            "declared_grade": "lead",
+        },
+        headers=_auth(token),
+    )
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["declared_grade"] == "lead"
+    assert saved.json()["grade"] is None, "подтверждённый грейд не может появиться из формы"
+
+    etoken = await _employer_token(client, "bank-check@example.com")
+    found = await client.get("/api/v1/employers/me/search", params={"limit": 100}, headers=_auth(etoken))
+    assert found.status_code == 200, found.text
+    references = [item["reference"] for item in found.json()["candidates"]]
+    assert candidate_reference(saved.json()["user_id"]) not in references, (
+        "кандидат без теста не должен попадать в банк работодателя"
+    )
+
+
 # --- Подборка -----------------------------------------------------------------
 
 

@@ -315,7 +315,7 @@ async def test_fsp_id_appears_in_profile_and_pdf(client: AsyncClient, db_factory
     token = await _login(client, "fspdf@example.com", "candidate")
     await client.put(
         "/api/v1/candidates/me/profile",
-        json={"full_name": "С ФСП", "specialization": "backend", "grade": "middle"},
+        json={"full_name": "С ФСП", "specialization": "backend", "declared_grade": "middle"},
         headers=_auth(token),
     )
     await client.put("/api/v1/candidates/me/fsp", json={"fsp_id": "fsp-1001"}, headers=_auth(token))

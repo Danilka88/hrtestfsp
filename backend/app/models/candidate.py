@@ -32,7 +32,11 @@ class CandidateProfile(Base):
     full_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
     contacts: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
     specialization: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    # Подтверждённый тестом грейд — часть категории. Записывает только тестирование.
     grade: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # Заявленный грейд: то, что кандидат указал сам в форме или в резюме.
+    # В банк работодателя не влияет — иначе самоописание выдавалось бы за результат теста.
+    declared_grade: Mapped[str | None] = mapped_column(String(20), nullable=True)
     experience_years: Mapped[int | None] = mapped_column(Integer, nullable=True)
     stack: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
     roles: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)

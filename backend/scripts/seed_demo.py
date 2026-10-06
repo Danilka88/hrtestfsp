@@ -410,6 +410,7 @@ async def seed() -> dict[str, int]:
                     contacts={"email": candidate["email"], "phone": "+7 900 000-00-00", "telegram": "@demo"},
                     specialization=candidate["specialization"],
                     grade=candidate["grade"],
+                    declared_grade=candidate["grade"],
                     experience_years=candidate["years"],
                     stack=list(candidate["stack"]),
                     roles=[candidate["specialization"]],

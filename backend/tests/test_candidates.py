@@ -63,7 +63,7 @@ async def test_put_profile_and_read_back(client: AsyncClient) -> None:
         "full_name": "Мария Сидорова",
         "contacts": {"email": "maria@example.com", "telegram": "@maria"},
         "specialization": "backend",
-        "grade": "middle",
+        "declared_grade": "middle",
         "experience_years": 4,
         "stack": ["Python", "Django", "PostgreSQL"],
         "roles": ["backend"],
@@ -148,7 +148,7 @@ async def test_generated_profile_pdf_is_valid(client: AsyncClient) -> None:
         json={
             "full_name": "Пётр Иванов",
             "specialization": "backend",
-            "grade": "senior",
+            "declared_grade": "senior",
             "experience_years": 7,
             "stack": ["Python", "PostgreSQL", "Docker"],
             "summary": "Проектирую высоконагруженные сервисы.",

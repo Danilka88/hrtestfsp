@@ -839,7 +839,7 @@
       <tbody>
         <tr><td>Профиль вручную либо загрузка PDF с автораспознаванием (ФИО, контакты, стек, грейд, роли, стаж)</td>
             <td><span class="tag must">выполнено ✓</span></td>
-            <td><code>POST /candidates/me/resume</code> — разбор PDF (pypdf), поля профиля заполняются автоматически</td></tr>
+            <td><code>POST /candidates/me/resume</code> — разбор PDF (pypdf), поля профиля заполняются автоматически. Грейд из формы или резюме — <b>заявленный</b> (<code>declared_grade</code>): подтверждённый присваивает только тест, иначе самоописание попадало бы в банк работодателя</td></tr>
         <tr><td>Автогенерация стандартизированного PDF-профиля</td>
             <td><span class="tag must">выполнено ✓</span></td>
             <td><code>GET /candidates/me/profile/pdf</code> — reportlab, шрифт DejaVu, поддержка кириллицы</td></tr>
