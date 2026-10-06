@@ -75,11 +75,14 @@ async def test_need_draft_normalizes_unknown_specialization(client):
     from app.services.ai import AIEngine
 
     engine = AIEngine()
-    normalized = engine._normalize_need(
+    normalized, notes = engine._normalize_need(
         {"title": "Роль", "stack": ["React", "TypeScript"], "specialization_code": "космос"}
     )
     assert normalized["specialization_code"] == "frontend"
     assert normalized["grade"] == "middle"
+    # Подстановку платформы не выдаём за ответ модели: она попадает в замечание.
+    assert any("выведена платформой" in note for note in notes)
+    assert any("грейд" in note for note in notes)
 
 
 async def test_invitation_draft_contains_salary(client):

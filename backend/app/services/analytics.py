@@ -33,6 +33,7 @@ from app.models.invitation import (
 from app.models.marketplace import VACANCY_PUBLISHED, Application, RegularTask, Vacancy
 from app.models.testing import SESSION_COMPLETED, Specialization, TestSession
 from app.models.user import User, UserRole
+from app.services import reference
 
 # Порог «свежести» активности профиля и «зависшего» приглашения
 ACTIVE_DAYS = 30
@@ -231,9 +232,9 @@ async def categories(session: AsyncSession) -> list[dict[str, Any]]:
     работодателей той же связки «специализация × грейд» плюс направленные
     приглашения. Разница показывает, куда платформе стоит привлекать людей.
     """
-    specializations = {
-        row.code: row.title for row in (await session.execute(select(Specialization))).scalars().all()
-    }
+    # Карта «код → название» берётся из общего справочника: там она строится
+    # одним запросом и уже используется другими сервисами.
+    _, specializations = await reference.specialization_maps(session)
 
     supply_rows = (
         await session.execute(

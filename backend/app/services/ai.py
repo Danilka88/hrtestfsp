@@ -25,7 +25,7 @@ import logging
 import math
 import re
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -260,42 +260,57 @@ class AIEngine:
             f"Допустимые грейды: {', '.join(GRADE_ORDER)}."
         )
         result = await self._json(prompt, system=system, schema=schema, demo=lambda: self._demo_need(brief))
-        result.data = self._normalize_need(dict(result.data))
+        data, notes = self._normalize_need(dict(result.data))
+        result.data = data
+        if notes and not result.degraded:
+            # Значение подставила платформа: не выдаём его за вывод модели.
+            result.note = "; ".join(notes)
         return result
 
     @staticmethod
-    def _normalize_need(data: dict[str, Any]) -> dict[str, Any]:
-        """Приводит ответ модели к данным платформы.
+    def _specialization_from_stack(stack: Iterable[str]) -> str | None:
+        """Специализация по стеку: голосование по таблице соответствий."""
+        votes: dict[str, int] = {}
+        for technology in stack:
+            mapped = SPECIALIZATION_BY_STACK.get(str(technology))
+            if mapped:
+                votes[mapped] = votes.get(mapped, 0) + 1
+        return max(votes, key=lambda key: votes[key]) if votes else None
 
-        На практике модель может не заполнить `specialization_code` или вернуть
-        несуществующий код — тогда специализация выводится из стека, чтобы
-        подборка не оказалась пустой из-за одного пропущенного поля.
+    @staticmethod
+    def _normalize_need(data: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+        """Приводит ответ модели к данным платформы и сообщает о подстановках.
+
+        Возвращает данные и замечания. Если модель не заполнила поле или вернула
+        неизвестный код, значение выводит платформа (из стека) — пользователь должен
+        видеть, что это вывод платформы, а не ответ модели.
         """
+        notes: list[str] = []
         valid_codes = {code for code, _ in SPECIALIZATIONS}
         code = str(data.get("specialization_code") or "").strip()
         if code not in valid_codes:
-            votes: dict[str, int] = {}
-            for technology in data.get("stack") or []:
-                mapped = SPECIALIZATION_BY_STACK.get(str(technology))
-                if mapped:
-                    votes[mapped] = votes.get(mapped, 0) + 1
-            code = max(votes, key=lambda key: votes[key]) if votes else "backend"
+            inferred = AIEngine._specialization_from_stack(data.get("stack") or [])
+            code = inferred or "backend"
+            notes.append(
+                f"специализация выведена платформой из стека: {code}"
+                if inferred
+                else f"модель не указала специализацию — подставлено «{code}»"
+            )
         data["specialization_code"] = code
 
         grade = str(data.get("grade") or "").strip()
-        data["grade"] = grade if grade in GRADE_ORDER else "middle"
+        if grade in GRADE_ORDER:
+            data["grade"] = grade
+        else:
+            data["grade"] = "middle"
+            notes.append("модель не определила грейд — подставлено «middle»")
         data["stack"] = [str(item).strip() for item in (data.get("stack") or []) if str(item).strip()]
-        return data
+        return data, notes
 
     def _demo_need(self, brief: str) -> dict[str, Any]:
         stack = detect_stack(brief)
         grade = detect_grade(brief) or "middle"
-        votes: dict[str, int] = {}
-        for technology in stack:
-            code = SPECIALIZATION_BY_STACK.get(technology)
-            if code:
-                votes[code] = votes.get(code, 0) + 1
-        specialization = max(votes, key=lambda k: votes[k]) if votes else "backend"
+        specialization = AIEngine._specialization_from_stack(stack) or "backend"
         title_role = SPECIALIZATION_TITLES.get(specialization, "Специалист")
         stack_text = ", ".join(stack) if stack else "уточните стек"
         return {

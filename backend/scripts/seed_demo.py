@@ -23,7 +23,7 @@ from app.core.security import hash_password, utcnow
 from app.db.session import dispose_engine, get_session_factory
 from app.models.candidate import CandidateProfile
 from app.models.employer import EmployerNeed, EmployerProfile, SelectionCandidate
-from app.models.marketplace import Application, Vacancy
+from app.models.marketplace import TASK_OPEN, Application, RegularTask, Vacancy
 from app.models.testing import SESSION_COMPLETED, Specialization, TestSession
 from app.models.user import User, UserRole
 from app.services.reference import ensure_reference_data
@@ -335,6 +335,59 @@ async def _seed_vacancies(session: AsyncSession, specializations: dict[str, int]
     return created
 
 
+async def _seed_tasks(session: AsyncSession, specializations: dict[str, int]) -> int:
+    """Короткие задания работодателя.
+
+    Раздел заданий — часть регулярной поддержки профиля. Без них вкладка у кандидата
+    пуста, а обещанный сценарий «предложить / выполнить задание» показать не на чем.
+    Одно задание общее (без специализации), одно — по специализации кандидата, чтобы
+    был виден отбор в списке предложенных заданий.
+    """
+    employer = (
+        await session.execute(select(User).where(User.email == "hr@fintech-demo.ru"))
+    ).scalar_one_or_none()
+    if employer is None:
+        return 0
+
+    plans = [
+        (
+            "Разобрать рост времени ответа",
+            "Есть график времени ответа за сутки: к вечеру сервис отвечает вдвое дольше. "
+            "Опишите, с чего начнёте разбор и какие данные запросите.",
+            None,
+            "middle",
+        ),
+        (
+            "Ускорить выборку каталога",
+            "Эндпоинт каталога отвечает около 400 мс при 50 тыс. записей. "
+            "Предложите подход к ускорению и объясните выбор.",
+            "backend",
+            "middle",
+        ),
+    ]
+
+    created = 0
+    for title, description, specialization_code, grade_code in plans:
+        existing = (
+            await session.execute(select(RegularTask).where(RegularTask.title == title))
+        ).scalar_one_or_none()
+        if existing is not None:
+            continue
+        session.add(
+            RegularTask(
+                employer_id=employer.id,
+                title=title,
+                description=description,
+                specialization_id=specializations.get(specialization_code) if specialization_code else None,
+                grade_code=grade_code,
+                status=TASK_OPEN,
+            )
+        )
+        created += 1
+    await session.flush()
+    return created
+
+
 async def _seed_applications(session: AsyncSession) -> int:
     """Отклики кандидатов на опубликованные вакансии.
 
@@ -493,6 +546,9 @@ async def seed() -> dict[str, int]:
         # Отклики: вторая механика должна быть видна сразу — у работодателя есть
         # отклики с решением, у кандидата — свои отклики в дашборде.
         created["applications"] = await _seed_applications(session)
+        # Короткие задания: раздел заданий должен быть виден сразу — у кандидата
+        # есть предложенные задания, у работодателя выданные.
+        created["tasks"] = await _seed_tasks(session, specializations)
 
         await session.commit()
 

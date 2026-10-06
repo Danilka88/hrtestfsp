@@ -96,7 +96,8 @@ export function AISourceNote({ result }: { result: AIResult | null }) {
     <p className={`mt-1 text-xs ${degraded ? "text-amber-400/90" : "text-slate-500"}`}>
       {degraded
         ? `Демо-данные: ${result.note ?? "модель недоступна"}`
-        : `Сформировано локальной моделью ${result.provider} за ${result.latency_ms} мс`}
+        : `Сформировано локальной моделью ${result.provider} за ${result.latency_ms} мс` +
+          (result.note ? ` · ${result.note}` : "")}
     </p>
   );
 }

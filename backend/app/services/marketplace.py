@@ -342,27 +342,25 @@ async def task_view(session: AsyncSession, task: RegularTask) -> dict[str, Any]:
 async def list_open_tasks(
     session: AsyncSession, candidate_user_id: str, *, limit: int = 20
 ) -> list[RegularTask]:
-    """Задания, релевантные специализации кандидата (или общие)."""
+    """Задания, релевантные специализации кандидата (или общие).
+
+    Фильтр выполняется в SQL до `limit`. Раньше он применялся в Python уже после
+    лимита: часть подходящих заданий отсекалась, а на каждое задание шёл отдельный
+    запрос за кодом специализации.
+    """
     profile = (
         await session.execute(select(CandidateProfile).where(CandidateProfile.user_id == candidate_user_id))
     ).scalar_one_or_none()
 
     query = select(RegularTask).where(RegularTask.status == TASK_OPEN)
-    tasks = list(
+    if profile is not None and profile.specialization:
+        specialization_id = await reference.specialization_id(session, profile.specialization)
+        query = query.where(
+            RegularTask.specialization_id.is_(None) | (RegularTask.specialization_id == specialization_id)
+        )
+    return list(
         (await session.execute(query.order_by(RegularTask.created_at.desc()).limit(limit))).scalars().all()
     )
-    if profile is not None and profile.specialization:
-        return [
-            t
-            for t in tasks
-            if t.specialization_id is None
-            or (
-                t.specialization_id
-                and await reference.specialization_code(session, t.specialization_id)
-                == profile.specialization
-            )
-        ]
-    return tasks
 
 
 async def submit_solution(
