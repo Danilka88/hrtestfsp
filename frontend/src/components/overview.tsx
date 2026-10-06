@@ -1,6 +1,41 @@
 import type { ReactNode } from "react";
 
-import { Card, SectionNote } from "./ui";
+import { Card, INVITATION_STATUS, SectionNote } from "./ui";
+
+/** Тон полосы для каждого статуса приглашения — в одном месте. */
+const INVITATION_TONES: Record<string, "sky" | "amber" | "emerald" | "rose" | "slate"> = {
+  sent: "sky",
+  viewed: "amber",
+  accepted: "emerald",
+  declined: "rose",
+  revoked: "slate",
+};
+
+/** Порядок статусов приглашения: от отправки к решению. */
+const INVITATION_ORDER = ["sent", "viewed", "accepted", "declined", "revoked"] as const;
+
+/**
+ * Распределение приглашений по статусам.
+ *
+ * Одинаково в обоих кабинетах: раньше этот блок из пяти полос был скопирован в каждый
+ * дашборд, и подписи со статусами могли разойтись.
+ */
+export function InvitationBars({ invitations }: { invitations: { status: string }[] }) {
+  const total = invitations.length;
+  return (
+    <div className="space-y-2">
+      {INVITATION_ORDER.map((status) => (
+        <Bar
+          key={status}
+          label={INVITATION_STATUS[status].label}
+          value={invitations.filter((item) => item.status === status).length}
+          total={total}
+          tone={INVITATION_TONES[status]}
+        />
+      ))}
+    </div>
+  );
+}
 
 /**
  * Кирпичики дашбордов кабинетов: показатели и ИИ-блок.

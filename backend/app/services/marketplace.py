@@ -9,6 +9,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.errors import DomainError
 from app.core.security import utcnow
 from app.models.candidate import CandidateProfile
 from app.models.employer import EmployerProfile
@@ -27,28 +28,23 @@ from app.models.marketplace import (
     TaskSubmission,
     Vacancy,
 )
-from app.models.testing import SESSION_COMPLETED, Specialization, TestSession
+from app.models.testing import SESSION_COMPLETED, TestSession
+from app.services import reference
 from app.services.testing import GRADE_ORDER
 
 logger = logging.getLogger(__name__)
 
 
-class MarketplaceError(Exception):
-    def __init__(self, status_code: int, detail: str) -> None:
-        super().__init__(detail)
-        self.status_code = status_code
-        self.detail = detail
+class MarketplaceError(DomainError):
+    """Ошибка вакансий, откликов и регулярных заданий."""
 
 
 async def _specialization_id(session: AsyncSession, code: str | None) -> int | None:
-    if not code:
-        return None
-    specialization = (
-        await session.execute(select(Specialization).where(Specialization.code == code))
-    ).scalar_one_or_none()
-    if specialization is None:
+    """Код специализации в id. Для вакансий неизвестный код — ошибка, а не пропуск."""
+    record = await reference.specialization_by_code(session, code)
+    if code and record is None:
         raise MarketplaceError(404, "Специализация не найдена")
-    return specialization.id
+    return record.id if record else None
 
 
 def _validate_salary(salary_from: int, salary_to: int) -> None:
@@ -59,13 +55,6 @@ def _validate_salary(salary_from: int, salary_to: int) -> None:
 def _validate_grade(grade: str | None) -> None:
     if grade and grade not in GRADE_ORDER:
         raise MarketplaceError(400, "Неизвестный грейд")
-
-
-async def _specialization_code(session: AsyncSession, specialization_id: int | None) -> str | None:
-    if specialization_id is None:
-        return None
-    specialization = await session.get(Specialization, specialization_id)
-    return specialization.code if specialization else None
 
 
 # --- Вакансии -----------------------------------------------------------------
@@ -126,7 +115,7 @@ async def vacancy_view(session: AsyncSession, vacancy: Vacancy) -> dict[str, Any
         "id": vacancy.id,
         "title": vacancy.title,
         "description": vacancy.description,
-        "specialization_code": await _specialization_code(session, vacancy.specialization_id),
+        "specialization_code": await reference.specialization_code(session, vacancy.specialization_id),
         "grade": vacancy.grade_code,
         "stack": list(vacancy.stack or []),
         "salary_from": vacancy.salary_from,
@@ -342,7 +331,7 @@ async def task_view(session: AsyncSession, task: RegularTask) -> dict[str, Any]:
         "id": task.id,
         "title": task.title,
         "description": task.description,
-        "specialization_code": await _specialization_code(session, task.specialization_id),
+        "specialization_code": await reference.specialization_code(session, task.specialization_id),
         "grade": task.grade_code,
         "status": task.status,
         "company_name": company.company_name if company else None,
@@ -369,7 +358,8 @@ async def list_open_tasks(
             if t.specialization_id is None
             or (
                 t.specialization_id
-                and await _specialization_code(session, t.specialization_id) == profile.specialization
+                and await reference.specialization_code(session, t.specialization_id)
+                == profile.specialization
             )
         ]
     return tasks

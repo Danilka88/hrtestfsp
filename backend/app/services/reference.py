@@ -38,6 +38,37 @@ GRADE_TITLES: dict[str, str] = {
 }
 
 
+async def specialization_by_code(session: AsyncSession, code: str | None) -> Specialization | None:
+    """Справочная запись по коду. `None` — код не задан или не найден.
+
+    Решение, что делать с ненайденным кодом (ответ 404 или пропуск), остаётся за
+    вызывающим: у подбора и у вакансий разные правила, а поиск записи — один.
+    """
+    if not code:
+        return None
+    return (
+        await session.execute(select(Specialization).where(Specialization.code == code))
+    ).scalar_one_or_none()
+
+
+async def specialization_id(session: AsyncSession, code: str | None) -> int | None:
+    record = await specialization_by_code(session, code)
+    return record.id if record else None
+
+
+async def specialization_code(session: AsyncSession, specialization_id: int | None) -> str | None:
+    if specialization_id is None:
+        return None
+    record = await session.get(Specialization, specialization_id)
+    return record.code if record else None
+
+
+async def specialization_maps(session: AsyncSession) -> tuple[dict[int, str], dict[str, str]]:
+    """Отображения «id → код» и «код → название» за один запрос."""
+    rows = (await session.execute(select(Specialization))).scalars().all()
+    return {row.id: row.code for row in rows}, {row.code: row.title for row in rows}
+
+
 async def ensure_reference_data(session: AsyncSession) -> dict[str, int]:
     """Гарантирует наличие справочников и непустого банка заданий."""
     created: dict[str, int] = {"specializations": 0, "grades": 0, "categories": 0, "items": 0}

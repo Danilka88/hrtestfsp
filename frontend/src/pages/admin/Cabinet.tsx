@@ -10,7 +10,17 @@ import type {
 } from "../../api/client";
 import { errorMessage } from "../../api/client";
 import { AISourceNote } from "../../components/ai";
-import { Alert, Button, Card, EmptyState, InfoTip, SectionNote, score } from "../../components/ui";
+import {
+  Alert,
+  Button,
+  Card,
+  EmptyState,
+  INVITATION_STATUS,
+  InfoTip,
+  Percent,
+  SectionNote,
+  score,
+} from "../../components/ui";
 import { useToast } from "../../components/toast";
 
 type Tab = "overview" | "graph" | "categories" | "companies" | "signals" | "ai";
@@ -23,22 +33,6 @@ const TABS: [Tab, string][] = [
   ["signals", "Сигналы"],
   ["ai", "ИИ-сводка"],
 ];
-
-const STATUS_COLORS: Record<string, string> = {
-  sent: "#38bdf8",
-  viewed: "#fbbf24",
-  accepted: "#34d399",
-  declined: "#fb7185",
-  revoked: "#64748b",
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  sent: "отправлено",
-  viewed: "просмотрено",
-  accepted: "принято",
-  declined: "отклонено",
-  revoked: "отозвано",
-};
 
 export function AdminCabinet() {
   const [tab, setTab] = useState<Tab>("overview");
@@ -75,14 +69,6 @@ export function AdminCabinet() {
       {tab === "ai" ? <AiTab /> : null}
     </div>
   );
-}
-
-/** Доля в процентах; отсутствие данных — «нет данных», а не «0%». */
-function Percent({ value }: { value: number | null }) {
-  if (value === null || value === undefined) {
-    return <span className="text-slate-500">нет данных</span>;
-  }
-  return <span>{value}%</span>;
 }
 
 function OverviewTab() {
@@ -329,13 +315,13 @@ function GraphTab() {
         <Button variant={only === "all" ? "primary" : "ghost"} onClick={() => setOnly("all")}>
           Все связи
         </Button>
-        {Object.entries(STATUS_LABELS).map(([key, label]) => (
+        {Object.entries(INVITATION_STATUS).map(([key, status]) => (
           <Button key={key} variant={only === key ? "primary" : "ghost"} onClick={() => setOnly(key)}>
             <span
               className="mr-1 inline-block h-2 w-2 rounded-full"
-              style={{ background: STATUS_COLORS[key] }}
+              style={{ background: status.color }}
             />
-            {label}
+            {status.label}
           </Button>
         ))}
       </div>
@@ -361,7 +347,7 @@ function GraphTab() {
                 <path
                   key={edge.id}
                   d={`M ${x1} ${y1} C ${mid} ${y1}, ${mid} ${y2}, ${x2} ${y2}`}
-                  stroke={STATUS_COLORS[edge.status] ?? "#64748b"}
+                  stroke={INVITATION_STATUS[edge.status]?.color ?? "#64748b"}
                   strokeWidth={edge.status === "accepted" ? 2.5 : 1.5}
                   fill="none"
                   opacity={edge.status === "revoked" ? 0.5 : 0.9}
@@ -412,13 +398,13 @@ function GraphTab() {
           </svg>
         </div>
         <div className="mt-3 flex flex-wrap gap-3 text-xs text-slate-400">
-          {Object.entries(STATUS_LABELS).map(([key, label]) => (
+          {Object.entries(INVITATION_STATUS).map(([key, status]) => (
             <span key={key} className="inline-flex items-center gap-1">
               <span
                 className="inline-block h-2 w-2 rounded-full"
-                style={{ background: STATUS_COLORS[key] }}
+                style={{ background: status.color }}
               />
-              {label}
+              {status.label}
             </span>
           ))}
         </div>

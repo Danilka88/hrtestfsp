@@ -13,9 +13,24 @@ import { useAuth } from "../../auth/AuthContext";
 import { AIButton, AISourceNote, AIStatusBadge, aiToastPayload } from "../../components/ai";
 import { TasksPanel, VacanciesPanel } from "../../components/marketplace";
 import { useToast } from "../../components/toast";
-import { Alert, Button, Card, EmptyState, Field, InfoTip, Modal, SectionNote, StatusBadge, TextArea, gradesLabel, money, score } from "../../components/ui";
+import {
+  Alert,
+  Button,
+  Card,
+  EmptyState,
+  Field,
+  InfoTip,
+  Modal,
+  SectionNote,
+  SelectField,
+  StatusBadge,
+  TextArea,
+  gradesLabel,
+  money,
+  score,
+} from "../../components/ui";
 import { VacancyHints } from "../../components/hints";
-import { Bar, Dashboard, Kpi } from "../../components/overview";
+import { Dashboard, InvitationBars, Kpi } from "../../components/overview";
 
 type Tab = "overview" | "category" | "test" | "invitations" | "vacancies" | "tasks" | "profile";
 
@@ -182,13 +197,7 @@ function OverviewTab() {
             основная механика платформы.
           </p>
         ) : (
-          <div className="space-y-2">
-            <Bar label="отправлено" value={invitations.filter((i) => i.status === "sent").length} total={invitations.length} />
-            <Bar label="просмотрено" value={invitations.filter((i) => i.status === "viewed").length} total={invitations.length} tone="amber" />
-            <Bar label="принято" value={accepted} total={invitations.length} tone="emerald" />
-            <Bar label="отклонено" value={invitations.filter((i) => i.status === "declined").length} total={invitations.length} tone="rose" />
-            <Bar label="отозвано работодателем" value={invitations.filter((i) => i.status === "revoked").length} total={invitations.length} tone="slate" />
-          </div>
+          <InvitationBars invitations={invitations} />
         )}
       </Card>
 
@@ -498,20 +507,12 @@ function TestTab({
       </SectionNote>
       <Card title="Шаг 1. Опрос по отрасли и специализации">
         <div className="flex flex-wrap items-end gap-3">
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-400">Специализация</span>
-            <select
-              className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100"
-              value={specialization}
-              onChange={(event) => setSpecialization(event.target.value)}
-            >
-              {specializations.map((spec) => (
-                <option key={spec.code} value={spec.code}>
-                  {spec.title}
-                </option>
-              ))}
-            </select>
-          </label>
+          <SelectField
+            label="Специализация"
+            value={specialization}
+            onChange={setSpecialization}
+            options={specializations.map((item) => ({ value: item.code, label: item.title }))}
+          />
           <Button onClick={() => void startSurvey()} disabled={busy || !specialization}>
             Пройти опрос
           </Button>
@@ -521,20 +522,12 @@ function TestTab({
       {grades.length ? (
         <Card title="Шаг 2. Заявленный грейд и тест">
           <div className="flex flex-wrap items-end gap-3">
-            <label className="text-sm">
-              <span className="mb-1 block text-slate-400">Грейд, на который тестируетесь</span>
-              <select
-                className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100"
-                value={targetGrade}
-                onChange={(event) => setTargetGrade(event.target.value)}
-              >
-                {grades.map((grade) => (
-                  <option key={grade} value={grade}>
-                    {gradesLabel(grade)}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <SelectField
+              label="Грейд, на который тестируетесь"
+              value={targetGrade}
+              onChange={setTargetGrade}
+              options={grades.map((code) => ({ value: code, label: gradesLabel(code) }))}
+            />
             <Button onClick={() => void start()} disabled={busy || !targetGrade}>
               Начать тест
             </Button>

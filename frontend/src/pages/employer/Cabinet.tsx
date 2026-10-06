@@ -14,7 +14,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { AIButton, AISourceNote, AIStatusBadge, aiToastPayload } from "../../components/ai";
 import { TasksPanel, VacanciesPanel } from "../../components/marketplace";
 import { CandidateHints } from "../../components/hints";
-import { Bar, Dashboard, Kpi } from "../../components/overview";
+import { Dashboard, InvitationBars, Kpi } from "../../components/overview";
 import { useToast } from "../../components/toast";
 import {
   Alert,
@@ -22,10 +22,12 @@ import {
   Card,
   EmptyState,
   Field,
+  GRADE_CODES,
   InfoTip,
   Modal,
   ReasonList,
   SectionNote,
+  SelectField,
   StatusBadge,
   TextArea,
   gradesLabel,
@@ -121,7 +123,6 @@ function OverviewTab() {
   const waiting = invitations.filter(
     (item) => item.status === "sent" || item.status === "viewed",
   ).length;
-  const accepted = invitations.filter((item) => item.status === "accepted").length;
   const responseRate = invitations.length
     ? Math.round((answered / invitations.length) * 100)
     : null;
@@ -166,13 +167,7 @@ function OverviewTab() {
             до начала общения.
           </p>
         ) : (
-          <div className="space-y-2">
-            <Bar label="отправлено" value={invitations.filter((i) => i.status === "sent").length} total={invitations.length} />
-            <Bar label="просмотрено" value={invitations.filter((i) => i.status === "viewed").length} total={invitations.length} tone="amber" />
-            <Bar label="принято" value={accepted} total={invitations.length} tone="emerald" />
-            <Bar label="отклонено" value={invitations.filter((i) => i.status === "declined").length} total={invitations.length} tone="rose" />
-            <Bar label="отозвано" value={invitations.filter((i) => i.status === "revoked").length} total={invitations.length} tone="slate" />
-          </div>
+          <InvitationBars invitations={invitations} />
         )}
       </Card>
     </Dashboard>
@@ -364,40 +359,22 @@ function SelectionTab() {
       >
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Название роли" value={title} onChange={setTitle} />
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-400">Специализация</span>
-            <select
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100"
-              value={specialization}
-              onChange={(event) => setSpecialization(event.target.value)}
-            >
-              {specializations.map((spec) => (
-                <option key={spec.code} value={spec.code}>
-                  {spec.title}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-400">Грейд</span>
-            <select
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100"
-              value={grade}
-              onChange={(event) => setGrade(event.target.value)}
-            >
-              {(grades.length
-                ? grades.map((item) => ({ code: item.code, title: item.title }))
-                : ["intern", "junior", "junior_plus", "middle", "senior", "lead"].map((code) => ({
-                    code,
-                    title: gradesLabel(code),
-                  }))
-              ).map((item) => (
-                <option key={item.code} value={item.code}>
-                  {item.title}
-                </option>
-              ))}
-            </select>
-          </label>
+          <SelectField
+            label="Специализация"
+            value={specialization}
+            onChange={setSpecialization}
+            options={specializations.map((item) => ({ value: item.code, label: item.title }))}
+          />
+          <SelectField
+            label="Грейд"
+            value={grade}
+            onChange={setGrade}
+            options={
+              grades.length
+                ? grades.map((item) => ({ value: item.code, label: item.title }))
+                : GRADE_CODES.map((code) => ({ value: code, label: gradesLabel(code) }))
+            }
+          />
           <Field label="Стек (через запятую)" value={stack} onChange={setStack} />
         </div>
         <div className="mt-3">
@@ -933,21 +910,13 @@ function SearchTab() {
           подтверждённой категории. Поиск нужен, когда требуется точечно проверить банк.
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-400">Специализация</span>
-            <select
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100"
-              value={specialization}
-              onChange={(event) => setSpecialization(event.target.value)}
-            >
-              <option value="">Любая</option>
-              {specializations.map((item) => (
-                <option key={item.code} value={item.code}>
-                  {item.title}
-                </option>
-              ))}
-            </select>
-          </label>
+          <SelectField
+            label="Специализация"
+            value={specialization}
+            onChange={setSpecialization}
+            options={specializations.map((item) => ({ value: item.code, label: item.title }))}
+            placeholder="Любая"
+          />
           <label className="text-sm">
             <span className="mb-1 block text-slate-400">Грейд</span>
             <select

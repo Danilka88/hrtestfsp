@@ -37,7 +37,7 @@ export function Field({
     <label className="block text-sm">
       <span className="mb-1 block text-slate-400">{label}</span>
       <input
-        className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100 outline-none focus:border-sky-500"
+        className={inputClass}
         type={type}
         value={value}
         required={required}
@@ -65,7 +65,7 @@ export function TextArea({
     <label className="block text-sm">
       <span className="mb-1 block text-slate-400">{label}</span>
       <textarea
-        className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100 outline-none focus:border-sky-500"
+        className={inputClass}
         rows={rows}
         value={value}
         onChange={(event) => onChange(event.target.value)}
@@ -104,37 +104,76 @@ export function Button({
   );
 }
 
+/**
+ * Единый вид поля ввода. Раньше класс копировался в каждую форму, причём в части
+ * мест без стиля фокуса — теперь он один и с видимым фокусом.
+ */
+export const inputClass =
+  "w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100 outline-none focus:border-sky-500";
+
+/**
+ * Статус приглашения в одном месте: подпись, вид значка и цвет линии на схеме
+ * взаимодействия. Раньше эти три представления жили в разных файлах и расходились.
+ */
+export const INVITATION_STATUS: Record<string, { label: string; badge: string; color: string }> = {
+  sent: { label: "отправлено", badge: "bg-sky-500/15 text-sky-300", color: "#38bdf8" },
+  viewed: { label: "просмотрено", badge: "bg-amber-500/15 text-amber-300", color: "#fbbf24" },
+  accepted: { label: "принято", badge: "bg-emerald-500/15 text-emerald-300", color: "#34d399" },
+  declined: { label: "отклонено", badge: "bg-rose-500/15 text-rose-300", color: "#fb7185" },
+  revoked: { label: "отозвано работодателем", badge: "bg-slate-600/30 text-slate-400", color: "#64748b" },
+};
+
+/** Остальные статусы платформы: вакансии, отклики, задания. */
+const OTHER_STATUS: Record<string, { label: string; badge: string }> = {
+  published: { label: "опубликована", badge: "bg-emerald-500/15 text-emerald-300" },
+  closed: { label: "закрыта", badge: "bg-slate-600/30 text-slate-400" },
+  open: { label: "открыто", badge: "bg-emerald-500/15 text-emerald-300" },
+  submitted: { label: "отправлено", badge: "bg-sky-500/15 text-sky-300" },
+  completed: { label: "завершён", badge: "bg-emerald-500/15 text-emerald-300" },
+  in_progress: { label: "в процессе", badge: "bg-amber-500/15 text-amber-300" },
+};
+
 export function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, string> = {
-    sent: "bg-sky-500/15 text-sky-300",
-    viewed: "bg-amber-500/15 text-amber-300",
-    accepted: "bg-emerald-500/15 text-emerald-300",
-    declined: "bg-rose-500/15 text-rose-300",
-    revoked: "bg-slate-600/30 text-slate-400",
-    published: "bg-emerald-500/15 text-emerald-300",
-    closed: "bg-slate-600/30 text-slate-400",
-    open: "bg-emerald-500/15 text-emerald-300",
-    submitted: "bg-sky-500/15 text-sky-300",
-    completed: "bg-emerald-500/15 text-emerald-300",
-    in_progress: "bg-amber-500/15 text-amber-300",
-  };
-  const labels: Record<string, string> = {
-    sent: "отправлено",
-    viewed: "просмотрено",
-    accepted: "принято",
-    declined: "отклонено",
-    revoked: "отозвано работодателем",
-    published: "опубликована",
-    closed: "закрыта",
-    open: "открыто",
-    submitted: "отправлено",
-    completed: "завершён",
-    in_progress: "в процессе",
-  };
+  const known = INVITATION_STATUS[status] ?? OTHER_STATUS[status];
+  const badge = known?.badge ?? "bg-slate-700/40 text-slate-300";
+  return <span className={`rounded-full px-2.5 py-0.5 text-xs ${badge}`}>{known?.label ?? status}</span>;
+}
+
+/** Процент с честным «нет данных»: отсутствие данных — не ноль. */
+export function Percent({ value }: { value: number | null | undefined }) {
+  if (value === null || value === undefined) return <span className="text-slate-500">нет данных</span>;
+  return <span>{value}%</span>;
+}
+
+/** Поле выбора: та же форма, что у поля ввода, но со списком. */
+export function SelectField({
+  label,
+  value,
+  onChange,
+  options,
+  placeholder,
+  hint,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: { value: string; label: string }[];
+  placeholder?: string;
+  hint?: string;
+}) {
   return (
-    <span className={`rounded-full px-2.5 py-0.5 text-xs ${map[status] ?? "bg-slate-700/40 text-slate-300"}`}>
-      {labels[status] ?? status}
-    </span>
+    <label className="block text-sm">
+      <span className="mb-1 block text-slate-400">{label}</span>
+      <select className={inputClass} value={value} onChange={(event) => onChange(event.target.value)}>
+        {placeholder ? <option value="">{placeholder}</option> : null}
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      {hint ? <span className="mt-1 block text-xs text-slate-500">{hint}</span> : null}
+    </label>
   );
 }
 
@@ -188,6 +227,9 @@ export function ReasonList({
     </>
   );
 }
+
+/** Порядок грейдов, если справочник ещё не загружен: тот же, что в GRADE_ORDER на сервере. */
+export const GRADE_CODES = ["intern", "junior", "junior_plus", "middle", "senior", "lead"];
 
 export function gradesLabel(grade: string | null | undefined): string {
   if (!grade) return "не определён";

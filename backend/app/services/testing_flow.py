@@ -19,6 +19,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
+from app.core.errors import DomainError
 from app.core.security import utcnow
 from app.models.candidate import DEFAULT_PRIVACY, CandidateProfile
 from app.models.testing import (
@@ -32,6 +33,7 @@ from app.models.testing import (
     SurveyResponse,
     TestSession,
 )
+from app.services import reference
 from app.services.testing import (
     GRADE_ORDER,
     AbilityEstimate,
@@ -51,11 +53,8 @@ TARGET_STANDARD_ERROR = 0.38
 FAST_ANSWER_MS = 1500
 
 
-class TestingError(Exception):
-    def __init__(self, status_code: int, detail: str) -> None:
-        super().__init__(detail)
-        self.status_code = status_code
-        self.detail = detail
+class TestingError(DomainError):
+    """Ошибка сценария тестирования и смены грейда."""
 
 
 @dataclass
@@ -90,8 +89,7 @@ def _item_to_core(item: Item):
 
 
 async def get_specialization(session: AsyncSession, code: str) -> Specialization:
-    result = await session.execute(select(Specialization).where(Specialization.code == code))
-    spec = result.scalar_one_or_none()
+    spec = await reference.specialization_by_code(session, code)
     if spec is None or not spec.is_active:
         raise TestingError(404, "Специализация не найдена")
     return spec

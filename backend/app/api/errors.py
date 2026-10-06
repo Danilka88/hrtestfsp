@@ -1,8 +1,10 @@
 """Обработчики доменных ошибок.
 
-Доменные исключения несут HTTP-код и сообщение. Регистрация одного обработчика
-на все типы гарантирует, что они не превращаются в 500 при новых эндпоинтах —
-это устраняет целый класс ошибок «забыл обернуть вызов».
+Все доменные исключения наследуют `DomainError`, поэтому обработчик регистрируется
+один раз на базовый класс. Новое исключение достаточно унаследовать — оно уже не
+превратится в 500, и помнить про отдельную регистрацию не нужно. Это и было целью:
+раньше список типов приходилось поддерживать вручную, и забытый тип давал ошибку
+сервера вместо понятного ответа.
 """
 
 from __future__ import annotations
@@ -10,33 +12,16 @@ from __future__ import annotations
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from app.services.ai import AIError
-from app.services.auth import AuthError
-from app.services.candidates import ProfileError
-from app.services.employers import EmployerError
-from app.services.invitations import InvitationError
-from app.services.marketplace import MarketplaceError
-from app.services.resume import ResumeError
-from app.services.testing_flow import TestingError
-
-DOMAIN_ERRORS = (
-    AuthError,
-    ProfileError,
-    ResumeError,
-    EmployerError,
-    InvitationError,
-    MarketplaceError,
-    TestingError,
-    AIError,
-)
+from app.core.errors import DomainError
 
 
 async def _domain_error_handler(_request: Request, exc: Exception) -> JSONResponse:
-    status_code = getattr(exc, "status_code", 400)
-    detail = getattr(exc, "detail", str(exc))
-    return JSONResponse(status_code=status_code, content={"detail": detail})
+    # Обработчик зарегистрирован на базовый класс, поэтому сюда попадают только его
+    # наследники; проверка оставлена на случай ошибочной регистрации.
+    if not isinstance(exc, DomainError):
+        return JSONResponse(status_code=500, content={"detail": "Внутренняя ошибка сервиса"})
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
 
 def register_domain_error_handlers(app: FastAPI) -> None:
-    for error_type in DOMAIN_ERRORS:
-        app.add_exception_handler(error_type, _domain_error_handler)
+    app.add_exception_handler(DomainError, _domain_error_handler)

@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { errorMessage } from "../api/client";
 import type { Role } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
-import { Alert, Button, Card, Field } from "../components/ui";
+import { Alert, Button, Card, Field, SelectField } from "../components/ui";
 
 /** Кабинет по роли — то же правило, что в маршрутизации приложения. */
 function cabinetPath(role: string): string {
@@ -157,17 +157,15 @@ export function LoginPage() {
 
             {mode === "register" ? (
               <>
-                <label className="block text-sm">
-                  <span className="mb-1 block text-slate-400">Роль</span>
-                  <select
-                    className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100"
-                    value={role}
-                    onChange={(event) => setRole(event.target.value as Role)}
-                  >
-                    <option value="candidate">Соискатель</option>
-                    <option value="employer">Работодатель</option>
-                  </select>
-                </label>
+                <SelectField
+                  label="Роль"
+                  value={role}
+                  onChange={(value) => setRole(value as Role)}
+                  options={[
+                    { value: "candidate", label: "Соискатель" },
+                    { value: "employer", label: "Работодатель" },
+                  ]}
+                />
 
                 <label className="flex items-start gap-2 text-sm text-slate-300">
                   <input

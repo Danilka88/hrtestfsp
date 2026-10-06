@@ -13,7 +13,21 @@ import { errorMessage } from "../api/client";
 import { AIButton, AISourceNote, aiToastPayload } from "./ai";
 import { useToast } from "./toast";
 import { VacancyHints } from "./hints";
-import { Button, Card, EmptyState, Field, InfoTip, Modal, SectionNote, StatusBadge, TextArea, gradesLabel, money } from "./ui";
+import {
+  Button,
+  Card,
+  EmptyState,
+  Field,
+  GRADE_CODES,
+  InfoTip,
+  Modal,
+  SectionNote,
+  SelectField,
+  StatusBadge,
+  TextArea,
+  gradesLabel,
+  money,
+} from "./ui";
 
 /**
  * Панели дополнительного функционала: вакансии с откликами и регулярные короткие
@@ -117,21 +131,13 @@ function CandidateVacancies() {
           сам. Контакты при этом раскрываются работодателю.
         </p>
         <div className="flex flex-wrap items-end gap-3">
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-400">Специализация</span>
-            <select
-              className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100"
-              value={specialization}
-              onChange={(event) => setSpecialization(event.target.value)}
-            >
-              <option value="">Все</option>
-              {specializations.map((item) => (
-                <option key={item.code} value={item.code}>
-                  {item.title}
-                </option>
-              ))}
-            </select>
-          </label>
+          <SelectField
+            label="Специализация"
+            value={specialization}
+            onChange={setSpecialization}
+            options={specializations.map((item) => ({ value: item.code, label: item.title }))}
+            placeholder="Все"
+          />
           <Button variant="ghost" onClick={() => void load()}>
             Обновить
           </Button>
@@ -377,34 +383,18 @@ function EmployerVacancies() {
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Название вакансии" value={title} onChange={setTitle} />
           <Field label="Стек (через запятую)" value={stack} onChange={setStack} />
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-400">Специализация</span>
-            <select
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100"
-              value={specialization}
-              onChange={(event) => setSpecialization(event.target.value)}
-            >
-              {specializations.map((item) => (
-                <option key={item.code} value={item.code}>
-                  {item.title}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-400">Грейд</span>
-            <select
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100"
-              value={grade}
-              onChange={(event) => setGrade(event.target.value)}
-            >
-              {["intern", "junior", "junior_plus", "middle", "senior", "lead"].map((code) => (
-                <option key={code} value={code}>
-                  {gradesLabel(code)}
-                </option>
-              ))}
-            </select>
-          </label>
+          <SelectField
+            label="Специализация"
+            value={specialization}
+            onChange={setSpecialization}
+            options={specializations.map((item) => ({ value: item.code, label: item.title }))}
+          />
+          <SelectField
+            label="Грейд"
+            value={grade}
+            onChange={setGrade}
+            options={GRADE_CODES.map((code) => ({ value: code, label: gradesLabel(code) }))}
+          />
           <Field label="Зарплата от, ₽" value={salaryFrom} onChange={setSalaryFrom} />
           <Field label="Зарплата до, ₽" value={salaryTo} onChange={setSalaryTo} />
         </div>
@@ -750,34 +740,18 @@ function EmployerTasks() {
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Название задания" value={title} onChange={setTitle} />
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-400">Специализация</span>
-            <select
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100"
-              value={specialization}
-              onChange={(event) => setSpecialization(event.target.value)}
-            >
-              {specializations.map((item) => (
-                <option key={item.code} value={item.code}>
-                  {item.title}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-400">Грейд</span>
-            <select
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100"
-              value={grade}
-              onChange={(event) => setGrade(event.target.value)}
-            >
-              {["intern", "junior", "junior_plus", "middle", "senior", "lead"].map((code) => (
-                <option key={code} value={code}>
-                  {gradesLabel(code)}
-                </option>
-              ))}
-            </select>
-          </label>
+          <SelectField
+            label="Специализация"
+            value={specialization}
+            onChange={setSpecialization}
+            options={specializations.map((item) => ({ value: item.code, label: item.title }))}
+          />
+          <SelectField
+            label="Грейд"
+            value={grade}
+            onChange={setGrade}
+            options={GRADE_CODES.map((code) => ({ value: code, label: gradesLabel(code) }))}
+          />
         </div>
         <div className="mt-3">
           <TextArea label="Формулировка задания" value={description} onChange={setDescription} rows={4} />

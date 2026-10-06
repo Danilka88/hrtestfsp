@@ -29,6 +29,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+from app.core.errors import DomainError
 from app.providers.mock import detect_grade, detect_roles, detect_stack
 from app.providers.registry import get_llm
 from app.services.reference import GRADE_ORDER, GRADE_TITLES, SPECIALIZATIONS
@@ -38,13 +39,8 @@ logger = logging.getLogger(__name__)
 FENCE_RE = re.compile(r"^\s*```(?:json|json5)?\s*|\s*```\s*$", re.IGNORECASE)
 
 
-class AIError(Exception):
-    """Ошибка ИИ-функции: несёт HTTP-код и сообщение (как остальные доменные ошибки)."""
-
-    def __init__(self, status_code: int, detail: str) -> None:
-        super().__init__(detail)
-        self.status_code = status_code
-        self.detail = detail
+class AIError(DomainError):
+    """Ошибка ИИ-функции: несёт HTTP-код и сообщение, как остальные доменные ошибки."""
 
 
 # Соответствие технологий специализациям — для демо-генерации потребности.

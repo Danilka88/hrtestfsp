@@ -17,12 +17,14 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.errors import DomainError
 from app.models.candidate import DEFAULT_PRIVACY, CandidateProfile
 from app.models.employer import EmployerNeed, EmployerProfile, Selection, SelectionCandidate
 from app.models.testing import SESSION_COMPLETED, Category, Specialization, TestSession
 from app.models.user import User, UserRole
 from app.providers.registry import get_fsp
 from app.schemas.employer import EmployerProfileIn, NeedIn, SearchQuery
+from app.services import reference
 from app.services.fit import (
     compute_fit,
     days_since,
@@ -42,11 +44,8 @@ logger = logging.getLogger(__name__)
 MAX_SELECTION_CANDIDATES = 25
 
 
-class EmployerError(Exception):
-    def __init__(self, status_code: int, detail: str) -> None:
-        super().__init__(detail)
-        self.status_code = status_code
-        self.detail = detail
+class EmployerError(DomainError):
+    """Ошибка стороны работодателя: профиль, потребность, поиск."""
 
 
 # --- Профиль компании ---------------------------------------------------------
@@ -74,15 +73,10 @@ async def upsert_profile(session: AsyncSession, user_id: str, data: EmployerProf
 
 
 async def create_need(session: AsyncSession, user_id: str, payload: NeedIn) -> EmployerNeed:
-    specialization_id = None
-    if payload.specialization_code:
-        result = await session.execute(
-            select(Specialization).where(Specialization.code == payload.specialization_code)
-        )
-        specialization = result.scalar_one_or_none()
-        if specialization is None:
-            raise EmployerError(404, "Специализация не найдена")
-        specialization_id = specialization.id
+    specialization = await reference.specialization_by_code(session, payload.specialization_code)
+    if payload.specialization_code and specialization is None:
+        raise EmployerError(404, "Специализация не найдена")
+    specialization_id = specialization.id if specialization else None
 
     if payload.grade and payload.grade not in GRADE_ORDER:
         raise EmployerError(400, "Неизвестный грейд")
@@ -319,9 +313,7 @@ async def _category_id(
 ) -> int | None:
     if not specialization_code or not grade:
         return None
-    specialization = (
-        await session.execute(select(Specialization).where(Specialization.code == specialization_code))
-    ).scalar_one_or_none()
+    specialization = await reference.specialization_by_code(session, specialization_code)
     if specialization is None:
         return None
     category = (

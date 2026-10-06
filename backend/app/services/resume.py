@@ -5,15 +5,13 @@ from __future__ import annotations
 import io
 import logging
 
+from app.core.errors import BadRequest
+
 logger = logging.getLogger(__name__)
 
 
-class ResumeError(Exception):
-    """Ошибка обработки загруженного резюме."""
-
-    def __init__(self, detail: str) -> None:
-        super().__init__(detail)
-        self.detail = detail
+class ResumeError(BadRequest):
+    """Ошибка обработки загруженного резюме: ответ 400 без отдельного кода."""
 
 
 def extract_text_from_pdf(data: bytes, max_chars: int = 200_000) -> str:

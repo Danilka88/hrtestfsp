@@ -23,8 +23,8 @@ from app.models.candidate import CandidateProfile
 from app.models.employer import EmployerNeed, EmployerProfile
 from app.models.invitation import STATUS_ACCEPTED, STATUS_SENT, STATUS_VIEWED, Invitation
 from app.models.marketplace import Application, Vacancy
-from app.models.testing import Specialization
 from app.models.user import User, UserRole
+from app.services import reference
 from app.services.testing import GRADE_ORDER
 
 # Веса подсказок. Ядро решения не меняют: это надстройка над подбором, а не замена.
@@ -59,16 +59,6 @@ def _freshness_score(days: int, full_days: int = 30, zero_days: int = 180) -> fl
     if days >= zero_days:
         return 0.0
     return round((zero_days - days) / (zero_days - full_days), 3)
-
-
-async def _specialization_titles(session: AsyncSession) -> dict[str, str]:
-    rows = (await session.execute(select(Specialization))).scalars().all()
-    return {row.code: row.title for row in rows}
-
-
-async def _specialization_codes(session: AsyncSession) -> dict[int, str]:
-    rows = (await session.execute(select(Specialization))).scalars().all()
-    return {row.id: row.code for row in rows}
 
 
 async def _semantic(anchor_text: str, texts: list[str]) -> tuple[list[float], str]:
@@ -110,8 +100,7 @@ async def vacancy_hints(session: AsyncSession, candidate_user_id: str, limit: in
             "note": "Нет опубликованных вакансий, которые вы ещё не рассматривали.",
         }
 
-    codes = await _specialization_codes(session)
-    titles = await _specialization_titles(session)
+    codes, titles = await reference.specialization_maps(session)
 
     # Опорный текст: сначала выбранные вакансии (интерес), иначе сам профиль.
     anchor_kind = "profile"
@@ -252,8 +241,7 @@ async def candidate_hints(session: AsyncSession, employer_id: str, limit: int = 
             "note": "Пока нет ваших действий: опишите потребность или отправьте первое приглашение.",
         }
 
-    codes = await _specialization_codes(session)
-    titles = await _specialization_titles(session)
+    codes, titles = await reference.specialization_maps(session)
 
     wanted: list[tuple[str | None, str | None]] = [
         (codes.get(need.specialization_id) if need.specialization_id else None, need.grade_code)

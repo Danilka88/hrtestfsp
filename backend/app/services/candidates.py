@@ -7,17 +7,15 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.errors import DomainError
 from app.models.candidate import DEFAULT_PRIVACY, CandidateProfile
 from app.providers.registry import get_llm
 from app.schemas.candidate import CandidateProfileIn, PrivacyUpdateRequest
 from app.services.resume import extract_text_from_pdf
 
 
-class ProfileError(Exception):
-    def __init__(self, status_code: int, detail: str) -> None:
-        super().__init__(detail)
-        self.status_code = status_code
-        self.detail = detail
+class ProfileError(DomainError):
+    """Ошибка профиля соискателя."""
 
 
 async def get_profile(session: AsyncSession, user_id: str) -> CandidateProfile | None:

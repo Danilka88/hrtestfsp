@@ -13,6 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
+from app.core.errors import DomainError
 from app.core.security import (
     hash_opaque_token,
     hash_password,
@@ -25,13 +26,8 @@ from app.providers.base import ExternalIdentity
 from app.providers.registry import get_providers
 
 
-class AuthError(Exception):
-    """Ошибка аутентификации с HTTP-кодом и сообщением."""
-
-    def __init__(self, status_code: int, detail: str) -> None:
-        super().__init__(detail)
-        self.status_code = status_code
-        self.detail = detail
+class AuthError(DomainError):
+    """Ошибка аутентификации и подтверждения адреса."""
 
 
 @dataclass

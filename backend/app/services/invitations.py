@@ -12,6 +12,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.errors import DomainError
 from app.core.security import utcnow
 from app.models.candidate import CandidateProfile
 from app.models.employer import EmployerProfile
@@ -32,11 +33,8 @@ logger = logging.getLogger(__name__)
 REFERENCE_PREFIX = "cand-"
 
 
-class InvitationError(Exception):
-    def __init__(self, status_code: int, detail: str) -> None:
-        super().__init__(detail)
-        self.status_code = status_code
-        self.detail = detail
+class InvitationError(DomainError):
+    """Ошибка приглашения: статус, доступ, повторная отправка."""
 
 
 def reference_for(user_id: str) -> str:
