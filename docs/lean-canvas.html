@@ -590,9 +590,9 @@
       <p>FastAPI 0.142 · Pydantic 2.13 · SQLAlchemy 2.1 (async) · PostgreSQL 16 · React 19 · TypeScript 7 · Vite 8 · Tailwind 4.
       Перечень зависимостей сверен с фактическими импортами: заявленных, но не используемых библиотек в нём нет.</p></div>
     <div class="card"><h3>Проверяемость</h3>
-      <p>285 автотестов (<code>pytest</code>, покрытие 95%), 8 сквозных проверок (<code>scripts/smoke-*.sh</code>),
+      <p>287 автотестов (<code>pytest</code>, покрытие 95%), 8 сквозных проверок (<code>scripts/smoke-*.sh</code>),
       линтер <code>ruff</code> — без замечаний, поиск мёртвого кода <code>vulture</code> — чисто,
-      7 миграций БД. Всё воспроизводится одной командой.</p></div>
+      8 миграций БД. Всё воспроизводится одной командой.</p></div>
     <div class="card"><h3>Как запустить</h3>
       <p><code>docker compose up --build -d</code> → API <code>:8000/docs</code>, SPA <code>:8080</code>.<br>
       Демо-данные: <code>python scripts/seed_demo.py</code> (8 кандидатов с пройденным тестом, 2 работодателя, 3 вакансии, приглашения во всех статусах, пароль <code>demo12345</code>).</p></div>
@@ -780,7 +780,7 @@
   <div class="card" style="border-color:rgba(52,211,153,.5);margin-bottom:16px">
     <h3>Статус: реализовано полностью</h3>
     <p>Все позиции Must и Should ниже реализованы в <code>project/</code> и проверены на живом стеке
-    (4 сервиса здоровы, 285 автотестов, 8 сквозных проверок, прогон валидации).
+    (4 сервиса здоровы, 287 автотестов, 8 сквозных проверок, прогон валидации).
     Единственный внешний артефакт — презентация для питч-сессии.</p>
   </div>
 
@@ -828,7 +828,7 @@
       <div class="l">позиций ТЗ подтверждено полностью</div></div>
     <div class="stat"><div class="v">67</div>
       <div class="l">методов API в 15 группах, все описаны в OpenAPI</div></div>
-    <div class="stat"><div class="v up">285</div>
+    <div class="stat"><div class="v up">287</div>
       <div class="l">автотестов (покрытие 95%) и 8 сквозных проверок на живом стеке</div></div>
   </div>
 
@@ -944,7 +944,7 @@
             <td>4 сервиса (backend, frontend, PostgreSQL, Redis) с health-check</td></tr>
         <tr><td>Все методы описаны через OpenAPI (Swagger), документированы запросы и коды ошибок</td>
             <td><span class="tag must">выполнено ✓</span></td>
-            <td>56 методов в 14 группах на <code>/docs</code>, единый обработчик доменных ошибок</td></tr>
+            <td>67 методов в 15 группах на <code>/docs</code>, единый обработчик доменных ошибок</td></tr>
         <tr><td>152-ФЗ: согласие, разграничение прав, безопасное хранение паролей и токенов</td>
             <td><span class="tag must">выполнено ✓</span></td>
             <td>Argon2id, JWT access/refresh, RBAC по ролям, согласия отдельным документом</td></tr>
@@ -953,7 +953,7 @@
             <td>Веб-сервис независим от ОС; вёрстка адаптируется под планшет и мобильный</td></tr>
         <tr><td>Качество кода и работоспособность прототипа</td>
             <td><span class="tag must">выполнено ✓</span></td>
-            <td>285 автотестов (покрытие 95%), линтер с расширенным набором правил без замечаний, мёртвого кода нет, зависимости сверены с фактическими импортами</td></tr>
+            <td>287 автотестов (покрытие 95%), линтер с расширенным набором правил без замечаний, мёртвого кода нет, зависимости сверены с фактическими импортами</td></tr>
       </tbody>
     </table>
   </div>
@@ -1309,7 +1309,7 @@ python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt -r requirements-dev.txt</pre>
   <p style="color:var(--mut)">Дальше проверки запускаются так:</p>
   <pre>cd backend
-.venv/bin/python -m pytest -q                                  # 285 тестов
+.venv/bin/python -m pytest -q                                  # 287 тестов
 .venv/bin/python -m pytest -q --cov=app                        # покрытие 95%
 .venv/bin/python scripts/validate_solution.py --runs 120       # метрики валидации
 cd .. && bash scripts/verify-stack.sh                          # состояние всех сервисов</pre>

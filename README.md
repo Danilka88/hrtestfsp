@@ -63,16 +63,16 @@ project/
       services/                # бизнес-логика: тестирование, ранжирование, объяснимость,
                                #   подбор, приглашения, вакансии, задания, ИИ
       main.py
-    alembic/                   # 6 миграций
+    alembic/                   # 8 миграций
     scripts/
       seed_demo.py             # демонстрационные данные
       validate_solution.py     # процедура валидации решения
-    tests/                     # pytest — 283 теста, покрытие 95%
+    tests/                     # pytest — 287 тестов, покрытие 95%
   frontend/                    # React 19 + TypeScript + Vite SPA
     src/{api,auth,components,pages,styles}/
   seed/                        # пояснения к генерации демонстрационных данных
   scripts/                     # smoke-проверки (8), verify-stack.sh, reset-demo.sh, make-sample-resume.py
-  docs/                        # сопроводительная документация (00–06 + лэндинг)
+  docs/                        # сопроводительная документация (00–08 + лэндинг)
   docker-compose.yml           # backend, frontend, PostgreSQL, Redis — 4 сервиса
                                #   (Redis поднят как задел под кэш: код к нему не обращается)
   .env.example
@@ -115,9 +115,9 @@ docker compose exec -T backend python scripts/seed_demo.py   # демо-данн
 `sergey.volkov@` (домен `demo.ru`).
 
 Стенд сразу содержит рабочий сюжет: 2 компании с потребностями, 3 опубликованные
-вакансии с откликами кандидатов и приглашения во всех статусах — поэтому воронка,
-ликвидность, схема взаимодействия и решение по отклику видны без ручной подготовки
-данных.
+вакансии с откликами кандидатов, 2 коротких задания и приглашения во всех статусах —
+поэтому воронка, ликвидность, схема взаимодействия, решение по отклику и раздел
+заданий видны без ручной подготовки данных.
 
 ### Вариант 2 — локальный запуск
 
@@ -144,7 +144,7 @@ npm run dev        # http://localhost:5173 (проксирует /api на :8000
 Проверки:
 
 ```bash
-cd backend && env -u PYTHONPATH .venv/bin/python -m pytest -q   # 283 теста
+cd backend && env -u PYTHONPATH .venv/bin/python -m pytest -q   # 287 тестов
 bash ../scripts/reset-demo.sh                                   # чистое состояние для демонстрации
 bash ../scripts/smoke-api.sh                                    # smoke-проверка API
 cd frontend && npm run build                                    # сборка SPA + строгая типизация
@@ -220,7 +220,7 @@ PDF), **настройки приватности профиля** (что им�
 уведомления в интерфейсе (toast), демо-данные, docker-compose и smoke-скрипты
 (`smoke-api.sh`, `smoke-auth.sh`, `smoke-candidate.sh`, `smoke-testing.sh`,
 `smoke-employer.sh`, `smoke-invitations.sh`, `smoke-marketplace.sh`,
-`smoke-ai.sh`, `verify-stack.sh`). Тестов — 283, покрытие кода — 95% (`make test-cov`).
+`smoke-ai.sh`, `verify-stack.sh`). Тестов — 287, покрытие кода — 95% (`make test-cov`).
 
 Валидация решения:
 
@@ -237,7 +237,7 @@ cd backend
 env -u PYTHONPATH .venv/bin/ruff check .      # линтер: без замечаний
 env -u PYTHONPATH .venv/bin/ruff format --check .
 env -u PYTHONPATH .venv/bin/vulture app --min-confidence 80   # мёртвый код: чисто
-env -u PYTHONPATH .venv/bin/python -m pytest -q               # 283 теста
+env -u PYTHONPATH .venv/bin/python -m pytest -q               # 287 тестов
 env -u PYTHONPATH .venv/bin/python -m pytest -q --cov=app --cov-report=term-missing  # покрытие 95%
 cd ../frontend && npm run build               # включает строгую проверку типов tsc
 cd .. && bash scripts/smoke-ai.sh             # ИИ: источник ответа и деградация
