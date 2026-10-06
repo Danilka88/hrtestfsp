@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 
 import * as apiClient from "../api/client";
 import type { AIResult, AIStatus } from "../api/client";
@@ -63,6 +64,30 @@ export function aiToastPayload(
   };
 }
 
+/**
+ * Текст модели.
+ *
+ * Модель оформляет ответ разметкой (`**жирный**`), и в интерфейсе это выглядело как
+ * звёздочки. Здесь разметка превращается в выделение, а служебные знаки не показываются.
+ */
+export function AIText({ children, className }: { children?: string | null; className?: string }) {
+  const text = (children ?? "").trim();
+  if (!text) return null;
+  return (
+    <span className={className}>
+      {text.split(/(\*\*[^*]+\*\*)/g).filter(Boolean).map((part, index) =>
+        part.startsWith("**") && part.endsWith("**") ? (
+          <strong key={index} className="font-semibold text-slate-100">
+            {part.slice(2, -2)}
+          </strong>
+        ) : (
+          <span key={index}>{part}</span>
+        ),
+      )}
+    </span>
+  );
+}
+
 /** Компактная пометка под сгенерированным текстом. */
 export function AISourceNote({ result }: { result: AIResult | null }) {
   if (!result) return null;
@@ -73,6 +98,55 @@ export function AISourceNote({ result }: { result: AIResult | null }) {
         ? `Демо-данные: ${result.note ?? "модель недоступна"}`
         : `Сформировано локальной моделью ${result.provider} за ${result.latency_ms} мс`}
     </p>
+  );
+}
+
+/**
+ * Метка ИИ-функции.
+ *
+ * Один знак для кнопок, блоков и результатов: пользователь сразу видит, что перед
+ * ним результат модели, а не обычное действие платформы. Раньше часть кнопок ИИ
+ * выглядела как обычные, и было непонятно, где подключается модель.
+ */
+export function AITag({ children = "ИИ" }: { children?: ReactNode }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-violet-500/40 bg-violet-500/10 px-2 py-0.5 text-[10px] font-medium tracking-wide text-violet-200 uppercase">
+      <span aria-hidden>✦</span>
+      {children}
+    </span>
+  );
+}
+
+/**
+ * Блок ИИ-функции: рамка и подложка того же цвета, что у кнопок ИИ.
+ *
+ * Внутри — форма запуска, результат и подпись об источнике текста. Любой блок,
+ * который показывает или собирает вывод модели, оформляется этим компонентом.
+ */
+export function AIPanel({
+  title,
+  hint,
+  children,
+  result,
+}: {
+  title: ReactNode;
+  hint?: ReactNode;
+  children: ReactNode;
+  result?: AIResult | null;
+}) {
+  return (
+    <section className="rounded-xl border border-violet-500/40 bg-violet-500/[0.06] p-4">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-violet-100">
+          <span aria-hidden>✦</span>
+          {title}
+        </h2>
+        <AITag />
+      </div>
+      {hint ? <div className="mb-3 text-xs leading-relaxed text-slate-400">{hint}</div> : null}
+      {children}
+      <AISourceNote result={result ?? null} />
+    </section>
   );
 }
 

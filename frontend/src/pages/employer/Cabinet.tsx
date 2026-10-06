@@ -8,10 +8,10 @@ import type {
   SelectionSummary,
 } from "../../api/client";
 import { errorMessage } from "../../api/client";
-import { useAuth } from "../../auth/AuthContext";
-import { AIButton, AISourceNote, AIStatusBadge, aiToastPayload } from "../../components/ai";
+import { AIButton, AISourceNote, AIText, aiToastPayload } from "../../components/ai";
 import { TasksPanel, VacanciesPanel } from "../../components/marketplace";
 import { useGrades, useSpecializations } from "../../api/hooks";
+import { CabinetShell } from "../../components/cabinet";
 import { CandidateHints } from "../../components/hints";
 import { Dashboard, InvitationBars, Kpi } from "../../components/overview";
 import { useToast } from "../../components/toast";
@@ -37,41 +37,25 @@ import {
 type Tab = "overview" | "selection" | "search" | "invitations" | "vacancies" | "tasks" | "profile";
 
 export function EmployerCabinet() {
-  const { user, logout } = useAuth();
   const [tab, setTab] = useState<Tab>("overview");
 
   return (
-    <div className="space-y-5">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Кабинет работодателя</h1>
-          <p className="text-sm text-slate-400">{user?.email}</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <AIStatusBadge />
-          <Button variant="ghost" onClick={() => void logout()}>
-            Выйти
-          </Button>
-        </div>
-      </header>
-
-      <nav className="flex flex-wrap gap-2">
-        {(
-          [
-            ["overview", "Обзор"],
-            ["selection", "Подбор кандидатов"],
-            ["search", "Поиск по банку"],
-            ["invitations", "Приглашения"],
-            ["vacancies", "Вакансии"],
-            ["tasks", "Задания"],
-            ["profile", "Профиль компании"],
-          ] as [Tab, string][]
-        ).map(([key, label]) => (
-          <Button key={key} variant={tab === key ? "primary" : "ghost"} onClick={() => setTab(key)}>
-            {label}
-          </Button>
-        ))}
-      </nav>
+    <CabinetShell
+      title="Кабинет работодателя"
+      active={tab}
+      onSelect={setTab}
+      tabs={
+        [
+          ["overview", "Обзор"],
+          ["selection", "Подбор кандидатов"],
+          ["search", "Поиск по банку"],
+          ["invitations", "Приглашения"],
+          ["vacancies", "Вакансии"],
+          ["tasks", "Задания"],
+          ["profile", "Профиль компании"],
+        ] as [Tab, string][]
+      }
+    >
 
       {tab === "overview" ? <OverviewTab /> : null}
       {tab === "selection" ? <SelectionTab /> : null}
@@ -80,7 +64,7 @@ export function EmployerCabinet() {
       {tab === "vacancies" ? <VacanciesPanel role="employer" /> : null}
       {tab === "tasks" ? <TasksPanel role="employer" /> : null}
       {tab === "profile" ? <CompanyTab /> : null}
-    </div>
+    </CabinetShell>
   );
 }
 
@@ -444,7 +428,7 @@ function SelectionTab() {
                 <button
                   type="button"
                   onClick={() => void openVersion(item.id)}
-                  className="flex w-full flex-wrap items-center gap-2 rounded-lg border border-slate-800 px-2 py-1.5 text-left text-slate-300 transition hover:border-sky-500/60 hover:text-white"
+                  className="flex w-full flex-wrap items-center gap-2 rounded-lg border border-slate-800 p-3 text-left text-slate-300 transition hover:border-sky-500/60 hover:text-white"
                 >
                   <span className="font-medium">{item.title}</span>
                   <span className="text-xs text-slate-500">
@@ -716,8 +700,8 @@ function CandidateRow({
       </div>
       <ReasonList reasons={candidate.reasons} missing={candidate.missing} />
       {explanation ? (
-        <p className="mt-2 rounded-lg border border-violet-500/30 bg-violet-500/5 p-2 text-xs text-violet-100">
-          {explanation}
+        <p className="mt-2 rounded-lg border border-violet-500/40 bg-violet-500/[0.06] p-3 text-xs text-violet-100">
+          <AIText>{explanation}</AIText>
         </p>
       ) : null}
       <p className="mt-1 text-xs text-slate-600">Контакты скрыты до принятия приглашения</p>

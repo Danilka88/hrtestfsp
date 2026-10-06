@@ -8,8 +8,7 @@ import type {
   TestItem,
 } from "../../api/client";
 import { errorMessage } from "../../api/client";
-import { useAuth } from "../../auth/AuthContext";
-import { AIButton, AISourceNote, AIStatusBadge, aiToastPayload } from "../../components/ai";
+import { AIButton, AISourceNote, aiToastPayload } from "../../components/ai";
 import { TasksPanel, VacanciesPanel } from "../../components/marketplace";
 import { useToast } from "../../components/toast";
 import {
@@ -30,12 +29,12 @@ import {
 } from "../../components/ui";
 import { useSpecializations } from "../../api/hooks";
 import { VacancyHints } from "../../components/hints";
+import { CabinetShell } from "../../components/cabinet";
 import { Dashboard, InvitationBars, Kpi } from "../../components/overview";
 
 type Tab = "overview" | "category" | "test" | "invitations" | "vacancies" | "tasks" | "profile";
 
 export function CandidateCabinet() {
-  const { user, logout } = useAuth();
   const [tab, setTab] = useState<Tab>("overview");
   // Возврат в незавершённый тест: переносим кандидата в тест на том же задании
   const [resume, setResume] = useState<{ specialization: string; targetGrade: string } | null>(null);
@@ -46,37 +45,22 @@ export function CandidateCabinet() {
   }, []);
 
   return (
-    <div className="space-y-5">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Кабинет соискателя</h1>
-          <p className="text-sm text-slate-400">{user?.email}</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <AIStatusBadge />
-          <Button variant="ghost" onClick={() => void logout()}>
-            Выйти
-          </Button>
-        </div>
-      </header>
-
-      <nav className="flex flex-wrap gap-2">
-        {(
-          [
-            ["overview", "Обзор"],
-            ["category", "Категория и грейд"],
-            ["test", "Тестирование"],
-            ["invitations", "Приглашения"],
-            ["vacancies", "Вакансии"],
-            ["tasks", "Задания"],
-            ["profile", "Профиль и ФСП"],
-          ] as [Tab, string][]
-        ).map(([key, label]) => (
-          <Button key={key} variant={tab === key ? "primary" : "ghost"} onClick={() => setTab(key)}>
-            {label}
-          </Button>
-        ))}
-      </nav>
+    <CabinetShell
+      title="Кабинет соискателя"
+      active={tab}
+      onSelect={setTab}
+      tabs={
+        [
+          ["overview", "Обзор"],
+          ["category", "Категория и грейд"],
+          ["test", "Тестирование"],
+          ["invitations", "Приглашения"],
+          ["vacancies", "Вакансии"],
+          ["tasks", "Задания"],
+          ["profile", "Профиль и ФСП"],
+        ] as [Tab, string][]
+      }
+    >
 
       {tab === "overview" ? <OverviewTab /> : null}
       {tab === "category" ? <CategoryTab onContinueTest={continueTest} /> : null}
@@ -85,7 +69,7 @@ export function CandidateCabinet() {
       {tab === "vacancies" ? <VacanciesPanel role="candidate" /> : null}
       {tab === "tasks" ? <TasksPanel role="candidate" /> : null}
       {tab === "profile" ? <ProfileTab /> : null}
-    </div>
+    </CabinetShell>
   );
 }
 
@@ -264,7 +248,7 @@ function CategoryTab({
         </Alert>
       ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-3">
         <Card
           title={
             <>
@@ -273,7 +257,7 @@ function CategoryTab({
             </>
           }
         >
-          <p className="text-lg">{status.specialization ?? "не выбрана"}</p>
+          <p className="text-lg font-semibold">{status.specialization ?? "не выбрана"}</p>
         </Card>
         <Card
           title={

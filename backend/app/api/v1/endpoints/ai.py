@@ -38,10 +38,13 @@ router = APIRouter(prefix="/ai", tags=["ai"])
 candidate_only = require_roles(UserRole.CANDIDATE)
 employer_only = require_roles(UserRole.EMPLOYER)
 any_user = require_roles(UserRole.CANDIDATE, UserRole.EMPLOYER)
+# Состояние модели показывается в шапке каждого кабинета, поэтому его читает и
+# администратор: это справка, а не ИИ-действие над данными.
+status_reader = require_roles(UserRole.CANDIDATE, UserRole.EMPLOYER, UserRole.ADMIN)
 
 
 @router.get("/status", response_model=AIStatusOut, summary="Состояние ИИ-слоя")
-async def ai_status(user: User = Depends(any_user)) -> AIStatusOut:
+async def ai_status(user: User = Depends(status_reader)) -> AIStatusOut:
     """Показывает, какая модель активна и не работаем ли мы на демо-данных."""
     state = await get_ai().status()
     if state.get("available"):

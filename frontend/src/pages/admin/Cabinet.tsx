@@ -9,7 +9,8 @@ import type {
   AdminOverview,
 } from "../../api/client";
 import { errorMessage } from "../../api/client";
-import { AISourceNote } from "../../components/ai";
+import { AIButton, AISourceNote, AITag, AIText } from "../../components/ai";
+import { CabinetShell } from "../../components/cabinet";
 import {
   Alert,
   Button,
@@ -39,35 +40,14 @@ const TABS: [Tab, string][] = [
   ["categories", "Категории"],
   ["companies", "Компании"],
   ["signals", "Сигналы"],
-  ["ai", "ИИ-сводка"],
+  ["ai", "✦ ИИ-сводка"],
 ];
 
 export function AdminCabinet() {
   const [tab, setTab] = useState<Tab>("overview");
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight">Кабинет администратора</h1>
-          <p className="mt-1 text-sm text-slate-400">
-            Наблюдение за платформой как за двусторонним рынком: обе стороны, их взаимодействие и
-            узкие места.
-          </p>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        {TABS.map(([key, label]) => (
-          <Button
-            key={key}
-            variant={tab === key ? "primary" : "ghost"}
-            onClick={() => setTab(key)}
-          >
-            {label}
-          </Button>
-        ))}
-      </div>
+    <CabinetShell title="Кабинет администратора" active={tab} onSelect={setTab} tabs={TABS}>
 
       {tab === "overview" ? <OverviewTab /> : null}
       {tab === "graph" ? <GraphTab /> : null}
@@ -75,7 +55,7 @@ export function AdminCabinet() {
       {tab === "companies" ? <CompaniesTab /> : null}
       {tab === "signals" ? <SignalsTab /> : null}
       {tab === "ai" ? <AiTab /> : null}
-    </div>
+    </CabinetShell>
   );
 }
 
@@ -179,7 +159,7 @@ function OverviewTab() {
               Потребности → подборка{" "}
               <InfoTip text="Доля запросов работодателей, по которым система смогла построить подборку. Низкая доля означает, что в описанных категориях нет кандидатов." />
             </p>
-            <p className="text-lg">
+            <p className="text-lg font-semibold">
               <Percent value={data.liquidity.selection_rate} />{" "}
               <span className="text-xs text-slate-500">
                 ({data.liquidity.needs_with_selection} из {data.liquidity.needs_total})
@@ -191,7 +171,7 @@ function OverviewTab() {
               Потребности → приглашение{" "}
               <InfoTip text="Доля запросов, которые дошли до реального контакта. Это главный показатель того, что механика работает, а не просто существует." />
             </p>
-            <p className="text-lg">
+            <p className="text-lg font-semibold">
               <Percent value={data.liquidity.contact_rate} />{" "}
               <span className="text-xs text-slate-500">
                 ({data.liquidity.needs_with_invitation} из {data.liquidity.needs_total})
@@ -200,7 +180,7 @@ function OverviewTab() {
           </div>
           <div>
             <p className="text-xs text-slate-400">Приглашений с решением кандидата</p>
-            <p className="text-lg">
+            <p className="text-lg font-semibold">
               <Percent value={data.liquidity.response_rate} />{" "}
               <span className="text-xs text-slate-500">
                 ({data.liquidity.invitations_answered} из {data.liquidity.invitations_total})
@@ -209,7 +189,7 @@ function OverviewTab() {
           </div>
           <div>
             <p className="text-xs text-slate-400">Приглашения приняты</p>
-            <p className="text-lg">
+            <p className="text-lg font-semibold">
               <Percent value={data.liquidity.accept_rate} />{" "}
               <span className="text-xs text-slate-500">({data.liquidity.invitations_accepted})</span>
             </p>
@@ -219,7 +199,7 @@ function OverviewTab() {
               Время до первого ответа{" "}
               <InfoTip text="Медиана часов от отправки приглашения до решения кандидата. Эту задержку чувствует кандидат, и она определяет, считает ли он платформу живой." />
             </p>
-            <p className="text-lg">
+            <p className="text-lg font-semibold">
               {data.liquidity.response_hours_median === null ? (
                 <span className="text-slate-500">нет данных</span>
               ) : (
@@ -229,7 +209,7 @@ function OverviewTab() {
           </div>
           <div>
             <p className="text-xs text-slate-400">Приглашения без ответа дольше недели</p>
-            <p className="text-lg">{data.liquidity.invitations_stale}</p>
+            <p className="text-lg font-semibold">{data.liquidity.invitations_stale}</p>
           </div>
         </div>
       </Card>
@@ -238,15 +218,15 @@ function OverviewTab() {
         <div className="grid gap-3 sm:grid-cols-3">
           <div>
             <p className="text-xs text-slate-400">Открытых вакансий</p>
-            <p className="text-lg">{data.coverage.vacancies_open}</p>
+            <p className="text-lg font-semibold">{data.coverage.vacancies_open}</p>
           </div>
           <div>
             <p className="text-xs text-slate-400">Откликов на вакансии</p>
-            <p className="text-lg">{data.coverage.applications_total}</p>
+            <p className="text-lg font-semibold">{data.coverage.applications_total}</p>
           </div>
           <div>
             <p className="text-xs text-slate-400">Регулярных заданий</p>
-            <p className="text-lg">{data.coverage.tasks_total}</p>
+            <p className="text-lg font-semibold">{data.coverage.tasks_total}</p>
           </div>
         </div>
       </Card>
@@ -479,9 +459,9 @@ function CategoriesTab() {
                 <td className="py-2 pr-3">
                   <div className="flex items-center gap-2">
                     <span className="w-8">{row.candidates}</span>
-                    <span className="h-1.5 w-24 rounded bg-slate-800">
+                    <span className="h-2 w-24 rounded bg-slate-800">
                       <span
-                        className="block h-1.5 rounded bg-emerald-500/70"
+                        className="block h-2 rounded bg-emerald-500/70"
                         style={{ width: `${Math.max(2, (row.candidates / maxCandidates) * 100)}%` }}
                       />
                     </span>
@@ -649,27 +629,33 @@ function AiTab() {
   return (
     <div className="space-y-4">
       <SectionNote>
-        Модель не считает метрики — она получает уже посчитанные числа и объясняет их. Если модель
-        недоступна, показываются подготовленные данные с пометкой, и сценарий не ломается.
+        <span className="mb-1 flex items-center gap-2">
+          <AITag />
+          <span>метрики считает платформа, модель только объясняет</span>
+        </span>
+        Модель получает уже посчитанные числа и формулирует вывод словами. Если модель недоступна,
+        показываются подготовленные данные с пометкой, и сценарий не ломается.
       </SectionNote>
 
       <div className="flex flex-wrap gap-2">
-        <Button disabled={busy} onClick={() => void run("summary")}>
+        <AIButton busy={busy} onClick={() => void run("summary")}>
           Сводка состояния платформы
-        </Button>
-        <Button variant="ghost" disabled={busy} onClick={() => void run("actions")}>
+        </AIButton>
+        <AIButton busy={busy} onClick={() => void run("actions")}>
           Что делать по показателям
-        </Button>
+        </AIButton>
       </div>
 
       {summary ? (
-        <Card title={(summary.data as { headline?: string }).headline ?? "Сводка"}>
+        <Card tone="ai" title={(summary.data as { headline?: string }).headline ?? "Сводка"}>
           <p className="text-sm text-slate-200">
-            {(summary.data as { summary?: string }).summary}
+            <AIText>{(summary.data as { summary?: string }).summary}</AIText>
           </p>
           <ul className="mt-2 space-y-1 text-sm text-slate-400">
             {((summary.data as { points?: string[] }).points ?? []).map((item) => (
-              <li key={item}>· {item}</li>
+              <li key={item}>
+                · <AIText>{item}</AIText>
+              </li>
             ))}
           </ul>
           {((summary.data as { watch?: string[] }).watch ?? []).length ? (
@@ -677,7 +663,9 @@ function AiTab() {
               <p className="text-xs text-slate-400">На что смотреть:</p>
               <ul className="mt-1 space-y-1 text-sm text-amber-300/90">
                 {((summary.data as { watch?: string[] }).watch ?? []).map((item) => (
-                  <li key={item}>· {item}</li>
+                  <li key={item}>
+                    · <AIText>{item}</AIText>
+                  </li>
                 ))}
               </ul>
             </div>
@@ -687,14 +675,20 @@ function AiTab() {
       ) : null}
 
       {actions ? (
-        <Card title="Предлагаемые действия">
+        <Card tone="ai" title="Предлагаемые действия">
           <div className="space-y-3">
             {((actions.data as { actions?: { title: string; why: string; how?: string }[] }).actions ?? []).map(
               (item) => (
                 <div key={item.title} className="rounded-lg border border-slate-800 p-3">
                   <p className="font-medium">{item.title}</p>
-                  <p className="mt-1 text-sm text-slate-300">{item.why}</p>
-                  {item.how ? <p className="mt-1 text-xs text-slate-500">{item.how}</p> : null}
+                  <p className="mt-1 text-sm text-slate-300">
+                    <AIText>{item.why}</AIText>
+                  </p>
+                  {item.how ? (
+                    <p className="mt-1 text-xs text-slate-500">
+                      <AIText>{item.how}</AIText>
+                    </p>
+                  ) : null}
                 </div>
               ),
             )}

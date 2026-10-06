@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import * as apiClient from "../api/client";
 import type { CandidateCard, HintItem, Vacancy } from "../api/client";
 import { errorMessage } from "../api/client";
+import { AIButton } from "./ai";
 import { Button, Card, SectionNote, score } from "./ui";
 import { useToast } from "./toast";
 
@@ -114,15 +115,15 @@ export function VacancyHints({ onApply }: { onApply?: (vacancy: Vacancy) => void
   }
 
   return (
-    <Card title="Подсказать близкие вакансии">
+    <Card tone="ai" title="Подсказать близкие вакансии">
       <SectionNote>
         Платформа смотрит на ваши действия: какие вакансии вы уже выбирали, какая у вас категория и
         стек — и предлагает похожие. Это надстройка над общим списком, ничего не заменяет.
       </SectionNote>
       <div className="mt-3">
-        <Button variant="ghost" disabled={busy} onClick={() => void load()}>
-          {busy ? "Подбираю…" : "Показать подсказки"}
-        </Button>
+        <AIButton busy={busy} onClick={() => void load()}>
+          Показать подсказки
+        </AIButton>
       </div>
       {items ? (
         items.length ? (
@@ -190,15 +191,15 @@ export function CandidateHints({ onInvite }: { onInvite?: (candidate: CandidateC
   }
 
   return (
-    <Card title="Кандидаты по вашим действиям">
+    <Card tone="ai" title="Кандидаты по вашим действиям">
       <SectionNote>
         Отбор идёт по тому, что вы уже делали: описанные потребности, стеки и те, кого вы приглашали.
         Уже приглашённые не повторяются — ручная работа не дублируется.
       </SectionNote>
       <div className="mt-3">
-        <Button variant="ghost" disabled={busy} onClick={() => void load()}>
-          {busy ? "Подбираю…" : "Показать подсказки"}
-        </Button>
+        <AIButton busy={busy} onClick={() => void load()}>
+          Показать подсказки
+        </AIButton>
       </div>
       {items ? (
         items.length ? (

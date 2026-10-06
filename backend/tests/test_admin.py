@@ -75,6 +75,15 @@ async def test_admin_endpoints_require_auth(client: AsyncClient) -> None:
     assert (await client.get("/api/v1/admin/overview")).status_code == 401
 
 
+async def test_admin_can_read_ai_status(client: AsyncClient, db_factory) -> None:
+    """Состояние модели читает и администратор: метка показывается в шапке кабинета."""
+    admin_token = await _make_admin(client, db_factory)
+    response = await client.get("/api/v1/ai/status", headers=_auth(admin_token))
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert "available" in body and "degraded" in body and body["hint"]
+
+
 # --- Метрики -------------------------------------------------------------------
 
 

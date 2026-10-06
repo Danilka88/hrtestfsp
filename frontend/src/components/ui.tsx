@@ -1,14 +1,44 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
-export function Card({ title, children, accent }: { title?: ReactNode; children: ReactNode; accent?: boolean }) {
+import { AITag } from "./ai";
+
+/**
+ * Карточка раздела.
+ *
+ * `tone="ai"` помечает блок как ИИ-функцию: рамка и подложка того же цвета, что у
+ * кнопок ИИ, плюс метка. Так видно, где работает модель, а где обычная логика.
+ */
+export function Card({
+  title,
+  children,
+  accent,
+  tone = "default",
+}: {
+  title?: ReactNode;
+  children: ReactNode;
+  accent?: boolean;
+  tone?: "default" | "ai";
+}) {
+  const ai = tone === "ai";
+  const frame = ai
+    ? "border-violet-500/40 bg-violet-500/[0.06]"
+    : accent
+      ? "border-sky-500/60 bg-slate-900/60"
+      : "border-slate-800 bg-slate-900/60";
   return (
-    <section
-      className={`rounded-xl border bg-slate-900/60 p-4 ${
-        accent ? "border-sky-500/60" : "border-slate-800"
-      }`}
-    >
-      {title ? <h2 className="mb-3 text-sm font-semibold text-sky-300">{title}</h2> : null}
+    <section className={`rounded-xl border p-4 ${frame}`}>
+      {title ? (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2
+            className={`flex items-center gap-2 text-sm font-semibold ${ai ? "text-violet-100" : "text-sky-300"}`}
+          >
+            {ai ? <span aria-hidden>✦</span> : null}
+            {title}
+          </h2>
+          {ai ? <AITag /> : null}
+        </div>
+      ) : null}
       {children}
     </section>
   );
@@ -317,7 +347,7 @@ export function Modal({
         onClick={(event) => event.stopPropagation()}
         className={`my-6 w-full ${wide ? "max-w-3xl" : "max-w-xl"} rounded-xl border border-slate-700 bg-slate-900 p-5 shadow-2xl outline-none`}
       >
-        <div className="mb-4 flex items-start justify-between gap-4">
+        <div className="mb-3 flex items-start justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold text-sky-300">{title}</h2>
             {description ? (
