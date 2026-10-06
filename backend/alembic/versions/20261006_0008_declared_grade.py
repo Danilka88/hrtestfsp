@@ -24,9 +24,7 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "candidate_profiles", sa.Column("declared_grade", sa.String(length=20), nullable=True)
-    )
+    op.add_column("candidate_profiles", sa.Column("declared_grade", sa.String(length=20), nullable=True))
 
 
 def downgrade() -> None:
