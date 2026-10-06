@@ -10,7 +10,7 @@ import type {
 import { errorMessage } from "../../api/client";
 import { AIButton, AISourceNote, AIText, aiToastPayload } from "../../components/ai";
 import { TasksPanel, VacanciesPanel } from "../../components/marketplace";
-import { useGrades, useSpecializations } from "../../api/hooks";
+import { useGrades, useResource, useSpecializations } from "../../api/hooks";
 import { CabinetShell } from "../../components/cabinet";
 import { CandidateHints } from "../../components/hints";
 import { Dashboard, InvitationBars, Kpi } from "../../components/overview";
@@ -473,22 +473,13 @@ function SelectionTab() {
 
 function InvitationsTab() {
   const toast = useToast();
-  const [invitations, setInvitations] = useState<EmployerInvitation[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: invitations,
+    error,
+    reload: load,
+  } = useResource(() => apiClient.employerInvitations(), { initial: [] });
   const [revokeFor, setRevokeFor] = useState<EmployerInvitation | null>(null);
   const [busy, setBusy] = useState(false);
-
-  const load = useCallback(async () => {
-    try {
-      setInvitations(await apiClient.employerInvitations());
-    } catch (err) {
-      setError(errorMessage(err));
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   async function revoke() {
     if (!revokeFor) return;

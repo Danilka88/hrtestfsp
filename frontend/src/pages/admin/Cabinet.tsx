@@ -1,14 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import * as apiClient from "../../api/client";
-import type {
-  AdminAnomaly,
-  AdminCategory,
-  AdminCompany,
-  AdminInteraction,
-  AdminOverview,
-} from "../../api/client";
 import { errorMessage } from "../../api/client";
+import { useResource } from "../../api/hooks";
 import { AIButton, AISourceNote, AITag, AIText } from "../../components/ai";
 import { CabinetShell } from "../../components/cabinet";
 import {
@@ -70,20 +64,7 @@ export function AdminCabinet() {
 }
 
 function OverviewTab() {
-  const [data, setData] = useState<AdminOverview | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    try {
-      setData(await apiClient.adminOverview());
-    } catch (err) {
-      setError(errorMessage(err));
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const { data, error } = useResource(() => apiClient.adminOverview());
 
   if (error) return <Alert kind="error">{error}</Alert>;
   if (!data) return <p className="text-sm text-slate-400">Загружаю показатели…</p>;
@@ -279,21 +260,8 @@ function OverviewTab() {
 }
 
 function GraphTab() {
-  const [data, setData] = useState<AdminInteraction | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { data, error } = useResource(() => apiClient.adminInteractions(80));
   const [only, setOnly] = useState<string>("all");
-
-  const load = useCallback(async () => {
-    try {
-      setData(await apiClient.adminInteractions(80));
-    } catch (err) {
-      setError(errorMessage(err));
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   const edges = useMemo(() => {
     if (!data) return [];
@@ -454,18 +422,7 @@ function GraphTab() {
 }
 
 function CategoriesTab() {
-  const [rows, setRows] = useState<AdminCategory[]>([]);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    void (async () => {
-      try {
-        setRows(await apiClient.adminCategories());
-      } catch (err) {
-        setError(errorMessage(err));
-      }
-    })();
-  }, []);
+  const { data: rows, error } = useResource(() => apiClient.adminCategories(), { initial: [] });
 
   if (error) return <Alert kind="error">{error}</Alert>;
 
@@ -547,18 +504,7 @@ function CategoriesTab() {
 }
 
 function CompaniesTab() {
-  const [rows, setRows] = useState<AdminCompany[]>([]);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    void (async () => {
-      try {
-        setRows(await apiClient.adminCompanies());
-      } catch (err) {
-        setError(errorMessage(err));
-      }
-    })();
-  }, []);
+  const { data: rows, error } = useResource(() => apiClient.adminCompanies(), { initial: [] });
 
   if (error) return <Alert kind="error">{error}</Alert>;
 
@@ -615,18 +561,7 @@ function CompaniesTab() {
 }
 
 function SignalsTab() {
-  const [rows, setRows] = useState<AdminAnomaly[]>([]);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    void (async () => {
-      try {
-        setRows(await apiClient.adminAnomalies());
-      } catch (err) {
-        setError(errorMessage(err));
-      }
-    })();
-  }, []);
+  const { data: rows, error } = useResource(() => apiClient.adminAnomalies(), { initial: [] });
 
   if (error) return <Alert kind="error">{error}</Alert>;
 

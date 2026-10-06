@@ -1,12 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import * as apiClient from "../../api/client";
-import type {
-  CandidateInvitation,
-  CategoryStatus,
-  FspStatus,
-  TestItem,
-} from "../../api/client";
+import type { CategoryStatus, FspStatus, TestItem } from "../../api/client";
 import { errorMessage } from "../../api/client";
 import { AIButton, AISourceNote, aiToastPayload } from "../../components/ai";
 import { TasksPanel, VacanciesPanel } from "../../components/marketplace";
@@ -27,7 +22,7 @@ import {
   money,
   score,
 } from "../../components/ui";
-import { useSpecializations } from "../../api/hooks";
+import { useResource, useSpecializations } from "../../api/hooks";
 import { VacancyHints } from "../../components/hints";
 import { CabinetShell } from "../../components/cabinet";
 import { Dashboard, InvitationBars, Kpi } from "../../components/overview";
@@ -573,32 +568,25 @@ function TestTab({
 
 function InvitationsTab() {
   const toast = useToast();
-  const [invitations, setInvitations] = useState<CandidateInvitation[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: invitations,
+    error,
+    setError,
+    reload: load,
+  } = useResource(async () => {
+    const list = await apiClient.myInvitations();
+    // Открытие вкладки означает фактический просмотр: приглашения в статусе
+    // «отправлено» переводятся в «просмотрено», чтобы работодатель видел,
+    // что приглашение доставлено и открыто, а не проигнорировано.
+    return Promise.all(
+      list.map(async (invitation) =>
+        invitation.status === "sent" ? await apiClient.viewInvitation(invitation.id) : invitation,
+      ),
+    );
+  }, { initial: [] });
   const [busy, setBusy] = useState(false);
   // Подтверждение решения: принятие и отказ необратимы, поэтому спрашиваем явно
   const [confirm, setConfirm] = useState<{ id: string; action: "accepted" | "declined" } | null>(null);
-
-  const load = useCallback(async () => {
-    try {
-      const list = await apiClient.myInvitations();
-      // Открытие вкладки означает фактический просмотр: приглашения в статусе
-      // «отправлено» переводятся в «просмотрено», чтобы работодатель видел,
-      // что приглашение доставлено и открыто, а не проигнорировано.
-      const marked = await Promise.all(
-        list.map(async (invitation) =>
-          invitation.status === "sent" ? await apiClient.viewInvitation(invitation.id) : invitation,
-        ),
-      );
-      setInvitations(marked);
-    } catch (err) {
-      setError(errorMessage(err));
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   async function decide(id: string, status: "accepted" | "declined") {
     setBusy(true);
