@@ -5,13 +5,13 @@ import type {
   ApplicationCandidate,
   ApplicationEmployer,
   RegularTask,
-  Specialization,
   TaskSubmission,
   Vacancy,
 } from "../api/client";
 import { errorMessage } from "../api/client";
 import { AIButton, AISourceNote, aiToastPayload } from "./ai";
 import { useToast } from "./toast";
+import { useSpecializations } from "../api/hooks";
 import { VacancyHints } from "./hints";
 import {
   Button,
@@ -45,7 +45,7 @@ export function VacanciesPanel({ role }: { role: Role }) {
 
 function CandidateVacancies() {
   const toast = useToast();
-  const [specializations, setSpecializations] = useState<Specialization[]>([]);
+  const specializations = useSpecializations();
   const [specialization, setSpecialization] = useState("");
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
   const [applications, setApplications] = useState<ApplicationCandidate[]>([]);
@@ -67,13 +67,6 @@ function CandidateVacancies() {
       toast.error("Не удалось загрузить вакансии", errorMessage(err));
     }
   }, [specialization, toast]);
-
-  useEffect(() => {
-    apiClient
-      .listSpecializations()
-      .then(setSpecializations)
-      .catch(() => undefined);
-  }, []);
 
   useEffect(() => {
     void load();
@@ -241,7 +234,7 @@ function CandidateVacancies() {
 
 function EmployerVacancies() {
   const toast = useToast();
-  const [specializations, setSpecializations] = useState<Specialization[]>([]);
+  const specializations = useSpecializations();
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -268,10 +261,6 @@ function EmployerVacancies() {
   }, [toast]);
 
   useEffect(() => {
-    apiClient
-      .listSpecializations()
-      .then(setSpecializations)
-      .catch(() => undefined);
     void load();
   }, [load]);
 
@@ -642,7 +631,7 @@ function CandidateTasks() {
 
 function EmployerTasks() {
   const toast = useToast();
-  const [specializations, setSpecializations] = useState<Specialization[]>([]);
+  const specializations = useSpecializations();
   const [tasks, setTasks] = useState<RegularTask[]>([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -663,10 +652,6 @@ function EmployerTasks() {
   }, [toast]);
 
   useEffect(() => {
-    apiClient
-      .listSpecializations()
-      .then(setSpecializations)
-      .catch(() => undefined);
     void load();
   }, [load]);
 

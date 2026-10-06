@@ -5,7 +5,6 @@ import type {
   CandidateInvitation,
   CategoryStatus,
   FspStatus,
-  Specialization,
   TestItem,
 } from "../../api/client";
 import { errorMessage } from "../../api/client";
@@ -29,6 +28,7 @@ import {
   money,
   score,
 } from "../../components/ui";
+import { useSpecializations } from "../../api/hooks";
 import { VacancyHints } from "../../components/hints";
 import { Dashboard, InvitationBars, Kpi } from "../../components/overview";
 
@@ -385,7 +385,7 @@ function TestTab({
   resume: { specialization: string; targetGrade: string } | null;
   onResumeConsumed: () => void;
 }) {
-  const [specializations, setSpecializations] = useState<Specialization[]>([]);
+  const specializations = useSpecializations();
   const [specialization, setSpecialization] = useState("");
   const [grades, setGrades] = useState<string[]>([]);
   const [targetGrade, setTargetGrade] = useState("");
@@ -397,15 +397,10 @@ function TestTab({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // Первую специализацию подставляем, когда справочник загрузился
   useEffect(() => {
-    apiClient
-      .listSpecializations()
-      .then((list) => {
-        setSpecializations(list);
-        if (list.length) setSpecialization(list[0].code);
-      })
-      .catch((err) => setError(errorMessage(err)));
-  }, []);
+    if (specializations.length && !specialization) setSpecialization(specializations[0].code);
+  }, [specializations, specialization]);
 
   // Возврат в незавершённый тест: шаг опроса пропускаем и продолжаем с того же задания.
   useEffect(() => {
@@ -513,6 +508,11 @@ function TestTab({
             onChange={setSpecialization}
             options={specializations.map((item) => ({ value: item.code, label: item.title }))}
           />
+          {specializations.length === 0 ? (
+            <p className="text-xs text-amber-400">
+              Справочник специализаций недоступен или ещё загружается — обновите страницу.
+            </p>
+          ) : null}
           <Button onClick={() => void startSurvey()} disabled={busy || !specialization}>
             Пройти опрос
           </Button>

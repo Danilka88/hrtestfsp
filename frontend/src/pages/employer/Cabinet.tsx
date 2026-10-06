@@ -4,15 +4,14 @@ import * as apiClient from "../../api/client";
 import type {
   CandidateCard,
   EmployerInvitation,
-  Grade,
   Selection,
   SelectionSummary,
-  Specialization,
 } from "../../api/client";
 import { errorMessage } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { AIButton, AISourceNote, AIStatusBadge, aiToastPayload } from "../../components/ai";
 import { TasksPanel, VacanciesPanel } from "../../components/marketplace";
+import { useGrades, useSpecializations } from "../../api/hooks";
 import { CandidateHints } from "../../components/hints";
 import { Dashboard, InvitationBars, Kpi } from "../../components/overview";
 import { useToast } from "../../components/toast";
@@ -176,8 +175,8 @@ function OverviewTab() {
 
 function SelectionTab() {
   const toast = useToast();
-  const [specializations, setSpecializations] = useState<Specialization[]>([]);
-  const [grades, setGrades] = useState<Grade[]>([]);
+  const specializations = useSpecializations();
+  const grades = useGrades();
   const [history, setHistory] = useState<SelectionSummary[]>([]);
   const [explanations, setExplanations] = useState<Record<string, string>>({});
   const [aiBusyFor, setAiBusyFor] = useState<string | null>(null);
@@ -204,14 +203,6 @@ function SelectionTab() {
   }, []);
 
   useEffect(() => {
-    apiClient
-      .listSpecializations()
-      .then(setSpecializations)
-      .catch(() => undefined);
-    apiClient
-      .listGrades()
-      .then(setGrades)
-      .catch(() => undefined);
     void loadHistory();
   }, [loadHistory]);
 
@@ -855,8 +846,8 @@ function InvitePanel({
 
 /** Поиск по банку кандидатов: фильтры по специализации, грейду, стеку и ФСП. */
 function SearchTab() {
-  const [specializations, setSpecializations] = useState<Specialization[]>([]);
-  const [grades, setGrades] = useState<Grade[]>([]);
+  const specializations = useSpecializations();
+  const grades = useGrades();
   const [specialization, setSpecialization] = useState("");
   const [grade, setGrade] = useState("");
   const [stack, setStack] = useState("");
@@ -868,14 +859,6 @@ function SearchTab() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    apiClient
-      .listSpecializations()
-      .then(setSpecializations)
-      .catch(() => undefined);
-    apiClient
-      .listGrades()
-      .then(setGrades)
-      .catch(() => undefined);
   }, []);
 
   const search = useCallback(async () => {
